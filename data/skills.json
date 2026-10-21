@@ -1,0 +1,13 @@
+{
+  "earphones": {
+    "auditoryMultiplier": 0.5,
+    "lowpassHz": 700,
+    "npcFootstepGain": 0
+  },
+  "phonePretend": {
+    "blocksEyeContact": true,
+    "pitchDeg": -35,
+    "moveMultiplier": 0.6,
+    "pitchLerpPerSec": 6
+  }
+}

@@ -3,6 +3,7 @@
     "max": 100,
     "start": 100,
     "outdoorDrainPerSec": 0.05,
+    "safeRecoverPerSec": 1,
     "tiers": {
       "tired": 69,
       "danger": 39,
@@ -12,6 +13,12 @@
   "stress": {
     "max": 100,
     "decayPerSec": 2,
-    "somaticThreshold": 60
+    "somaticThreshold": 60,
+    "gainPerDamage": 1.5,
+    "decayDelaySec": 1.5
+  },
+  "ambush": {
+    "freezeSec": 0.5,
+    "shakeSec": 0.6
   }
 }

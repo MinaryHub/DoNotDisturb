@@ -1,0 +1,36 @@
+{
+  "id": "stage01",
+  "level": "levels/stage01.glb",
+  "titleKey": "stage01.title",
+  "homeVolume": "home",
+  "objectives": [
+    { "id": "reachLobby", "textKey": "stage01.obj.reachLobby", "completeOnEvent": "reachLobby" },
+    { "id": "goHome", "textKey": "stage01.obj.goHome", "requires": ["reachLobby"] }
+  ],
+  "winEvent": "bed",
+  "winRequires": ["reachLobby"],
+  "events": {
+    "hallwayPhone": { "stimulus": "textMessage" }
+  },
+  "interactions": {
+    "bed": "interact.bed",
+    "elevCall3F": "interact.elevCall",
+    "elevCall1F": "interact.elevCall",
+    "elevPanel": "interact.elevClose"
+  },
+  "npcs": [{ "id": "neighbor", "profile": "neighbor" }],
+  "elevator": {
+    "car": "elevCar",
+    "stops": [
+      { "floor": "1F", "offsetY": 0, "door": "elevDoor1F", "callEvent": "elevCall1F" },
+      { "floor": "3F", "offsetY": 6, "door": "elevDoor3F", "callEvent": "elevCall3F" }
+    ],
+    "startStop": "1F",
+    "panelEvent": "elevPanel",
+    "speed": 1.5,
+    "doorOpenSec": 4,
+    "doorMoveSec": 1.2,
+    "doorSlide": 1.0,
+    "closePressCutSec": 1.5
+  }
+}

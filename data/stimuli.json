@@ -1,0 +1,12 @@
+{
+  "textMessage": { "kind": "ambush", "channel": "auditory", "damage": 3 },
+  "voiceCall": { "kind": "ambush", "channel": "auditory", "damage": 30 },
+  "shoulderTap": { "kind": "ambush", "channel": "social", "damage": 15 },
+  "smalltalkPlaceholder": { "kind": "encounter", "channel": "social", "damage": 15 },
+  "smalltalkLinger": { "kind": "continuous", "channel": "social", "ratePerSec": 1 },
+  "eyeContact": { "kind": "continuous", "channel": "visual", "ratePerSec": 0.6 },
+  "crowd": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.3 },
+  "lobbyNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.2 },
+  "awkwardSilence": { "kind": "continuous", "channel": "social", "ratePerSec": 1 },
+  "rumination": { "kind": "rumination", "channel": "social", "ratePerSec": 0.5, "durationSec": 20 }
+}

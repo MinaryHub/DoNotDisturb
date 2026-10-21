@@ -1,0 +1,26 @@
+{
+  "neighbor": {
+    "type": "passerby",
+    "displayTagKey": "tag.potentialSmalltalker",
+    "walkSpeed": 1.2,
+    "approachSpeed": 1.6,
+    "viewDistance": 12,
+    "viewHalfAngleDeg": 50,
+    "hearingRadius": 2.5,
+    "noticeFillPerSec": 1.2,
+    "noticeDecayPerSec": 0.6,
+    "eyeContactMultiplier": 2.5,
+    "eyeContactAngleDeg": 12,
+    "noticePauseSec": 0.6,
+    "talkRange": 3,
+    "stareSec": 1,
+    "lingerRange": 3.5,
+    "talkDurationSec": 8,
+    "loseSightGiveUpSec": 4,
+    "cooldownSec": 20,
+    "waypointWaitSec": 1.5,
+    "encounterStimulus": "smalltalkPlaceholder",
+    "lingerStimulus": "smalltalkLinger",
+    "gazeStimulus": "eyeContact"
+  }
+}

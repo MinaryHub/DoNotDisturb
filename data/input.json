@@ -6,6 +6,11 @@
   "moveUp": ["Space"],
   "moveDown": ["KeyC"],
   "sprint": ["ShiftLeft", "ShiftRight"],
+  "interact": ["KeyF"],
+  "earphones": ["KeyE"],
+  "phonePretend": ["KeyQ"],
+  "restart": ["KeyR"],
   "toggleDebug": ["F1"],
+  "toggleNoclip": ["F2"],
   "reloadLevel": ["F5"]
 }

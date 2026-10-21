@@ -31,7 +31,12 @@ export const inputActions = [
   'moveUp',
   'moveDown',
   'sprint',
+  'interact',
+  'earphones',
+  'phonePretend',
+  'restart',
   'toggleDebug',
+  'toggleNoclip',
   'reloadLevel',
 ] as const;
 export type InputAction = (typeof inputActions)[number];
@@ -49,11 +54,134 @@ export const balanceConfigSchema = z.object({
     max: positive,
     start: positive,
     outdoorDrainPerSec: nonNegative,
-    tiers: z.object({ tired: positive, danger: positive, critical: positive }),
+    safeRecoverPerSec: nonNegative,
+    tiers: z
+      .object({ tired: positive, danger: positive, critical: positive })
+      .refine((t) => t.tired > t.danger && t.danger > t.critical, '구간은 tired > danger > critical 이어야 합니다'),
   }),
-  stress: z.object({ max: positive, decayPerSec: nonNegative, somaticThreshold: nonNegative }),
+  stress: z.object({
+    max: positive,
+    decayPerSec: nonNegative,
+    somaticThreshold: nonNegative,
+    gainPerDamage: nonNegative,
+    decayDelaySec: nonNegative,
+  }),
+  ambush: z.object({ freezeSec: nonNegative, shakeSec: nonNegative }),
 });
 export type BalanceConfig = z.infer<typeof balanceConfigSchema>;
+
+export const stimulusTableSchema = z.record(
+  z.string(),
+  z
+    .object({
+      kind: z.enum(['ambush', 'continuous', 'encounter', 'rumination']),
+      channel: z.enum(['auditory', 'visual', 'social']),
+      damage: nonNegative.optional(),
+      ratePerSec: nonNegative.optional(),
+      durationSec: positive.optional(),
+    })
+    .refine(
+      (s) =>
+        s.kind === 'ambush' || s.kind === 'encounter'
+          ? s.damage !== undefined
+          : s.ratePerSec !== undefined && (s.kind !== 'rumination' || s.durationSec !== undefined),
+      '기습·대면형은 damage, 지속형은 ratePerSec, 내면형은 ratePerSec+durationSec가 필요합니다',
+    ),
+);
+export type StimulusTableConfig = z.infer<typeof stimulusTableSchema>;
+
+export const skillsConfigSchema = z.object({
+  earphones: z.object({ auditoryMultiplier: z.number().min(0).max(1), lowpassHz: positive, npcFootstepGain: nonNegative }),
+  phonePretend: z.object({
+    blocksEyeContact: z.boolean(),
+    pitchDeg: z.number().min(-89).max(0),
+    moveMultiplier: z.number().min(0).max(1),
+    pitchLerpPerSec: positive,
+  }),
+});
+export type SkillsConfig = z.infer<typeof skillsConfigSchema>;
+
+export const playerConfigSchema = z.object({
+  walkSpeed: positive,
+  runSpeed: positive,
+  height: positive,
+  radius: positive,
+  eyeHeight: positive,
+  stepHeight: nonNegative,
+  maxSlopeDeg: z.number().min(0).max(89),
+  gravity: z.number().negative(),
+  interactRange: positive,
+  mouseSensitivity: positive,
+  fovDangerExtraDeg: nonNegative,
+  burnoutSinkSec: positive,
+});
+export type PlayerConfig = z.infer<typeof playerConfigSchema>;
+
+export const npcProfileSchema = z.object({
+  type: z.enum(['passerby', 'hunter', 'stalker', 'boss', 'ally']),
+  displayTagKey: z.string(),
+  walkSpeed: positive,
+  approachSpeed: positive,
+  viewDistance: positive,
+  viewHalfAngleDeg: z.number().min(0).max(180),
+  hearingRadius: nonNegative,
+  noticeFillPerSec: positive,
+  noticeDecayPerSec: nonNegative,
+  eyeContactMultiplier: z.number().min(1),
+  eyeContactAngleDeg: positive,
+  noticePauseSec: nonNegative,
+  talkRange: positive,
+  stareSec: nonNegative,
+  lingerRange: positive,
+  talkDurationSec: positive,
+  loseSightGiveUpSec: positive,
+  cooldownSec: nonNegative,
+  waypointWaitSec: nonNegative,
+  encounterStimulus: z.string(),
+  lingerStimulus: z.string(),
+  gazeStimulus: z.string(),
+});
+export const npcProfilesSchema = z.record(z.string(), npcProfileSchema);
+export type NpcProfile = z.infer<typeof npcProfileSchema>;
+
+export const stageConfigSchema = z.object({
+  id: z.string(),
+  level: z.string(),
+  titleKey: z.string(),
+  homeVolume: z.string(),
+  objectives: z.array(
+    z.object({
+      id: z.string(),
+      textKey: z.string(),
+      completeOnEvent: z.string().optional(),
+      requires: z.array(z.string()).optional(),
+    }),
+  ),
+  winEvent: z.string(),
+  winRequires: z.array(z.string()),
+  events: z.record(z.string(), z.object({ stimulus: z.string() })),
+  interactions: z.record(z.string(), z.string()),
+  npcs: z.array(z.object({ id: z.string(), profile: z.string() })),
+  elevator: z
+    .object({
+      car: z.string(),
+      stops: z
+        .array(z.object({ floor: z.string(), offsetY: z.number(), door: z.string(), callEvent: z.string() }))
+        .min(2),
+      startStop: z.string(),
+      panelEvent: z.string(),
+      speed: positive,
+      doorOpenSec: positive,
+      doorMoveSec: positive,
+      doorSlide: positive,
+      closePressCutSec: nonNegative,
+    })
+    .optional(),
+});
+export type StageConfig = z.infer<typeof stageConfigSchema>;
+
+export const textTableSchema = z.record(z.string(), z.string());
+export type TextTable = z.infer<typeof textTableSchema>;
 
 export const assetCategories = ['level', 'prop', 'npc', 'crowdNpc', 'fpHands'] as const;
 export type AssetCategory = (typeof assetCategories)[number];

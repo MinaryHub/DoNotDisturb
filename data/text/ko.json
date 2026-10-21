@@ -1,0 +1,16 @@
+{
+  "stage01.title": "월요일 아침, 출근길",
+  "stage01.obj.reachLobby": "1층 현관까지 내려가기",
+  "stage01.obj.goHome": "집으로 돌아가 침대에 눕기",
+  "interact.bed": "눕기",
+  "interact.bed.notYet": "아직 나갈 일이 남았다",
+  "interact.elevCall": "엘리베이터 호출",
+  "interact.elevClose": "닫힘 버튼",
+  "tag.potentialSmalltalker": "[잠재적 스몰토크 유발자]",
+  "result.burnout.title": "오늘은 여기까지",
+  "result.burnout.body": "에너지가 다 떨어진 건 약해서가 아니에요. 그만큼 애썼다는 뜻이에요.",
+  "result.clear.title": "무사히 귀가",
+  "result.clear.body": "오늘 하루도 잘 버텼어요. 이제 푹 쉬어요.",
+  "result.retry": "R 다시 시작",
+  "hud.paused": "클릭해서 계속"
+}
