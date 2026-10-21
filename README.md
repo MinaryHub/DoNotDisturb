@@ -6,11 +6,12 @@
 
 ```bash
 npm install
-npm run make:greybox      # Kreate 맵이 없을 때 테스트 레벨 생성
-npm run dev               # http://localhost:5173  (?level=levels/xxx.glb 로 레벨 지정)
+npm run dev               # http://localhost:5173  (스테이지 1)
 ```
 
-조작(Phase 0, 자유 비행): 화면 클릭으로 마우스 고정 · WASD · Space/C 상하 · Shift 빠르게 · F1 디버그 패널 · F5 레벨 다시 불러오기
+조작: 화면 클릭으로 시작 · WASD 이동 · Shift 달리기 · F 상호작용 · E 이어폰 토글 · Q(누르고 있기) 폰 보는 척 · R 결과 화면에서 다시 시작
+
+개발용: F1 디버그 패널(배터리·스트레스 수치, 오버레이, 자극 발생 버튼) · F2 자유 비행 카메라 · F5 레벨 다시 불러오기 · `?level=levels/xxx.glb` 다른 레벨 · `?nolock` 마우스 고정 없이 플레이(자동화 테스트용)
 
 ## 검사
 
@@ -25,12 +26,15 @@ npm run validate:assets   # Kreate GLB 검증 (-- --strict, -- --json)
 
 ```
 src/core/      게임 루프, 이벤트, 설정 로딩, 입력
-src/sim/       시뮬레이션 (순수 TS, Phase 1~)
-src/gameplay/  플레이어·스킬 등 (Phase 0: noclip 카메라)
-src/world/     LevelLoader, 노드 이름 규칙, Rapier, recast
-src/debug/     lil-gui 패널, 오버레이, 핫 리로드
-data/          밸런스·설정 JSON
-assets/kreate/ Kreate에서 내보낸 GLB
-tools/         validate-assets, make-greybox
+src/sim/          StimulusBus, EnergyModel (순수 TS)
+src/gameplay/     StageSession, 플레이어, 엘리베이터, 상호작용, 스킬
+src/npc/          지각, 상태 머신, 절차적 애니메이터
+src/world/        LevelLoader, 노드 이름 규칙, Rapier, recast, mover
+src/presentation/ 후처리, 카메라, 오디오, HUD
+src/debug/        lil-gui 패널, 오버레이, 핫 리로드
+data/             밸런스·설정·문구 JSON
+assets/kreate/    Kreate에서 내보낸 GLB
+assets/kreate-src Kreate 원본 문서 (.kreate)
+tools/            validate-assets, make-greybox, kreate-scripts
 docs/          Kreate 제작 규칙, Kreate 기능 요청서
 ```

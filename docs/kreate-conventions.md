@@ -69,6 +69,8 @@ COL_table__shape=box
 |---|---|---|---|
 | `TRG_` | `eventId` | ✔ | 스테이지 스크립트(`data/stages/stageNN.json`)에서 찾을 이벤트 이름 |
 |  | `once` |  | `true`면 한 번만 발동 |
+|  | `interact` |  | `true`면 들어갈 때가 아니라 **바라보고 F를 눌렀을 때** 발동 (버튼·침대 등). 박스는 버튼보다 조금 크게 |
+| `VIS_` `COL_` `LOS_` `TRG_` | `mover` |  | 같은 값끼리 묶여 **함께 움직임** (엘리베이터 칸·문). 움직임은 스테이지 설정이 정함 |
 | `ZONE_` | `stimulus` | ✔ | 자극 종류 (`crowd`, `noise` 등) |
 |  | `intensity` |  | 0~1 강도 |
 | `SAFE_` | `capacity` |  | 동시에 숨을 수 있는 인원 |
@@ -108,7 +110,16 @@ npm run dev                 # 게임 실행 → 디버그 패널(F1)에서 오�
 
 ---
 
-## 5. 캐릭터 (Phase 1 이후 사용)
+## 5. 움직이는 부분 (엘리베이터 예시 — 스테이지 1)
+
+- 칸: 바닥·벽·천장·버튼을 모두 `__mover=elevCar`로 묶는다. 1층 위치에 만든다 (층 높이는 `data/stages/stage01.json`의 `stops`).
+- 승강장 문: 층마다 `VIS_elevDoor1F__mover=elevDoor1F` + `COL_elevDoor1F__shape=box__mover=elevDoor1F`. 닫힌 위치에 만들면 게임이 +X로 밀어 연다.
+- **문턱·칸 바닥·샤프트 벽은 문 선(문 안쪽 면)에 정확히 맞춘다.** 고정된 문턱이나 벽이 칸 쪽으로 몇 cm라도 튀어나오면, 문 가까이 선 사람이 거기에 걸려 칸만 떠나 버린다. (실제로 겪은 문제 — 문턱이 15cm 튀어나와 있었음)
+- 호출 버튼·칸 안 버튼은 `TRG_..__interact=true` 박스로 감싼다.
+
+---
+
+## 6. 캐릭터 (Phase 1 이후 사용)
 
 - 애니메이션 클립 이름: `Idle`, `Walk`, `TurnHead`, `Nod`, `Reach`, `Talk`, `Sit`, `Laugh`
 - 스켈레탈 애니메이션을 쓰지 않는 경우: 모델을 `HEAD`, `BODY`, `ARM_L`, `ARM_R` 오브젝트로 나눠 주면 게임이 코드로 움직입니다.
