@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { NodeIO } from '@gltf-transform/core';
+import { Logger, NodeIO } from '@gltf-transform/core';
 import { assetBudgetSchema, parseConfig } from '../src/core/configSchemas';
 import { validateAsset, type AssetReport } from './lib/validateAsset';
 
@@ -32,7 +32,8 @@ async function main(): Promise<number> {
     JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'assetBudget.json'), 'utf8')),
     'data/assetBudget.json',
   );
-  const io = new NodeIO();
+  // Kreate 전용 선택 확장(KREATE_ngons 등) 미지원 안내는 출력하지 않는다
+  const io = new NodeIO().setLogger(new Logger(Logger.Verbosity.ERROR));
   const files = findGlbs(ASSET_DIR);
   const reports: AssetReport[] = [];
 
