@@ -191,7 +191,7 @@ solid('elevDoor1F', -0.8, 0.8, 22.05, 22.15, F1, F1 + DOOR_H, 'metal', '__mover=
 solid('elevDoor3F', -0.8, 0.8, 22.05, 22.15, F3, F3 + DOOR_H, 'metal', '__mover=elevDoor3F');
 
 // ───────────── 스폰과 순찰 경로 ─────────────
-empty('SPAWN_player', 0.8, -1.5, F3); // 집 안, 현관(+Y) 방향
+empty('SPAWN_player', 0, -1.0, F3); // 집 안, 현관(+Y) 방향
 empty('SPAWN_npc_neighbor', 0.6, 20.5, F3, Math.PI);
 empty('PATH_neighbor_01', 0.6, 20.5, F3);
 empty('PATH_neighbor_02', 0.6, 8.0, F3);

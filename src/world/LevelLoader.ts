@@ -7,6 +7,7 @@ import { parseNodeName, parsePathId, type ParsedNode } from './parseNodeName';
 import { LOS_GROUPS, SENSOR_GROUPS, WORLD_GROUPS } from './collisionGroups';
 import { buildNavigation, type Navigation } from './navigation';
 import type { PhysicsWorld } from './physics';
+import { Mover } from './Mover';
 
 /** 방향을 가진 위치 (SPAWN_). yaw는 −Z가 0, 라디안 */
 export interface SpawnPoint {
@@ -15,7 +16,7 @@ export interface SpawnPoint {
   yaw: number;
 }
 
-/** 센서 볼륨 (TRG_/SAFE_/HIDE_/ZONE_). 회전된 박스(OBB) */
+/** 센서 볼륨 (TRG_/SAFE_/HIDE_/ZONE_). 회전된 박스(OBB). center는 레벨에 배치된 원래 위치 */
 export interface VolumeDef<P extends VolumePrefix = VolumePrefix> {
   kind: P;
   id: string;
@@ -25,12 +26,22 @@ export interface VolumeDef<P extends VolumePrefix = VolumePrefix> {
   rotation: THREE.Quaternion;
   halfExtents: THREE.Vector3;
   collider: RAPIER.Collider;
+  /** 움직이는 묶음에 속하면 그 mover */
+  mover: Mover | null;
 }
 
-/** 디버그 오버레이용 원본 메시 (월드 변환 포함) */
+/** 현재 볼륨 중심 (mover 이동 반영) */
+export function volumeCenter(volume: VolumeDef, out = new THREE.Vector3()): THREE.Vector3 {
+  out.copy(volume.center);
+  if (volume.mover) out.add(volume.mover.offset);
+  return out;
+}
+
+/** 디버그 오버레이용 원본 메시 (로드 시점의 월드 변환 포함) */
 export interface SourceMesh {
   nodeName: string;
   mesh: THREE.Mesh;
+  mover: Mover | null;
 }
 
 export interface LevelWarning {
@@ -52,6 +63,8 @@ export interface Level {
   navSourceMeshes: SourceMesh[];
   navigation: Navigation | null;
   colliders: RAPIER.Collider[];
+  /** mover id → 움직이는 묶음 */
+  movers: Map<string, Mover>;
   warnings: LevelWarning[];
   dispose(): void;
 }
@@ -156,6 +169,18 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
     nodes.push({ obj, parsed: parseNodeName(rawName, obj.userData) });
   });
 
+  const movers = new Map<string, Mover>();
+  const getMover = (moverId: string): Mover => {
+    let mover = movers.get(moverId);
+    if (!mover) {
+      mover = new Mover(moverId, ctx.physics.addKinematicBody(), ctx.physics.world);
+      root.add(mover.group);
+      movers.set(moverId, mover);
+    }
+    return mover;
+  };
+  const toReparent: { obj: THREE.Object3D; mover: Mover }[] = [];
+
   for (const { obj, parsed } of nodes) {
     for (const issue of parsed.issues) warnings.push({ node: parsed.rawName, level: issue.level, message: issue.message });
     const { prefix, id, props } = parsed;
@@ -165,19 +190,24 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
     // 필수 속성이 틀린 노드는 게임플레이 요소를 만들지 않는다 (경고는 위에서 기록)
     if (props === null) continue;
 
+    const moverId = typeof props['mover'] === 'string' ? props['mover'] : null;
+    const mover = moverId ? getMover(moverId) : null;
+    const parent = mover?.body;
+    if (mover) toReparent.push({ obj, mover });
+
     switch (prefix) {
       case 'VIS':
         break;
 
       case 'COL':
         for (const mesh of meshes) {
-          colliderMeshes.push({ nodeName: parsed.rawName, mesh });
+          colliderMeshes.push({ nodeName: parsed.rawName, mesh, mover });
           if ((props as PropsOf<'COL'>).shape === 'box') {
             const obb = nodeObb(mesh, [mesh]);
-            colliders.push(ctx.physics.addStaticBox(obb.center, obb.rotation, obb.halfExtents, WORLD_GROUPS));
+            colliders.push(ctx.physics.addStaticBox(obb.center, obb.rotation, obb.halfExtents, WORLD_GROUPS, parent));
           } else {
             const { vertices, indices } = worldTriangles(mesh);
-            colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, WORLD_GROUPS));
+            colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, WORLD_GROUPS, parent));
           }
         }
         if (meshes.length === 0) warnings.push({ node: parsed.rawName, level: 'warning', message: 'COL_ 노드에 메시가 없습니다' });
@@ -185,14 +215,14 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
 
       case 'LOS':
         for (const mesh of meshes) {
-          losMeshes.push({ nodeName: parsed.rawName, mesh });
+          losMeshes.push({ nodeName: parsed.rawName, mesh, mover });
           const { vertices, indices } = worldTriangles(mesh);
-          colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, LOS_GROUPS));
+          colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, LOS_GROUPS, parent));
         }
         break;
 
       case 'NAV':
-        for (const mesh of meshes) navSourceMeshes.push({ nodeName: parsed.rawName, mesh });
+        for (const mesh of meshes) navSourceMeshes.push({ nodeName: parsed.rawName, mesh, mover: null });
         break;
 
       case 'SPAWN': {
@@ -220,14 +250,17 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
             break;
           }
           const obb = nodeObb(obj, meshes);
-          const def = { kind: prefix, id, nodeName: parsed.rawName, props, ...obb } as Omit<VolumeDef, 'collider'>;
-          const collider = ctx.physics.addSensorBox(obb.center, obb.rotation, obb.halfExtents, SENSOR_GROUPS, def);
+          const def = { kind: prefix, id, nodeName: parsed.rawName, props, mover, ...obb } as Omit<VolumeDef, 'collider'>;
+          const collider = ctx.physics.addSensorBox(obb.center, obb.rotation, obb.halfExtents, SENSOR_GROUPS, def, parent);
           const volume = Object.assign(def, { collider }) as VolumeDef;
           volumes.push(volume);
           colliders.push(collider);
         }
     }
   }
+
+  // mover 노드는 월드 변환을 유지한 채 mover 그룹 아래로 옮긴다
+  for (const { obj, mover } of toReparent) mover.group.attach(obj);
 
   const paths = new Map<string, THREE.Vector3[]>();
   for (const [npcId, list] of pathPoints) {
@@ -265,10 +298,12 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
     navSourceMeshes,
     navigation,
     colliders,
+    movers,
     warnings,
     dispose() {
       root.removeFromParent();
       ctx.physics.removeColliders(colliders);
+      ctx.physics.removeBodies([...movers.values()].map((m) => m.body));
       navigation?.dispose();
       disposeObject(root);
     },

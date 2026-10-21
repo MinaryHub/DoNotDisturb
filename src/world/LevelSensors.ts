@@ -35,15 +35,25 @@ export class LevelSensors extends EventEmitter<LevelSensorEvents> {
       this.emit('volumeEnter', { volume });
       if (volume.kind === 'TRG') {
         const trg = volume as VolumeDef<'TRG'>;
-        if (trg.props.once && this.fired.has(volume)) return;
-        this.fired.add(volume);
-        this.emit('trigger', { eventId: trg.props.eventId, volume: trg });
+        // interact=true는 진입이 아니라 상호작용 키로 발동한다 (Interaction이 fireInteract 호출)
+        if (!trg.props.interact) this.fire(trg);
       }
     } else {
       this.inside.delete(volume);
       this.emit('volumeExit', { volume });
     }
   };
+
+  /** 상호작용형 TRG_ 발동 */
+  fireInteract(volume: VolumeDef<'TRG'>): void {
+    this.fire(volume);
+  }
+
+  private fire(trg: VolumeDef<'TRG'>): void {
+    if (trg.props.once && this.fired.has(trg)) return;
+    this.fired.add(trg);
+    this.emit('trigger', { eventId: trg.props.eventId, volume: trg });
+  }
 
   /** 레벨 재로드 시 상태 초기화 */
   reset(): void {

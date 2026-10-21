@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Level, VolumeDef } from '../world/LevelLoader';
 import type { VolumePrefix } from '../world/levelSchema';
 import { navMeshDebugGeometry } from '../world/navigation';
+import type { Mover } from '../world/Mover';
 
 export const OVERLAY_LAYERS = ['colliders', 'los', 'volumes', 'spawns', 'paths', 'navmesh', 'labels'] as const;
 export type OverlayLayer = (typeof OVERLAY_LAYERS)[number];
@@ -18,6 +19,7 @@ export class DebugOverlay {
   readonly root = new THREE.Group();
   private readonly layers = new Map<OverlayLayer, THREE.Group>();
   private readonly volumeMeshes = new Map<VolumeDef, THREE.Mesh>();
+  private readonly moverHolders = new Map<string, { group: THREE.Group; mover: Mover }>();
   private readonly ownedGeometries: THREE.BufferGeometry[] = [];
   private readonly ownedMaterials: THREE.Material[] = [];
 
@@ -40,10 +42,10 @@ export class DebugOverlay {
     const layer = (name: OverlayLayer) => this.layers.get(name)!;
 
     const colMat = this.material(new THREE.MeshBasicMaterial({ color: 0x39ff6a, wireframe: true }));
-    for (const { mesh } of level.colliderMeshes) layer('colliders').add(this.worldCopy(mesh, colMat));
+    for (const { mesh, mover } of level.colliderMeshes) this.holder('colliders', mover).add(this.worldCopy(mesh, colMat));
 
     const losMat = this.material(new THREE.MeshBasicMaterial({ color: 0xff8a2a, wireframe: true }));
-    for (const { mesh } of level.losMeshes) layer('los').add(this.worldCopy(mesh, losMat));
+    for (const { mesh, mover } of level.losMeshes) this.holder('los', mover).add(this.worldCopy(mesh, losMat));
 
     for (const volume of level.volumes) {
       const size = volume.halfExtents.clone().multiplyScalar(2);
@@ -59,11 +61,11 @@ export class DebugOverlay {
         this.material(new THREE.LineBasicMaterial({ color: VOLUME_COLORS[volume.kind] })),
       );
       box.add(edges);
-      layer('volumes').add(box);
+      this.holder('volumes', volume.mover).add(box);
       this.volumeMeshes.set(volume, box);
 
       const detail = volume.kind === 'TRG' ? `eventId=${(volume as VolumeDef<'TRG'>).props.eventId}` : '';
-      layer('labels').add(this.label(`${volume.kind}_${volume.id} ${detail}`, volume.center, VOLUME_COLORS[volume.kind]));
+      this.holder('labels', volume.mover).add(this.label(`${volume.kind}_${volume.id} ${detail}`, volume.center, VOLUME_COLORS[volume.kind]));
     }
 
     for (const spawn of level.spawns.values()) {
@@ -111,16 +113,32 @@ export class DebugOverlay {
     }
   }
 
-  /** 플레이어가 들어가 있는 볼륨을 강조 */
-  highlight(active: ReadonlySet<VolumeDef>): void {
+  /** 플레이어가 들어가 있는 볼륨을 강조하고, 움직이는 묶음의 표시를 따라가게 한다 */
+  update(active: ReadonlySet<VolumeDef>): void {
     for (const [volume, mesh] of this.volumeMeshes) {
       (mesh.material as THREE.MeshBasicMaterial).opacity = active.has(volume) ? 0.45 : 0.18;
     }
+    for (const { group, mover } of this.moverHolders.values()) group.position.copy(mover.group.position);
+  }
+
+  /** 레이어 안에서 mover를 따라 움직일 그룹 (mover가 없으면 레이어 자체) */
+  private holder(layer: OverlayLayer, mover: Mover | null): THREE.Group {
+    const base = this.layers.get(layer)!;
+    if (!mover) return base;
+    const key = `${layer}:${mover.id}`;
+    let entry = this.moverHolders.get(key);
+    if (!entry) {
+      entry = { group: new THREE.Group(), mover };
+      base.add(entry.group);
+      this.moverHolders.set(key, entry);
+    }
+    return entry.group;
   }
 
   clear(): void {
     for (const group of this.layers.values()) group.clear();
     this.volumeMeshes.clear();
+    this.moverHolders.clear();
     for (const g of this.ownedGeometries.splice(0)) g.dispose();
     for (const m of this.ownedMaterials.splice(0)) {
       if (m instanceof THREE.SpriteMaterial) m.map?.dispose();

@@ -123,7 +123,7 @@ async function main(): Promise<void> {
       panel.beginFrame();
       if (input.wasPressed('toggleDebug')) panel.toggle();
       if (input.wasPressed('reloadLevel')) void openLevel(levelPath, { keepCamera: true });
-      overlay.highlight(sensors.activeVolumes);
+      overlay.update(sensors.activeVolumes);
       renderer.render(scene, fp.camera);
       panel.endFrame(renderer, fp.camera);
       input.endFrame();
