@@ -40,7 +40,7 @@ export class PlayerController {
   constructor(
     private readonly physics: PhysicsWorld,
     private readonly cfg: PlayerConfig,
-    private readonly moverByBody: (bodyHandle: number) => Mover | null,
+    private readonly moverByCollider: (colliderHandle: number) => Mover | null,
   ) {
     this.halfHeight = Math.max(0.05, (cfg.height - 2 * cfg.radius) / 2);
     this.body = physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
@@ -86,6 +86,14 @@ export class PlayerController {
   fixedUpdate(dt: number, intent: MoveIntent, mods: MoveModifiers): void {
     this.prevPos.copy(this.currPos);
 
+    // 움직이는 바닥(엘리베이터)에 서 있으면 바닥이 움직인 만큼 충돌 검사 없이 함께 옮긴다.
+    // 바닥이 위로 올라갈 때 캡슐을 먼저 뚫고 올라오는 것을 막기 위해 이동 계산보다 먼저 한다.
+    if (this.carrier && this.carrier.lastDelta.lengthSq() > 0) {
+      this.currPos.add(this.carrier.lastDelta);
+      this.body.setTranslation(this.currPos, true);
+      this.physics.world.propagateModifiedBodyPositionsToColliders();
+    }
+
     const speed = (intent.run ? this.cfg.runSpeed : this.cfg.walkSpeed) * mods.speedMultiplier;
     const wish = new THREE.Vector3(intent.move.x, 0, intent.move.y);
     if (wish.lengthSq() > 1) wish.normalize();
@@ -93,25 +101,40 @@ export class PlayerController {
 
     this.verticalSpeed = this.grounded ? -0.5 : this.verticalSpeed + this.cfg.gravity * dt;
     const desired = new THREE.Vector3(wish.x, this.verticalSpeed * dt, wish.z);
-    // 움직이는 바닥(엘리베이터)에 서 있으면 그 이동량을 더한다
-    if (this.carrier) desired.add(this.carrier.lastDelta);
 
     this.controller.computeColliderMovement(this.collider, desired, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, PLAYER_MOVE_FILTER);
     const moved = this.controller.computedMovement();
     this.grounded = this.controller.computedGrounded();
 
-    this.carrier = null;
-    for (let i = 0; i < this.controller.numComputedCollisions(); i++) {
-      const hit = this.controller.computedCollision(i);
-      const parent = hit?.collider?.parent();
-      if (hit && parent && hit.normal1.y > 0.7) this.carrier = this.moverByBody(parent.handle) ?? this.carrier;
-    }
-
-    const t = this.body.translation();
-    this.currPos.set(t.x + moved.x, t.y + moved.y, t.z + moved.z);
+    this.currPos.add(moved);
+    this.carrier = this.grounded ? this.findCarrier() : null;
     this.body.setNextKinematicTranslation(this.currPos);
     this.horizontalSpeed = Math.hypot(moved.x, moved.z) / dt;
   }
+
+  /**
+   * 발밑의 얇은 상자와 겹치는 움직이는 바닥을 찾는다.
+   * (문턱에 걸쳐 서 있어도 칸 바닥을 밟고 있으면 함께 움직이도록 접촉점 하나가 아니라 발 면적으로 판정)
+   */
+  private findCarrier(): Mover | null {
+    const feetY = this.currPos.y - this.halfHeight - this.cfg.radius;
+    const r = this.cfg.radius * 0.8;
+    let found: Mover | null = null;
+    this.physics.world.intersectionsWithShape(
+      { x: this.currPos.x, y: feetY - 0.06, z: this.currPos.z },
+      { x: 0, y: 0, z: 0, w: 1 },
+      this.footProbe ??= new RAPIER.Cuboid(r, 0.06, r),
+      (collider) => {
+        found = this.moverByCollider(collider.handle);
+        return found === null; // 찾으면 중단
+      },
+      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS,
+      PLAYER_MOVE_FILTER,
+    );
+    return found;
+  }
+
+  private footProbe: RAPIER.Cuboid | null = null;
 
   /** 렌더용 보간된 눈 위치 */
   eyePosition(alpha: number, out = new THREE.Vector3()): THREE.Vector3 {

@@ -101,7 +101,7 @@ solid('lobby_wall_E_lintel', 1.5, 1.5 + WT, 14.2, 15.2, F1 + DOOR_H, F1 + H, 'wa
 box('VIS_lobby_entrance', -3, 0.5, 6 - 0.05, 6.02, F1, 2.4, 'metal');
 solid('lobby_mailbox', -4, -3.6, 10, 13, F1, 1.6, 'metal');
 // 엘리베이터 문턱
-floorSlab('elev_sill_1F', -0.8, 0.8, 22, 22.3, F1, false);
+floorSlab('elev_sill_1F', -0.8, 0.8, 22, 22.15, F1, false);
 // 호출 버튼
 box('VIS_elevCall1F_button', 1.0, 1.2, 21.94, 22, 1.1, 1.35, 'button');
 box('TRG_elevCall1F__eventId=elevCall1F__interact=true', 0.9, 1.3, 21.7, 22, 0.95, 1.5);
@@ -120,7 +120,7 @@ solid('corridor3F_wall_E_lintel', 1.5, 1.5 + WT, 14.2, 15.2, F3 + DOOR_H, F3 + H
 solid('corridor3F_wall_N_a', -1.5 - WT, -0.8, 22, 22 + WT, F3, F3 + H, 'wall');
 solid('corridor3F_wall_N_b', 0.8, 1.5 + WT, 22, 22 + WT, F3, F3 + H, 'wall');
 solid('corridor3F_wall_N_lintel', -0.8, 0.8, 22, 22 + WT, F3 + DOOR_H, F3 + H, 'wall');
-floorSlab('elev_sill_3F', -0.8, 0.8, 22, 22.3, F3, false);
+floorSlab('elev_sill_3F', -0.8, 0.8, 22, 22.15, F3, false);
 // 이웃집 현관문 (장식)
 box('VIS_door_301', -1.5, -1.44, 7.5, 8.5, F3, F3 + 2.1, 'door');
 box('VIS_door_302', 1.44, 1.5, 11, 12, F3, F3 + 2.1, 'door');
@@ -173,12 +173,13 @@ box('VIS_stair_ceiling', 1.5, SX1 + WT, 14, 19.4, F3 + H, F3 + H + 0.2, 'ceiling
 solid('shaft_wall_W', -1.3, -1.1, 22, 24.6, F1 - 0.3, F3 + H + 0.4, 'wall');
 solid('shaft_wall_E', 1.1, 1.3, 22, 24.6, F1 - 0.3, F3 + H + 0.4, 'wall');
 solid('shaft_wall_N', -1.3, 1.3, 24.4, 24.6, F1 - 0.3, F3 + H + 0.4, 'wall');
-solid('shaft_wall_S_2F', -1.3, 1.3, 22, 22 + WT, F1 + H, F3, 'wall');
+solid('shaft_wall_S_2F', -1.3, 1.3, 22, 22.15, F1 + H, F3, 'wall'); // 문 선과 같은 면 (칸 쪽으로 튀어나오지 않게)
 solid('shaft_pit', -1.1, 1.1, 22.3, 24.4, F1 - 0.5, F1 - 0.3, 'wall');
 
 // 엘리베이터 칸 (움직이는 부분: mover=elevCar). 시작 위치 1층
 const CAR = '__mover=elevCar';
-solid('elevCar_floor', -1.0, 1.0, 22.3, 24.3, F1 - 0.1, F1, 'metal', CAR);
+// 칸 바닥은 문 선(22.15)까지 나와 있어 문턱에 걸쳐 서는 일이 없게 한다
+solid('elevCar_floor', -1.0, 1.0, 22.15, 24.3, F1 - 0.1, F1, 'metal', CAR);
 solid('elevCar_wall_W', -1.0, -0.95, 22.3, 24.3, F1, F1 + 2.4, 'metal', CAR);
 solid('elevCar_wall_E', 0.95, 1.0, 22.3, 24.3, F1, F1 + 2.4, 'metal', CAR);
 solid('elevCar_wall_N', -1.0, 1.0, 24.25, 24.3, F1, F1 + 2.4, 'metal', CAR);

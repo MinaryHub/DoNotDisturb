@@ -60,7 +60,7 @@ export class StageSession extends EventEmitter<SessionEvents> {
   readonly completed = new Set<string>();
   private freezeTimer = 0;
   private readonly simEvents: SimEvent[] = [];
-  private readonly moverByBody = new Map<number, Mover>();
+  private readonly moverByCollider = new Map<number, Mover>();
   private readonly doorCenters: THREE.Vector3[] = [];
   private readonly zoneWarned = new Set<string>();
 
@@ -74,8 +74,8 @@ export class StageSession extends EventEmitter<SessionEvents> {
     this.physics = physics;
     this.sim = new Simulation(cfg.balance, cfg.stimuli);
     this.skills = new Skills(cfg.skills);
-    for (const m of level.movers.values()) this.moverByBody.set(m.body.handle, m);
-    this.player = new PlayerController(physics, cfg.player, (h) => this.moverByBody.get(h) ?? null);
+    for (const m of level.movers.values()) for (const h of m.colliderHandles) this.moverByCollider.set(h, m);
+    this.player = new PlayerController(physics, cfg.player, (h) => this.moverByCollider.get(h) ?? null);
     const spawn = level.spawns.get('player');
     if (spawn) this.player.placeAt(spawn.position, spawn.yaw);
 
@@ -219,8 +219,10 @@ export class StageSession extends EventEmitter<SessionEvents> {
     if (!this.elevator) return false;
     const c = this.doorCenters[this.elevator.stopIndex];
     if (!c) return false;
+    // 캡슐이 문이 닫히는 면과 겹치는지 (반경 + 문 두께의 절반)
     const f = this.player.feet;
-    return Math.abs(f.x - c.x) < 0.9 && Math.abs(f.z - c.z) < 0.5 && Math.abs(f.y - (c.y - 1.1)) < 1;
+    const reach = this.cfg.player.radius + 0.05;
+    return Math.abs(f.x - c.x) < 0.8 + this.cfg.player.radius && Math.abs(f.z - c.z) < reach && Math.abs(f.y - (c.y - 1.1)) < 1;
   }
 
   private onTrigger(eventId: string, _volume: VolumeDef<'TRG'>): void {

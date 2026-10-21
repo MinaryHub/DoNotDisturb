@@ -1,0 +1,34 @@
+{
+  "postfx": {
+    "stressVignette": 0.6,
+    "redTint": [0.5, 0.04, 0.05],
+    "tiredDesaturation": 0.2,
+    "dangerDistortion": 1.0,
+    "criticalTunnel": 1.0,
+    "burnoutFadeSec": 2.5,
+    "distortionScale": 1.0
+  },
+  "camera": {
+    "dangerFovExtraDeg": 14,
+    "shakeAmplitude": 0.04,
+    "shakeRollDeg": 2.0,
+    "shakeFrequency": 18,
+    "burnoutSinkSec": 2.5,
+    "burnoutSinkHeight": 0.9,
+    "burnoutRollDeg": 14,
+    "headBobAmplitude": 0.025,
+    "headBobFrequency": 1.9
+  },
+  "audio": {
+    "masterVolume": 0.8,
+    "murmurZoneGain": 0.35,
+    "murmurTiredBonus": 0.12,
+    "heartbeatMinBpm": 62,
+    "heartbeatMaxBpm": 128,
+    "heartbeatGain": 0.9,
+    "tinnitusHz": 7600,
+    "tinnitusGain": 0.02,
+    "ringGain": 0.35,
+    "footstepGain": 0.5
+  }
+}

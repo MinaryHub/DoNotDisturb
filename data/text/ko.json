@@ -12,5 +12,10 @@
   "result.clear.title": "무사히 귀가",
   "result.clear.body": "오늘 하루도 잘 버텼어요. 이제 푹 쉬어요.",
   "result.retry": "R 다시 시작",
-  "hud.paused": "클릭해서 계속"
+  "hud.paused": "클릭해서 계속",
+  "hud.start.title": "방해 금지 모드",
+  "hud.start.hint": "클릭해서 시작 · WASD 이동 · Shift 달리기 · F 상호작용 · E 이어폰 · Q(누르고 있기) 폰 보는 척",
+  "hud.skill.earphones": "🎧 노이즈 캔슬링",
+  "hud.skill.phone": "📱 폰 보는 중",
+  "hud.objectivePrefix": "오늘 할 일"
 }

@@ -96,6 +96,38 @@ describe('엘리베이터', () => {
     expect(session.player.isGrounded).toBe(true);
   });
 
+  it('칸 안쪽 문 가까이(0.4m) 서 있어도 문은 닫히고 출발한다', () => {
+    session.elevator!.handleEvent('elevCall3F');
+    run(6);
+    teleport(0.25, 6.05, -22.5, -Math.PI / 2);
+    session.elevator!.handleEvent('elevPanel');
+    session.elevator!.handleEvent('elevPanel');
+    session.elevator!.handleEvent('elevPanel');
+    run(8);
+    expect(session.elevator!.floor).toBe('1F');
+    expect(session.player.feet.y).toBeCloseTo(0, 0);
+  });
+
+  it('승강장에서 걸어서 칸에 타고, 다시 걸어서 내릴 수 있다 (문턱·칸 바닥 이음매)', () => {
+    session.elevator!.handleEvent('elevCall1F');
+    run(3);
+    teleport(0.3, 0, -20.5, 0); // 1층 승강장, 칸(−Z)을 바라봄
+    run(1.2, { move: new THREE.Vector2(0, -1) });
+    expect(session.player.feet.z).toBeLessThan(-23.0);
+    session.player.yaw = Math.PI; // 로비 쪽으로 돌아서
+    run(1.2, { move: new THREE.Vector2(0, -1) });
+    expect(session.player.feet.z).toBeGreaterThan(-21.5);
+  });
+
+  it('칸이 올라갈 때 탄 사람이 바닥을 뚫고 떨어지지 않는다', () => {
+    teleport(0, 0, -23.3);
+    session.elevator!.handleEvent('elevPanel');
+    run(8);
+    expect(session.elevator!.floor).toBe('3F');
+    expect(session.player.feet.y).toBeCloseTo(6, 0);
+    expect(session.player.isGrounded).toBe(true);
+  });
+
   it('문턱에 서 있으면 닫히던 문이 다시 열린다', () => {
     teleport(0, 0, -22.1);
     session.elevator!.handleEvent('elevCall1F');

@@ -50,6 +50,137 @@ body {
   color: #ffb0b0;
 }
 
+/* ───── 플레이 HUD (수치 없음) ───── */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud__crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.hud__objective {
+  position: absolute;
+  left: 24px;
+  top: 20px;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: rgba(240, 236, 228, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.hud__prompt {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 15px;
+  transition: opacity 0.15s;
+  opacity: 0;
+}
+
+.hud__toast {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  color: #f3eadb;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  transition: opacity 0.6s;
+  opacity: 0;
+}
+
+.hud__skills {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  font-size: 14px;
+  color: rgba(240, 236, 228, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.npc-tag {
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(30, 30, 36, 0.55);
+  color: #e9e3d6;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9;
+  transition: background 0.3s;
+}
+
+.npc-tag[data-state='approach'],
+.npc-tag[data-state='talk'] {
+  background: rgba(150, 60, 50, 0.6);
+}
+
+/* ───── 시작·일시정지·결과 화면 ───── */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 14, 0.55);
+  cursor: pointer;
+}
+
+.screen[data-kind='burnout'],
+.screen[data-kind='clear'] {
+  background: rgba(10, 10, 14, 0.82);
+  cursor: default;
+}
+
+.screen[data-kind='clear'] {
+  background: rgba(40, 28, 12, 0.78);
+}
+
+.screen__box {
+  max-width: 560px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.screen__title {
+  margin: 0 0 12px;
+  font-size: 30px;
+  font-weight: 600;
+  color: #f1e9da;
+}
+
+.screen__body {
+  margin: 0 0 22px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #ddd5c6;
+}
+
+.screen__hint {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(221, 213, 198, 0.7);
+}
+
 .fatal {
   position: fixed;
   inset: 20px;

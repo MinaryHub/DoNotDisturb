@@ -3,6 +3,7 @@ import Stats from 'stats.js';
 import type * as THREE from 'three';
 import { OVERLAY_LAYERS, type DebugOverlay, type OverlayLayer } from './DebugOverlay';
 import type { Level } from '../world/LevelLoader';
+import type { StageSession } from '../gameplay/StageSession';
 
 const LAYER_LABELS: Record<OverlayLayer, string> = {
   colliders: 'COL_ 충돌체',
@@ -18,6 +19,7 @@ export interface DebugPanelActions {
   reloadLevel(): void;
   loadLevel(path: string): void;
   respawn(): void;
+  toggleNoclip(): void;
 }
 
 /** lil-gui 디버그 패널 + stats.js + 화면 이벤트 로그 */
@@ -55,6 +57,7 @@ export class DebugPanel {
       .onFinishChange((v: string) => actions.loadLevel(v));
     levelFolder.add(actions, 'reloadLevel').name('다시 불러오기 (F5)');
     levelFolder.add(actions, 'respawn').name('SPAWN_player로 이동');
+    levelFolder.add(actions, 'toggleNoclip').name('자유 비행 카메라 (F2)');
     levelFolder.add(this.levelInfo, 'errors').name('오류').disable().listen();
     levelFolder.add(this.levelInfo, 'warnings').name('경고').disable().listen();
     levelFolder.add(this.levelInfo, 'volumes').name('볼륨 수').disable().listen();
@@ -68,6 +71,64 @@ export class DebugPanel {
     perfFolder.add(this.perf, 'textures').name('텍스처').disable().listen();
 
     this.gui.addFolder('카메라').add(this.cameraInfo, 'position').name('위치').disable().listen();
+  }
+
+  private simFolder: GUI | null = null;
+  private readonly simInfo = {
+    battery: 0,
+    stress: 0,
+    tier: '',
+    inHome: false,
+    earphones: false,
+    npc: '',
+    notice: 0,
+    elevator: '',
+    outcome: '',
+  };
+
+  /** 시뮬레이션 수치 (디버그 전용 HUD) 와 테스트용 조작 */
+  bindSession(session: StageSession, actions: { emit(stimulusId: string): void; setBattery(v: number): void }): void {
+    this.simFolder?.destroy();
+    const f = this.gui.addFolder('시뮬레이션');
+    this.simFolder = f;
+    f.add(this.simInfo, 'battery', 0, 100).name('배터리').disable().listen();
+    f.add(this.simInfo, 'stress', 0, 100).name('스트레스').disable().listen();
+    f.add(this.simInfo, 'tier').name('구간').disable().listen();
+    f.add(this.simInfo, 'inHome').name('집 안').disable().listen();
+    f.add(this.simInfo, 'earphones').name('이어폰').disable().listen();
+    f.add(this.simInfo, 'npc').name('이웃 상태').disable().listen();
+    f.add(this.simInfo, 'notice', 0, 1).name('알아챔').disable().listen();
+    f.add(this.simInfo, 'elevator').name('엘리베이터').disable().listen();
+    f.add(this.simInfo, 'outcome').name('결과').disable().listen();
+    const tools = {
+      battery50: () => actions.setBattery(50),
+      battery30: () => actions.setBattery(30),
+      battery10: () => actions.setBattery(10),
+      voiceCall: () => actions.emit('voiceCall'),
+      textMessage: () => actions.emit('textMessage'),
+    };
+    f.add(tools, 'battery50').name('배터리 50 (Tired)');
+    f.add(tools, 'battery30').name('배터리 30 (Danger)');
+    f.add(tools, 'battery10').name('배터리 10 (Critical)');
+    f.add(tools, 'voiceCall').name('자극: 음성 통화');
+    f.add(tools, 'textMessage').name('자극: 문자');
+    this.updateSim(session);
+  }
+
+  updateSim(session: StageSession): void {
+    const snap = session.sim.snapshot();
+    const npc = session.npcs[0];
+    Object.assign(this.simInfo, {
+      battery: +snap.battery.toFixed(1),
+      stress: +snap.stress.toFixed(1),
+      tier: snap.tier,
+      inHome: session.inHome,
+      earphones: session.skills.earphones,
+      npc: npc?.state ?? '-',
+      notice: npc ? +npc.notice.toFixed(2) : 0,
+      elevator: session.elevator ? `${session.elevator.floor} / ${session.elevator.phase}` : '-',
+      outcome: session.outcome,
+    });
   }
 
   setLevel(level: Level): void {
@@ -98,6 +159,10 @@ export class DebugPanel {
     this.perf.textures = renderer.info.memory.textures;
     const p = camera.position;
     this.cameraInfo.position = `${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`;
+  }
+
+  get visible(): boolean {
+    return !this.gui._hidden;
   }
 
   toggle(): void {

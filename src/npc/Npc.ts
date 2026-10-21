@@ -102,6 +102,11 @@ export class Npc {
     this.syncVisual(1);
   }
 
+  /** 현재 이동 속도 (발소리 연출용) */
+  get moveSpeed(): number {
+    return this.speed;
+  }
+
   get eye(): THREE.Vector3 {
     return this.position.clone().setY(this.position.y + EYE_HEIGHT);
   }

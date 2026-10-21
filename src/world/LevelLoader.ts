@@ -173,7 +173,7 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
   const getMover = (moverId: string): Mover => {
     let mover = movers.get(moverId);
     if (!mover) {
-      mover = new Mover(moverId, ctx.physics.addKinematicBody(), ctx.physics.world);
+      mover = new Mover(moverId);
       root.add(mover.group);
       movers.set(moverId, mover);
     }
@@ -192,8 +192,13 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
 
     const moverId = typeof props['mover'] === 'string' ? props['mover'] : null;
     const mover = moverId ? getMover(moverId) : null;
-    const parent = mover?.body;
     if (mover) toReparent.push({ obj, mover });
+    /** 콜라이더 등록 (mover 소속이면 함께 움직이도록 mover에도 등록) */
+    const track = (c: RAPIER.Collider): RAPIER.Collider => {
+      colliders.push(c);
+      mover?.addCollider(c);
+      return c;
+    };
 
     switch (prefix) {
       case 'VIS':
@@ -204,10 +209,10 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
           colliderMeshes.push({ nodeName: parsed.rawName, mesh, mover });
           if ((props as PropsOf<'COL'>).shape === 'box') {
             const obb = nodeObb(mesh, [mesh]);
-            colliders.push(ctx.physics.addStaticBox(obb.center, obb.rotation, obb.halfExtents, WORLD_GROUPS, parent));
+            track(ctx.physics.addStaticBox(obb.center, obb.rotation, obb.halfExtents, WORLD_GROUPS));
           } else {
             const { vertices, indices } = worldTriangles(mesh);
-            colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, WORLD_GROUPS, parent));
+            track(ctx.physics.addStaticTrimesh(vertices, indices, WORLD_GROUPS));
           }
         }
         if (meshes.length === 0) warnings.push({ node: parsed.rawName, level: 'warning', message: 'COL_ 노드에 메시가 없습니다' });
@@ -217,7 +222,7 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
         for (const mesh of meshes) {
           losMeshes.push({ nodeName: parsed.rawName, mesh, mover });
           const { vertices, indices } = worldTriangles(mesh);
-          colliders.push(ctx.physics.addStaticTrimesh(vertices, indices, LOS_GROUPS, parent));
+          track(ctx.physics.addStaticTrimesh(vertices, indices, LOS_GROUPS));
         }
         break;
 
@@ -251,10 +256,8 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
           }
           const obb = nodeObb(obj, meshes);
           const def = { kind: prefix, id, nodeName: parsed.rawName, props, mover, ...obb } as Omit<VolumeDef, 'collider'>;
-          const collider = ctx.physics.addSensorBox(obb.center, obb.rotation, obb.halfExtents, SENSOR_GROUPS, def, parent);
-          const volume = Object.assign(def, { collider }) as VolumeDef;
-          volumes.push(volume);
-          colliders.push(collider);
+          const collider = track(ctx.physics.addSensorBox(obb.center, obb.rotation, obb.halfExtents, SENSOR_GROUPS, def));
+          volumes.push(Object.assign(def, { collider }) as VolumeDef);
         }
     }
   }
@@ -303,7 +306,6 @@ export function buildLevel(gltf: GLTF, url: string, ctx: LevelContext): Level {
     dispose() {
       root.removeFromParent();
       ctx.physics.removeColliders(colliders);
-      ctx.physics.removeBodies([...movers.values()].map((m) => m.body));
       navigation?.dispose();
       disposeObject(root);
     },

@@ -6,12 +6,14 @@ import skillsJson from '../../data/skills.json';
 import playerJson from '../../data/player.json';
 import npcProfilesJson from '../../data/npcProfiles.json';
 import textKoJson from '../../data/text/ko.json';
+import presentationJson from '../../data/presentation.json';
 import {
   balanceConfigSchema,
   inputConfigSchema,
   npcProfilesSchema,
   parseConfig,
   playerConfigSchema,
+  presentationConfigSchema,
   skillsConfigSchema,
   stageConfigSchema,
   stimulusTableSchema,
@@ -21,6 +23,7 @@ import {
   type InputConfig,
   type NpcProfile,
   type PlayerConfig,
+  type PresentationConfig,
   type SkillsConfig,
   type StageConfig,
   type StimulusTableConfig,
@@ -37,6 +40,7 @@ export interface GameConfig {
   player: PlayerConfig;
   npcProfiles: Record<string, NpcProfile>;
   text: TextTable;
+  presentation: PresentationConfig;
 }
 
 /** /data의 JSON을 zod로 검증해 불러온다. 값이 틀리면 시작 시점에 바로 실패한다. */
@@ -50,6 +54,7 @@ export function loadConfig(): GameConfig {
     player: parseConfig(playerConfigSchema, playerJson, 'data/player.json'),
     npcProfiles: parseConfig(npcProfilesSchema, npcProfilesJson, 'data/npcProfiles.json'),
     text: parseConfig(textTableSchema, textKoJson, 'data/text/ko.json'),
+    presentation: parseConfig(presentationConfigSchema, presentationJson, 'data/presentation.json'),
   };
 }
 

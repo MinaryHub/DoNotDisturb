@@ -20,6 +20,12 @@ export const worldConfigSchema = z.object({
     agentMaxSlopeDeg: z.number().min(0).max(90),
   }),
   hotReloadDebounceMs: nonNegative,
+  lighting: z.object({
+    ambient: z.object({ color: z.string(), intensity: nonNegative }),
+    hemisphere: z.object({ sky: z.string(), ground: z.string(), intensity: nonNegative }),
+    key: z.object({ color: z.string(), intensity: nonNegative, position: z.tuple([z.number(), z.number(), z.number()]) }),
+    background: z.string(),
+  }),
 });
 export type WorldConfig = z.infer<typeof worldConfigSchema>;
 
@@ -112,10 +118,46 @@ export const playerConfigSchema = z.object({
   gravity: z.number().negative(),
   interactRange: positive,
   mouseSensitivity: positive,
-  fovDangerExtraDeg: nonNegative,
-  burnoutSinkSec: positive,
 });
 export type PlayerConfig = z.infer<typeof playerConfigSchema>;
+
+const unit = z.number().min(0).max(1);
+export const presentationConfigSchema = z.object({
+  postfx: z.object({
+    stressVignette: unit,
+    redTint: z.tuple([unit, unit, unit]),
+    tiredDesaturation: unit,
+    dangerDistortion: nonNegative,
+    criticalTunnel: unit,
+    burnoutFadeSec: positive,
+    /** 접근성: 왜곡 강도 배율 (0이면 끔) */
+    distortionScale: nonNegative,
+  }),
+  camera: z.object({
+    dangerFovExtraDeg: nonNegative,
+    shakeAmplitude: nonNegative,
+    shakeRollDeg: nonNegative,
+    shakeFrequency: positive,
+    burnoutSinkSec: positive,
+    burnoutSinkHeight: nonNegative,
+    burnoutRollDeg: nonNegative,
+    headBobAmplitude: nonNegative,
+    headBobFrequency: positive,
+  }),
+  audio: z.object({
+    masterVolume: unit,
+    murmurZoneGain: nonNegative,
+    murmurTiredBonus: nonNegative,
+    heartbeatMinBpm: positive,
+    heartbeatMaxBpm: positive,
+    heartbeatGain: nonNegative,
+    tinnitusHz: positive,
+    tinnitusGain: nonNegative,
+    ringGain: nonNegative,
+    footstepGain: nonNegative,
+  }),
+});
+export type PresentationConfig = z.infer<typeof presentationConfigSchema>;
 
 export const npcProfileSchema = z.object({
   type: z.enum(['passerby', 'hunter', 'stalker', 'boss', 'ally']),

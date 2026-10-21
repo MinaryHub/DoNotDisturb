@@ -7,8 +7,6 @@
   "stepHeight": 0.3,
   "maxSlopeDeg": 45,
   "gravity": -18,
-  "interactRange": 2.0,
-  "mouseSensitivity": 0.0022,
-  "fovDangerExtraDeg": 14,
-  "burnoutSinkSec": 2.5
+  "interactRange": 2,
+  "mouseSensitivity": 0.0022
 }
