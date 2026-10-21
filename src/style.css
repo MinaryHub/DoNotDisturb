@@ -1,0 +1,58 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  color: #ddd;
+  font-family: system-ui, 'Malgun Gothic', sans-serif;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.debug-log {
+  position: fixed;
+  left: 8px;
+  bottom: 40px;
+  max-width: 60vw;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  pointer-events: none;
+}
+
+.debug-log__line {
+  padding: 1px 6px;
+  margin-top: 2px;
+  background: rgba(0, 0, 0, 0.55);
+  border-left: 3px solid #888;
+}
+
+.debug-log__line--event {
+  border-color: #ffd23f;
+  color: #ffe68a;
+}
+
+.debug-log__line--error {
+  border-color: #ff5050;
+  color: #ffb0b0;
+}
+
+.fatal {
+  position: fixed;
+  inset: 20px;
+  color: #ffb0b0;
+  white-space: pre-wrap;
+}
