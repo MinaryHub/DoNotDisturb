@@ -1,0 +1,11 @@
+{
+  "moveForward": ["KeyW"],
+  "moveBackward": ["KeyS"],
+  "moveLeft": ["KeyA"],
+  "moveRight": ["KeyD"],
+  "moveUp": ["Space"],
+  "moveDown": ["KeyC"],
+  "sprint": ["ShiftLeft", "ShiftRight"],
+  "toggleDebug": ["F1"],
+  "reloadLevel": ["F5"]
+}

@@ -1,0 +1,27 @@
+{
+  "triangles": {
+    "prop": 2000,
+    "npc": 8000,
+    "crowdNpc": 1500,
+    "fpHands": 6000,
+    "environmentModule": 10000
+  },
+  "textures": {
+    "maxSize": 2048,
+    "propMaxSize": 1024
+  },
+  "units": {
+    "minObjectSize": 0.01,
+    "maxObjectSize": 200,
+    "maxLevelExtent": 1000,
+    "maxCharacterHeight": 2.5,
+    "minCharacterHeight": 0.5
+  },
+  "categories": [
+    { "category": "level", "pathPrefix": "levels/" },
+    { "category": "prop", "pathPrefix": "props/" },
+    { "category": "crowdNpc", "pathPrefix": "characters/", "nameSuffix": "_crowd" },
+    { "category": "npc", "pathPrefix": "characters/" },
+    { "category": "fpHands", "pathPrefix": "fp/" }
+  ]
+}

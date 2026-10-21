@@ -1,0 +1,17 @@
+{
+  "battery": {
+    "max": 100,
+    "start": 100,
+    "outdoorDrainPerSec": 0.05,
+    "tiers": {
+      "tired": 69,
+      "danger": 39,
+      "critical": 14
+    }
+  },
+  "stress": {
+    "max": 100,
+    "decayPerSec": 2,
+    "somaticThreshold": 60
+  }
+}
