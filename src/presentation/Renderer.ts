@@ -6,7 +6,7 @@ import { inRect, type Rect, type TileMap, type Vec2 } from '../world/TileMap';
 import { Camera2D } from './Camera2D';
 import { parseTime } from '../sim/DayCycle';
 import { drawProp } from './draw/props';
-import { paintDeco } from './draw/tiles';
+import { isSolid, paintDeco, paintFloor, paintFloorLight } from './draw/tiles';
 import { Pigeons, Roofs, drawCloudShadows, timeTint } from './draw/ambient';
 import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
@@ -374,14 +374,17 @@ export class Renderer {
     c.width = c.height = CHUNK * CHUNK_PX;
     const g = c.getContext('2d')!;
     g.scale(CHUNK_PX, CHUNK_PX);
-    for (let y = 0; y < CHUNK; y++) {
-      for (let x = 0; x < CHUNK; x++) {
-        const tx = cx * CHUNK + x;
-        const ty = cy * CHUNK + y;
-        if (inRect(layer.rect, tx, ty)) this.paintTile(g, tx, ty, x, y);
-        else {
-          g.fillStyle = this.cfg.tiles[0]!.color;
-          g.fillRect(x, y, 1.02, 1.02);
+    // 바닥을 다 깐 뒤에 장식을 올린다 (나무 그림자처럼 칸 밖으로 번지는 것이 이웃 바닥에 덮이지 않게)
+    for (const pass of ['floor', 'deco'] as const) {
+      for (let y = 0; y < CHUNK; y++) {
+        for (let x = 0; x < CHUNK; x++) {
+          const tx = cx * CHUNK + x;
+          const ty = cy * CHUNK + y;
+          if (inRect(layer.rect, tx, ty)) this.paintTile(g, tx, ty, x, y, pass);
+          else if (pass === 'floor') {
+            g.fillStyle = this.cfg.tiles[0]!.color;
+            g.fillRect(x, y, 1.02, 1.02);
+          }
         }
       }
     }
@@ -390,49 +393,24 @@ export class Renderer {
     return c;
   }
 
-  private paintTile(g: CanvasRenderingContext2D, tx: number, ty: number, x: number, y: number): void {
-    const d = this.map.def(tx, ty);
-    g.fillStyle = d.color;
-    g.fillRect(x, y, 1.02, 1.02);
-    const a = d.accent ?? d.color;
-    g.fillStyle = a;
-    g.strokeStyle = a;
-    g.lineWidth = 0.06;
-    switch (d.pattern) {
-      case 'dots':
-        if ((tx * 7 + ty * 13) % 5 === 0) g.fillRect(x + 0.3, y + 0.6, 0.12, 0.12);
-        if ((tx * 3 + ty * 11) % 7 === 0) g.fillRect(x + 0.7, y + 0.2, 0.1, 0.1);
-        break;
-      case 'grid':
-        g.strokeRect(x + 0.03, y + 0.03, 0.94, 0.94);
-        break;
-      case 'plank':
-        g.fillRect(x, y + ((tx % 2) * 0.5 + 0.47), 1, 0.05);
-        break;
-      case 'stripe':
-        for (let i = 0; i < 3; i++) g.fillRect(x + 0.12 + i * 0.3, y + 0.1, 0.14, 0.8);
-        break;
-      default:
-        break;
+  private paintTile(g: CanvasRenderingContext2D, tx: number, ty: number, x: number, y: number, pass: 'floor' | 'deco'): void {
+    const m = this.map;
+    const d = m.def(tx, ty);
+    const n = { up: m.def(tx, ty - 1), down: m.def(tx, ty + 1), left: m.def(tx - 1, ty), right: m.def(tx + 1, ty), upLeft: m.def(tx - 1, ty - 1), upRight: m.def(tx + 1, ty - 1) };
+    if (pass === 'deco') {
+      if (d.deco) paintDeco(g, d, n, x, y, tx, ty);
+      return;
     }
-    if (d.tall) {
+    paintFloor(g, d, n, x, y, tx, ty);
+    if (isSolid(d)) {
       // 위쪽은 밝게, 아래쪽은 어둡게 → 살짝 서 있는 느낌
       g.fillStyle = 'rgba(255,255,255,0.10)';
       g.fillRect(x, y, 1, 0.18);
       g.fillStyle = 'rgba(0,0,0,0.18)';
       g.fillRect(x, y + 0.82, 1, 0.18);
-    } else if (this.map.def(tx, ty - 1).tall) {
-      // 벽 아래 바닥에 그림자
-      const grad = g.createLinearGradient(0, y, 0, y + 0.45);
-      grad.addColorStop(0, 'rgba(0,0,0,0.22)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = grad;
-      g.fillRect(x, y, 1, 0.45);
     }
-    if (d.deco) {
-      const m = this.map;
-      paintDeco(g, d, { up: m.def(tx, ty - 1), down: m.def(tx, ty + 1), left: m.def(tx - 1, ty), right: m.def(tx + 1, ty) }, x, y, tx, ty);
-    }
+    const area = m.areaAt(tx + 0.5, ty + 0.5);
+    paintFloorLight(g, d, n, x, y, tx, ty, !!area && area.kind !== 'outdoor');
     if (d.id === 'road' && ty % 6 === 2 && tx % 4 < 2) {
       g.fillStyle = 'rgba(240,230,190,0.5)';
       g.fillRect(x, y + 0.45, 1, 0.08);

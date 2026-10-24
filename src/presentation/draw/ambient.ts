@@ -16,10 +16,12 @@ interface Building {
   outer: Rect[];
   color: string;
   alpha: number;
-  details: { kind: 'ac' | 'vent' | 'tank'; x: number; y: number }[];
+  details: { kind: RoofDetail; x: number; y: number }[];
 }
 
 /** 지붕: 붙어 있는 실내 영역을 한 건물로 묶는다. 플레이어가 들어간 건물만 지붕이 걷힌다 */
+type RoofDetail = 'ac' | 'vent' | 'tank' | 'solar' | 'hatch' | 'stain';
+
 export class Roofs {
   private readonly buildings: Building[] = [];
 
@@ -40,11 +42,11 @@ export class Roofs {
       const h = hashOf(rects.map((r) => r.join(',')).join('|'));
       const details: Building['details'] = [];
       for (const r of rects) {
-        const n = Math.floor((r[2] * r[3]) / 120);
+        const n = Math.floor((r[2] * r[3]) / 70);
         for (let k = 0; k < n; k++) {
           const hk = hashOf(`${h}:${r.join(',')}:${k}`);
           details.push({
-            kind: (['ac', 'ac', 'vent', 'tank'] as const)[hk % 4]!,
+            kind: k === 0 && r[2] * r[3] > 100 ? 'hatch' : (['ac', 'ac', 'vent', 'tank', 'solar', 'stain', 'stain'] as const)[hk % 7]!,
             x: r[0] + 1.2 + ((hk >>> 4) % 1000) / 1000 * Math.max(0, r[2] - 2.4),
             y: r[1] + 1.2 + ((hk >>> 14) % 1000) / 1000 * Math.max(0, r[3] - 2.4),
           });
@@ -112,7 +114,9 @@ export class Roofs {
       g.lineWidth = 0.05;
       g.strokeStyle = shade(b.color, 0.22);
       for (const r of b.outer) g.strokeRect(r[0] + 0.25, r[1] + 0.25, r[2] - 0.5, r[3] - 0.5);
-      for (const d of b.details) drawRoofDetail(g, d.kind, d.x, d.y);
+      // 얼룩은 바닥에 깔고, 설비는 그 위에
+      for (const d of b.details) if (d.kind === 'stain') drawRoofDetail(g, d.kind, d.x, d.y);
+      for (const d of b.details) if (d.kind !== 'stain') drawRoofDetail(g, d.kind, d.x, d.y);
       if (night > 0.01) {
         g.fillStyle = `rgba(12, 16, 42, ${night * 0.55})`;
         g.fill(path);
@@ -122,8 +126,45 @@ export class Roofs {
   }
 }
 
-function drawRoofDetail(g: CanvasRenderingContext2D, kind: 'ac' | 'vent' | 'tank', x: number, y: number): void {
+function drawRoofDetail(g: CanvasRenderingContext2D, kind: RoofDetail, x: number, y: number): void {
+  if (kind === 'stain') {
+    // 빗물 얼룩
+    g.fillStyle = 'rgba(30, 30, 40, 0.07)';
+    g.beginPath();
+    g.ellipse(x, y, 1.1, 0.6, (x * 7) % 3, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.ellipse(x + 0.5, y + 0.3, 0.6, 0.35, 0, 0, Math.PI * 2);
+    g.fill();
+    return;
+  }
   g.fillStyle = 'rgba(0,0,0,0.22)';
+  if (kind === 'solar') {
+    // 태양광 패널 2×3
+    g.fillRect(x - 0.9 + 0.15, y - 0.6 + 0.2, 1.8, 1.2);
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 2; j++) {
+        g.fillStyle = '#2f4a6b';
+        g.fillRect(x - 0.9 + i * 0.6, y - 0.6 + j * 0.6, 0.56, 0.56);
+        g.fillStyle = 'rgba(160, 200, 255, 0.25)';
+        g.fillRect(x - 0.9 + i * 0.6, y - 0.6 + j * 0.6, 0.56, 0.12);
+        g.fillStyle = 'rgba(255,255,255,0.12)';
+        g.fillRect(x - 0.9 + i * 0.6 + 0.27, y - 0.6 + j * 0.6, 0.02, 0.56);
+      }
+    }
+    return;
+  }
+  if (kind === 'hatch') {
+    // 옥상 계단실: 작은 상자 + 문
+    g.fillRect(x - 0.8 + 0.25, y - 0.6 + 0.35, 1.6, 1.2);
+    g.fillStyle = '#c9c3b8';
+    g.fillRect(x - 0.8, y - 0.6, 1.6, 1.2);
+    g.fillStyle = '#ddd8ce';
+    g.fillRect(x - 0.8, y - 0.6, 1.6, 0.12);
+    g.fillStyle = '#7a6a5a';
+    g.fillRect(x - 0.25, y + 0.45, 0.5, 0.15);
+    return;
+  }
   if (kind === 'ac') {
     g.fillRect(x - 0.4 + 0.12, y - 0.3 + 0.16, 0.8, 0.6);
     g.fillStyle = '#d5d8dc';
