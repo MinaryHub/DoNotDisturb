@@ -1,46 +1,300 @@
 {
   "bagMax": 4,
   "consumables": [
-    { "id": "coldDrink", "nameKey": "item.coldDrink", "useKey": "use.coldDrink", "icon": "cup", "effects": { "flush": 0.5, "migraine": 0.5 } },
-    { "id": "snack", "nameKey": "item.snack", "useKey": "use.snack", "icon": "snack", "effects": { "battery": 12 }, "cornerOnly": true },
-    { "id": "coffee", "nameKey": "item.coffee", "useKey": "use.coffee", "icon": "tumbler", "effects": { "battery": 12 } },
-    { "id": "energyDrink", "nameKey": "item.energyDrink", "useKey": "use.energyDrink", "icon": "can", "effects": { "stress": 35, "battery": 5 } },
-    { "id": "water", "nameKey": "item.water", "useKey": "use.water", "icon": "bottle", "effects": { "stress": 12, "flush": 0.25 } },
-    { "id": "painkiller", "nameKey": "item.painkiller", "useKey": "use.painkiller", "icon": "pill", "effects": { "migraine": 1, "stress": 5 } },
-    { "id": "herbalTea", "nameKey": "item.herbalTea", "useKey": "use.herbalTea", "icon": "tea", "effects": { "stress": 20, "battery": 5 } },
-    { "id": "coolPatch", "nameKey": "item.coolPatch", "useKey": "use.coolPatch", "icon": "patch", "effects": { "flush": 0.6, "migraine": 0.3 } }
+    {
+      "id": "coldDrink",
+      "nameKey": "item.coldDrink",
+      "useKey": "use.coldDrink",
+      "icon": "cup",
+      "effects": {
+        "flush": 0.5,
+        "migraine": 0.5
+      }
+    },
+    {
+      "id": "snack",
+      "nameKey": "item.snack",
+      "useKey": "use.snack",
+      "icon": "snack",
+      "effects": {
+        "battery": 12
+      },
+      "cornerOnly": true
+    },
+    {
+      "id": "coffee",
+      "nameKey": "item.coffee",
+      "useKey": "use.coffee",
+      "icon": "tumbler",
+      "effects": {
+        "battery": 12
+      }
+    },
+    {
+      "id": "energyDrink",
+      "nameKey": "item.energyDrink",
+      "useKey": "use.energyDrink",
+      "icon": "can",
+      "effects": {
+        "battery": 20
+      }
+    },
+    {
+      "id": "water",
+      "nameKey": "item.water",
+      "useKey": "use.water",
+      "icon": "bottle",
+      "effects": {
+        "stress": 12,
+        "flush": 0.25
+      }
+    },
+    {
+      "id": "painkiller",
+      "nameKey": "item.painkiller",
+      "useKey": "use.painkiller",
+      "icon": "pill",
+      "effects": {
+        "migraine": 1,
+        "stress": 5
+      }
+    },
+    {
+      "id": "herbalTea",
+      "nameKey": "item.herbalTea",
+      "useKey": "use.herbalTea",
+      "icon": "tea",
+      "effects": {
+        "stress": 20,
+        "battery": 5
+      }
+    },
+    {
+      "id": "coolPatch",
+      "nameKey": "item.coolPatch",
+      "useKey": "use.coolPatch",
+      "icon": "patch",
+      "effects": {
+        "flush": 0.6,
+        "migraine": 0.3
+      }
+    },
+    {
+      "id": "gimbap",
+      "nameKey": "item.gimbap",
+      "useKey": "use.gimbap",
+      "icon": "rice",
+      "effects": {
+        "battery": 15
+      }
+    },
+    {
+      "id": "sandwich",
+      "nameKey": "item.sandwich",
+      "useKey": "use.sandwich",
+      "icon": "sandwich",
+      "effects": {
+        "battery": 18
+      }
+    },
+    {
+      "id": "bread",
+      "nameKey": "item.bread",
+      "useKey": "use.bread",
+      "icon": "bread",
+      "effects": {
+        "battery": 12
+      }
+    },
+    {
+      "id": "banana",
+      "nameKey": "item.banana",
+      "useKey": "use.banana",
+      "icon": "banana",
+      "effects": {
+        "battery": 8
+      }
+    },
+    {
+      "id": "lunchbox",
+      "nameKey": "item.lunchbox",
+      "useKey": "use.lunchbox",
+      "icon": "box",
+      "effects": {
+        "battery": 25
+      },
+      "cornerOnly": true
+    }
   ],
   "gear": [
-    { "id": "umbrella", "nameKey": "item.umbrella", "icon": "umbrella" }
+    {
+      "id": "umbrella",
+      "nameKey": "item.umbrella",
+      "icon": "umbrella"
+    }
   ],
   "shops": {
     "convStore": {
       "titleKey": "shop.convStore",
       "stock": [
-        { "item": "water", "price": 1000 },
-        { "item": "coldDrink", "price": 1500 },
-        { "item": "snack", "price": 2000 },
-        { "item": "energyDrink", "price": 2500 },
-        { "item": "painkiller", "price": 4000 },
-        { "item": "umbrella", "price": 5000 }
+        {
+          "item": "gimbap",
+          "price": 1400
+        },
+        {
+          "item": "sandwich",
+          "price": 2800
+        },
+        {
+          "item": "energyDrink",
+          "price": 2500
+        },
+        {
+          "item": "water",
+          "price": 1000
+        },
+        {
+          "item": "coldDrink",
+          "price": 1500
+        },
+        {
+          "item": "snack",
+          "price": 2000
+        },
+        {
+          "item": "painkiller",
+          "price": 4000
+        },
+        {
+          "item": "umbrella",
+          "price": 5000
+        }
       ]
     },
     "pharmacy": {
       "titleKey": "shop.pharmacy",
       "stock": [
-        { "item": "painkiller", "price": 3500 },
-        { "item": "coolPatch", "price": 3000 },
-        { "item": "herbalTea", "price": 2500 },
-        { "item": "water", "price": 800 }
+        {
+          "item": "painkiller",
+          "price": 3500
+        },
+        {
+          "item": "coolPatch",
+          "price": 3000
+        },
+        {
+          "item": "herbalTea",
+          "price": 2500
+        },
+        {
+          "item": "water",
+          "price": 800
+        }
       ]
     },
     "vending": {
       "titleKey": "shop.vending",
       "stock": [
-        { "item": "water", "price": 1200 },
-        { "item": "coldDrink", "price": 1500 },
-        { "item": "energyDrink", "price": 2000 },
-        { "item": "herbalTea", "price": 1800 }
+        {
+          "item": "water",
+          "price": 1200
+        },
+        {
+          "item": "coldDrink",
+          "price": 1500
+        },
+        {
+          "item": "energyDrink",
+          "price": 2000
+        },
+        {
+          "item": "herbalTea",
+          "price": 1800
+        }
+      ]
+    },
+    "cafe": {
+      "titleKey": "shop.cafe",
+      "stock": [
+        {
+          "item": "coffee",
+          "price": 4500
+        },
+        {
+          "item": "sandwich",
+          "price": 5500
+        },
+        {
+          "item": "bread",
+          "price": 3800
+        },
+        {
+          "item": "coldDrink",
+          "price": 4500
+        },
+        {
+          "item": "herbalTea",
+          "price": 4000
+        }
+      ]
+    },
+    "takeout": {
+      "titleKey": "shop.takeout",
+      "stock": [
+        {
+          "item": "lunchbox",
+          "price": 7000
+        },
+        {
+          "item": "gimbap",
+          "price": 2500
+        }
+      ]
+    },
+    "homePantry": {
+      "titleKey": "shop.homePantry",
+      "stock": [
+        {
+          "item": "lunchbox",
+          "price": 0,
+          "life": {
+            "essentials": -4
+          }
+        },
+        {
+          "item": "bread",
+          "price": 0,
+          "life": {
+            "essentials": -2
+          }
+        },
+        {
+          "item": "banana",
+          "price": 0,
+          "life": {
+            "essentials": -2
+          }
+        }
+      ]
+    },
+    "officePantry": {
+      "titleKey": "shop.officePantry",
+      "stock": [
+        {
+          "item": "snack",
+          "price": 0,
+          "perDay": 1
+        },
+        {
+          "item": "coffee",
+          "price": 0,
+          "perDay": 1
+        },
+        {
+          "item": "banana",
+          "price": 0,
+          "perDay": 1
+        }
       ]
     }
   }

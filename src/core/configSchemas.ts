@@ -145,7 +145,7 @@ export const choresConfigSchema = z.record(
 );
 export type ChoresConfig = z.infer<typeof choresConfigSchema>;
 
-/** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~8 */
+/** 소모품과 상점 (data/items.json). 단축키 1~8은 가방에 든 순서(칸) */
 export const itemsConfigSchema = z.object({
   /** 가방: 소모품을 합쳐서 이만큼만 들고 다닌다 */
   bagMax: z.number().int().min(1),
@@ -155,16 +155,22 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
-        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch']).optional(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box']).optional(),
         effects: recoveryEffects,
         /** 나를 보는 사람이 없고 군중 속이 아닐 때만 */
         cornerOnly: z.boolean().optional(),
       }),
-    )
-    .max(8),
+    ),
   /** 쓰면 없어지지 않는 물건 (우산 등). 상점 품목 item에 소모품 대신 이 id를 쓸 수 있다 */
   gear: z.array(z.object({ id: z.string(), nameKey: z.string(), icon: z.enum(['umbrella']).optional() })),
-  shops: z.record(z.string(), z.object({ titleKey: z.string(), stock: z.array(z.object({ item: z.string(), price: nonNegative })).min(1) })),
+  /** 상점·찬장·탕비실. price 0이면 무료, life는 돈 대신 쓰는 생활 지표(집 찬장), perDay는 하루에 챙길 수 있는 개수(탕비실) */
+  shops: z.record(
+    z.string(),
+    z.object({
+      titleKey: z.string(),
+      stock: z.array(z.object({ item: z.string(), price: nonNegative, life: lifeDelta.optional(), perDay: z.number().int().min(1).optional() })).min(1),
+    }),
+  ),
 });
 export type ItemsConfig = z.infer<typeof itemsConfigSchema>;
 export type ConsumableDef = ItemsConfig['consumables'][number];

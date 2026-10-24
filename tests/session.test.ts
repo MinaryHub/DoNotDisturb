@@ -289,3 +289,47 @@ describe('군중 밀도', () => {
     expect(many).toBeGreaterThan(few + 2);
   });
 });
+
+describe('에너지 보충 음식', () => {
+  function openShop(s: GameSession, shopId: string, item: string) {
+    const cursor = cfg.items.shops[shopId]!.stock.findIndex((e) => e.item === item);
+    s.mode = { kind: 'shop', shopId, cursor };
+  }
+
+  it('집 찬장: 돈 대신 생활 필수를 쓰고 챙긴다', () => {
+    const s = newDay();
+    const money = s.sim.life.money;
+    const ess = s.sim.life.get('essentials');
+    openShop(s, 'homePantry', 'lunchbox');
+    press(s, { interactPressed: true });
+    expect(s.player.inventory.consumables['lunchbox']).toBe(1);
+    expect(s.sim.life.money).toBe(money);
+    expect(s.sim.life.get('essentials')).toBeLessThan(ess);
+  });
+
+  it('탕비실 간식: 무료, 하루에 하나씩', () => {
+    const s = newDay();
+    openShop(s, 'officePantry', 'snack');
+    press(s, { interactPressed: true });
+    step(s, 0.05);
+    press(s, { interactPressed: true });
+    expect(s.player.inventory.consumables['snack']).toBe(1);
+    expect(s.shopLeft('officePantry', 'snack')).toBe(0);
+  });
+
+  it('단축키는 가방 칸 순서: 두 번째로 챙긴 음식이 [2], 먹으면 에너지가 찬다', () => {
+    const s = newDay();
+    s.sim.life.addMoney(100000);
+    openShop(s, 'convStore', 'water');
+    press(s, { interactPressed: true });
+    step(s, 0.05);
+    openShop(s, 'convStore', 'gimbap');
+    press(s, { interactPressed: true });
+    s.mode = { kind: 'free' };
+    expect(s.bagSlots()).toEqual(['water', 'gimbap']);
+    s.sim.energy.debugSet({ battery: 40 });
+    press(s, { useItem: 1 });
+    expect(s.player.inventory.consumables['gimbap'] ?? 0).toBe(0);
+    expect(s.snapshot.battery).toBeGreaterThan(50);
+  });
+});

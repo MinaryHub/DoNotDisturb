@@ -201,6 +201,8 @@ export class GameSession {
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
   private ownedGear = new Set<string>();
+  /** 오늘 상점별로 챙긴 개수 (탕비실 perDay) */
+  private readonly shopTaken = new Map<string, number>();
   /** 첫 대화는 연습 (규칙을 하나씩 알려 준다) */
   private practiced = false;
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
@@ -290,6 +292,7 @@ export class GameSession {
     this.homeLocked = true;
     this.rehearsed = false;
     this.choresDone.clear();
+    this.shopTaken.clear();
     this.soakedToday = false;
     this.hurry = 0;
     this.hurryNoted = false;
@@ -481,7 +484,9 @@ export class GameSession {
     }
     if (p.cover) this.phoneOpen = false;
     if (!modal) {
-      const def = c.useItem !== null ? this.cfg.items.consumables[c.useItem] : undefined;
+      // 단축키 1~8 = 가방 칸 순서
+      const id = c.useItem !== null ? this.bagSlots()[c.useItem] : undefined;
+      const def = id ? this.consumable(id) : undefined;
       if (def) this.useItem(def);
     }
   }
@@ -914,6 +919,20 @@ export class GameSession {
     return true;
   }
 
+  /** 가방 칸: 든 순서대로 소모품 id (단축키 1~8, 메모 표시) */
+  bagSlots(): string[] {
+    return Object.entries(this.player.inventory.consumables)
+      .filter(([, n]) => n > 0)
+      .map(([id]) => id);
+  }
+
+  /** 상점 품목을 오늘 몇 개 더 챙길 수 있는지 (perDay 없으면 무제한) */
+  shopLeft(shopId: string, item: string): number {
+    const entry = this.cfg.items.shops[shopId]?.stock.find((e) => e.item === item);
+    if (!entry?.perDay) return Infinity;
+    return entry.perDay - (this.shopTaken.get(`${shopId}:${item}`) ?? 0);
+  }
+
   bagCount(): number {
     return Object.values(this.player.inventory.consumables).reduce((a, b) => a + b, 0);
   }
@@ -971,9 +990,17 @@ export class GameSession {
       this.toast('bag.full');
       return;
     }
-    if (!this.pay(entry.price)) return;
+    if (this.shopLeft(m.shopId, entry.item) <= 0) {
+      this.toast('shop.soldOut');
+      return;
+    }
+    if (entry.price > 0 && !this.pay(entry.price)) return;
+    if (entry.life) this.sim.life.apply(entry.life);
     this.addItem(entry.item);
-    this.toast('shop.bought', { item: this.cfg.text[this.consumable(entry.item)!.nameKey] ?? entry.item });
+    const key = `${m.shopId}:${entry.item}`;
+    this.shopTaken.set(key, (this.shopTaken.get(key) ?? 0) + 1);
+    const name = this.cfg.text[this.consumable(entry.item)!.nameKey] ?? entry.item;
+    this.toast(entry.price > 0 ? 'shop.bought' : 'shop.taken', { item: name });
   }
 
   private petCat(): void {

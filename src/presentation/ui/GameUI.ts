@@ -219,9 +219,11 @@ export class GameUI {
     // 오늘 밤 생활비도 못 낼 만큼이면 붉게
     const poor = s.sim.life.money < this.cfg.life.settlement.dailyCost.money;
     const parts = [`<span class="${poor ? 'memo__money--low' : ''}">${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span>`];
-    this.cfg.items.consumables.forEach((d, i) => {
-      const n = inv.consumables[d.id] ?? 0;
-      if (n > 0) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
+    // 가방 칸 순서 = 단축키 1~8
+    s.bagSlots().forEach((id, i) => {
+      const d = this.cfg.items.consumables.find((c) => c.id === id);
+      const n = inv.consumables[id] ?? 0;
+      if (d) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
     const bag = s.bagCount();
     if (bag > 0) parts.push(`<span class="memo__bag${bag >= this.cfg.items.bagMax ? ' memo__bag--full' : ''}">🎒${bag}/${this.cfg.items.bagMax}</span>`);
@@ -538,11 +540,18 @@ export class GameUI {
       .map((e, i) => {
         const def = this.cfg.items.consumables.find((d) => d.id === e.item) ?? this.cfg.items.gear.find((g) => g.id === e.item)!;
         const have = s.player.inventory.gear.includes(e.item) ? '✓' : inv[e.item] ? `×${inv[e.item]}` : '';
-        return `<li class="${i === m.cursor ? 'sel' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
+        // 값: 돈, 생활 지표(집 찬장), 무료(탕비실, 남은 개수)
+        const left = s.shopLeft(m.shopId, e.item);
+        const lifeCost = Object.entries(e.life ?? {})
+          .map(([k, v]) => `${({ income: '💼', housing: '🏠', essentials: '🛒', bond: '💛' } as Record<string, string>)[k] ?? k}${v}`)
+          .join(' ');
+        const price = e.price > 0 ? `${e.price.toLocaleString('ko-KR')}원` : lifeCost || this.tx('shop.free');
+        const note = Number.isFinite(left) ? `<span class="shop__left">${escapeHtml(left > 0 ? this.tx('shop.left', { n: left }) : this.tx('shop.soldOut'))}</span>` : '';
+        return `<li class="${i === m.cursor ? 'sel' : ''}${left <= 0 ? ' shop__out' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}${note}</span><span class="shop__have">${have}</span><span class="shop__price">${escapeHtml(price)}</span></li>`;
       })
       .join('');
     return `<div class="shop">
-      <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span></div>
+      <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>🎒${s.bagCount()}/${this.cfg.items.bagMax} · ${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span></div>
       <ul class="shop__list">${rows}</ul>
       <div class="shop__hint">${escapeHtml(this.tx('shop.hint'))}</div>
     </div>`;

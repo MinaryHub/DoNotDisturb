@@ -245,7 +245,9 @@
 
     { "op": "fill", "rect": [196, 49, 1, 2], "tile": "vending" },
     { "op": "fill", "rect": [60, 143, 2, 1], "tile": "vending" },
-    { "op": "fill", "rect": [251, 40, 2, 1], "tile": "vending" }
+    { "op": "fill", "rect": [251, 40, 2, 1], "tile": "vending" },
+    { "op": "tiles", "tile": "shelf", "at": [[144, 151], [163, 29], [164, 29]] },
+    { "op": "tiles", "tile": "counter", "at": [[38, 81], [39, 81], [40, 81]] }
   ],
 
   "areas": [
@@ -335,7 +337,10 @@
     { "id": "officeSink", "kind": "sink", "at": [139, 42.5], "labelKey": "interact.sink" },
     { "id": "convShop", "kind": "shop", "at": [119.6, 47.5], "labelKey": "interact.convShop", "shop": "convStore" },
     { "id": "soloSeat", "kind": "soloMeal", "at": [124.6, 20], "labelKey": "interact.soloMeal", "price": 9000 },
-    { "id": "cafeCounter", "kind": "coldDrink", "at": [120, 9.6], "labelKey": "interact.cafeOrder", "price": 4500 },
+    { "id": "cafeCounter", "kind": "shop", "at": [120, 9.6], "labelKey": "interact.cafeOrder", "shop": "cafe" },
+    { "id": "homePantry", "kind": "shop", "at": [143.4, 151.5], "labelKey": "interact.homePantry", "shop": "homePantry" },
+    { "id": "pantrySnacks", "kind": "shop", "at": [163.9, 30.6], "labelKey": "interact.pantrySnacks", "shop": "officePantry" },
+    { "id": "restaurantTakeout", "kind": "shop", "at": [39.5, 82.4], "labelKey": "interact.takeout", "shop": "takeout" },
     { "id": "parkBench", "kind": "bench", "at": [57.5, 29.4], "labelKey": "interact.bench" },
     { "id": "item_tofu", "kind": "martItem", "at": [69.5, 95], "labelKey": "interact.item.tofu", "item": "tofu", "price": 2500 },
     { "id": "item_egg", "kind": "martItem", "at": [84.5, 92], "labelKey": "interact.item.egg", "item": "egg", "price": 6000 },
