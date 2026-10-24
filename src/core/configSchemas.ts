@@ -80,6 +80,8 @@ export const balanceConfigSchema = z.object({
     decayDelaySec: nonNegative,
   }),
   ambush: z.object({ freezeSec: nonNegative, shakeSec: nonNegative }),
+  /** 업무 스트레스: 일하는 동안 긴장이 쌓이고(쌓이는 동안 가라앉지 않음), 답 못 한 메신저마다 더. 오후를 건너뛰면 그만큼 지쳐서 퇴근 */
+  work: z.object({ pressureStressPerSec: nonNegative, pendingPingStressPerSec: nonNegative, bossPingMultiplier: positive, afternoonStress: nonNegative }),
   /** 조급함: 달리면 차오르고(fullAfterSec), 걸으면 천천히 가라앉는다(calmSec). 차 있는 만큼 스트레스가 오른다 */
   hurry: z.object({ fullAfterSec: positive, calmSec: positive, stressPerSec: nonNegative }),
   recovery: z.object({

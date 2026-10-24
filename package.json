@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "validate:world": "tsx tools/validate-world.ts"
+    "validate:world": "tsx tools/validate-world.ts",
+    "balance": "tsx tools/balance-week.ts"
   },
   "license": "UNLICENSED",
   "type": "module",

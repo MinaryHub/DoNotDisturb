@@ -8,6 +8,7 @@ import { Phone, applyContactOutcome } from '../src/sim/Phone';
 import { Simulation, type SimConfig } from '../src/sim/Simulation';
 import { SomaticController } from '../src/sim/SomaticController';
 import { SpeechChallenge, stutterText } from '../src/sim/SpeechChallenge';
+import { playWeek } from '../tools/lib/weekSim';
 import { StimulusBus, type StimulusTable } from '../src/sim/StimulusBus';
 import { readConfig } from '../tools/lib/readData';
 
@@ -338,76 +339,22 @@ describe('DayCycle', () => {
 
 /**
  * Phase 3 완료 기준: "전부 회피하는 플레이와 전부 수용하는 플레이가 각각 다른 이유로 실패한다"
- * 실제 data(days, life, stimuli, npcProfiles, speeches)로 한 주를 시뮬레이션한다.
- * 필수 상호작용은 두 정책 모두 수행한다 (회피 불가).
+ * + 밸런스 기준: "적당히 하는 플레이는 한 주를 버틴다" (tools/lib/weekSim.ts, npm run balance)
  */
-describe('정책 시뮬레이션: 완전 회피 vs 완전 수용', () => {
-  type Policy = 'avoid' | 'accept';
-
-  function playWeek(policy: Policy): { failed: 'burnout' | 'collapse' | null; day: string; stat?: string } {
-    const sim = new Simulation(simConfigOf(game), game.stimuli);
-    let nextMax = game.balance.battery.start;
-    for (const day of game.days) {
-      sim.startDay(nextMax);
-      const outdoor = { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS };
-      const encounter = (stimulus: string, talkSec: number) => {
-        sim.bus.emit(stimulus);
-        sim.bus.setContinuous('dialogue', 'dialogue', 1);
-        run(sim, talkSec, outdoor);
-        sim.bus.setContinuous('dialogue', 'dialogue', 0);
-        run(sim, 5, outdoor);
-      };
-      // 출퇴근 이동 (실외 자연 감소)
-      run(sim, 90, outdoor);
-      // 필수 상호작용
-      const mandatoryCalls = day.objectives.filter((o) => o.mandatory && o.on.startsWith('answered:')).map((o) => o.on.split(':')[1]!);
-      for (const o of day.objectives) {
-        const speech = Object.values(game.speeches).find((s) => s.objectiveEvent === o.on);
-        if (o.mandatory && speech) encounter(speech.stimulus, 0.1);
-      }
-      // 전화·문자
-      for (const ev of day.phone) {
-        const contact = game.life.contacts[ev.contact]!;
-        const mustAnswer = mandatoryCalls.includes(ev.contact);
-        const how = policy === 'accept' || mustAnswer ? (ev.kind === 'call' ? 'answered' : 'replied') : ev.kind === 'call' ? 'missed' : 'unread';
-        const out = applyContactOutcome(ev.contact, contact, how, sim.life);
-        if (out.stimulus) sim.bus.emit(out.stimulus);
-        if (how === 'replied') sim.bus.emit('textMessage');
-        if (out.escalation) sim.bus.emit(out.escalation);
-        run(sim, 2, outdoor);
-      }
-      // 말을 걸어오는 사람들: 수용하면 끝까지 대화, 회피하면 숨어서 지나간다
-      if (policy === 'accept') {
-        for (const n of day.npcs) {
-          const p = game.npcProfiles[n.profile]!;
-          if (p.approaches) encounter(p.encounterStimulus, p.baseDurationSec);
-        }
-      }
-      // 선택 목표: 회피하면 건너뜀
-      for (const o of day.objectives) if (o.optional && policy === 'avoid' && o.skip) sim.life.apply(o.skip);
-      if (sim.energy.burnedOut) return { failed: 'burnout', day: day.id };
-      settleDay(game.life.settlement, sim.life, day.flags);
-      const collapsed = sim.life.collapsed;
-      if (collapsed) return { failed: 'collapse', day: day.id, stat: collapsed };
-      nextMax = nightRecovery(game.life.night, {
-        stressAtBed: sim.energy.stress,
-        ruminations: sim.bus.activeRuminations,
-        hobbyDone: false,
-        bedMinutes: parseTime('22:00'),
-        housing: sim.life.get('housing'),
-        essentials: sim.life.get('essentials'),
-      }).nextMax;
-    }
-    return { failed: null, day: 'all' };
-  }
-
+describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
   it('전부 수용하면 배터리가 바닥나 번아웃', () => {
-    expect(playWeek('accept').failed).toBe('burnout');
+    expect(playWeek(game, 'accept').failed).toBe('burnout');
   });
 
   it('전부 회피하면 생활 지표가 무너진다 (번아웃은 아님)', () => {
-    const r = playWeek('avoid');
+    const r = playWeek(game, 'avoid');
     expect(r.failed).toBe('collapse');
     expect(r.stat).toBeDefined();
+  });
+
+  it('적당히 하면 한 주를 버티고, 생활 지표도 지켜진다', () => {
+    const r = playWeek(game, 'balanced');
+    expect(r.failed).toBeNull();
+    for (const d of r.rows) for (const v of Object.values(d.life)) expect(v).toBeGreaterThan(20);
   });
 });

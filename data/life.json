@@ -45,7 +45,7 @@
       "reply": {}, "readIgnored": {}, "unread": {}
     },
     "mom": {
-      "nameKey": "contact.mom", "answerStimulus": "voiceCall",
+      "nameKey": "contact.mom", "answerStimulus": "familyCall",
       "answer": { "bond": 10 }, "avoid": { "bond": -8 }, "texted": { "bond": 4 },
       "reply": { "bond": 6 }, "readIgnored": { "bond": -6 }, "unread": { "bond": -8 }
     },
@@ -56,7 +56,7 @@
     }
   },
   "settlement": {
-    "dailyDecay": { "essentials": -8, "bond": -4 },
+    "dailyDecay": { "essentials": -6, "bond": -4 },
     "dailyCost": { "money": 15000, "unpaidEssentials": -12 },
     "weekly": { "goodIncome": 55, "goodBonusMoney": 50000, "badIncomeDelta": -15 },
     "monthEnd": { "rent": 450000, "salaryBase": 300000, "salaryPerIncome": 4000, "unpaidHousingDelta": -30 }

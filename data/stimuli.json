@@ -1,6 +1,7 @@
 {
   "textMessage": { "kind": "ambush", "channel": "auditory", "damage": 3 },
-  "voiceCall": { "kind": "ambush", "channel": "auditory", "damage": 30 },
+  "voiceCall": { "kind": "ambush", "channel": "auditory", "damage": 18 },
+  "familyCall": { "kind": "ambush", "channel": "auditory", "damage": 8 },
   "phoneRingStartle": { "kind": "ambush", "channel": "auditory", "damage": 2 },
   "phoneRinging": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.5 },
   "replyAnxiety": { "kind": "continuous", "channel": "social", "ratePerSec": 0.3 },
@@ -31,10 +32,11 @@
   "bookTalk": { "kind": "encounter", "channel": "social", "damage": 5 },
   "workPing": { "kind": "ambush", "channel": "auditory", "damage": 0.5 },
   "workReply": { "kind": "ambush", "channel": "social", "damage": 0.5 },
+  "workPingMissed": { "kind": "ambush", "channel": "social", "damage": 2 },
 
-  "dialogue": { "kind": "continuous", "channel": "social", "ratePerSec": 1 },
+  "dialogue": { "kind": "continuous", "channel": "social", "ratePerSec": 0.5 },
   "eyeContact": { "kind": "continuous", "channel": "visual", "ratePerSec": 0.6 },
-  "crowd": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.3 },
+  "crowd": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.2 },
   "awkwardSilence": { "kind": "continuous", "channel": "social", "ratePerSec": 1 },
   "trafficNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.05 },
   "cafeChatter": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.12 },

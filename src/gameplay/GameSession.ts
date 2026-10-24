@@ -1222,12 +1222,17 @@ export class GameSession {
       }
     }
     g.update(dt, c.smile);
+    // 업무 스트레스: 일하는 동안 긴장이 쌓이고, 답 못 한 메신저(팀장은 더)가 짓누른다
+    const wc = this.cfg.balance.work;
+    const pending = g.pings.reduce((a, pg) => a + (pg.from === 'boss' ? wc.bossPingMultiplier : 1), 0);
+    this.sim.energy.addStress((wc.pressureStressPerSec + pending * wc.pendingPingStressPerSec) * dt, true);
     for (const e of g.drainEvents()) {
       if (e.type === 'ping') {
         this.sim.bus.emit('workPing');
         this.fx.push({ type: 'sound', id: 'vibrate' });
       } else if (e.type === 'pingIgnored') {
         this.sim.life.apply(rw.workPingIgnored);
+        this.sim.bus.emit('workPingMissed');
         this.gameEvent('avoided:income');
       }
       else if (e.type === 'task') this.sim.life.addMoney(rw.workPerTask);
@@ -1235,6 +1240,8 @@ export class GameSession {
         this.sim.life.apply(rw.workDone);
         this.clock.skipTo(parseTime(this.day.work!.endTime));
         this.sim.energy.recover(this.cfg.balance.recovery.workAfternoon);
+        // 오후 업무를 마친 피로: 긴장을 안고 퇴근한다
+        this.sim.energy.addStress(wc.afternoonStress);
         this.toast('work.done');
         this.mode = { kind: 'free' };
         this.gameEvent('done:work');

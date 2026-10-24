@@ -98,8 +98,8 @@
     "approaches": true,
     "dialogue": "boss",
     "encounterStimulus": "bossTalk",
-    "baseDurationSec": 50,
-    "minDurationSec": 40,
+    "baseDurationSec": 40,
+    "minDurationSec": 25,
     "leash": 30
   },
   "acquaintance": {

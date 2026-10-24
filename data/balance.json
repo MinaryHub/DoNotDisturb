@@ -14,12 +14,18 @@
     "max": 100,
     "decayPerSec": 2,
     "somaticThreshold": 60,
-    "gainPerDamage": 1.0,
+    "gainPerDamage": 0.6,
     "decayDelaySec": 1.5
   },
   "ambush": {
     "freezeSec": 0.5,
     "shakeSec": 0.6
+  },
+  "work": {
+    "pressureStressPerSec": 0.25,
+    "pendingPingStressPerSec": 0.8,
+    "bossPingMultiplier": 2,
+    "afternoonStress": 15
   },
   "hurry": {
     "fullAfterSec": 4,
@@ -33,14 +39,14 @@
     "soloMeal": 40,
     "homeMeal": 15,
     "plansCancelled": 50,
-    "benchPerSec": 0.3,
-    "windowPerSec": 0.5,
+    "benchPerSec": 0.6,
+    "windowPerSec": 0.8,
     "booksPerSec": 0.4,
     "booksStressPerSec": 0.6,
     "petStressRelief": 40,
     "washStressRelief": 25,
     "hobbyStressRelief": 30,
-    "workAfternoon": 15
+    "workAfternoon": 8
   },
   "clock": {
     "minutesPerSecond": 1,

@@ -40,6 +40,7 @@ npm run dev               # http://localhost:5173
 ## 검사
 
 ```bash
+npm run balance           # 한 주 밸런스 시뮬레이션 (전부 회피 / 전부 수용 / 적당히)
 npm run test              # Vitest (sim 단위 테스트 + 하루 진행 시나리오 + 정책 시뮬레이션)
 npm run typecheck
 npm run lint
