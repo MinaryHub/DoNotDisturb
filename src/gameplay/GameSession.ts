@@ -1,6 +1,6 @@
 import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
-import type { ConsumableDef, RecoveryEffects, DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import type { ConsumableDef, RecoveryEffects, DayDef, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
 import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
@@ -15,6 +15,7 @@ import { angleDiff, angleTo, type PlayerPercept } from '../npc/perception';
 import { dist, inRect, type AreaDef, type Vec2 } from '../world/TileMap';
 import { buildWorld, inHide, safeAt, type World } from '../world/World';
 import { GrillGame, PIANO_MELODY, PianoGame, WorkGame } from './minigames';
+import { composeDay } from './DayComposer';
 import { MonologueDirector } from './Monologue';
 import { Objectives } from './Objectives';
 
@@ -160,7 +161,12 @@ export class GameSession {
   readonly monologue: MonologueDirector;
   crowd: Crowd;
   clock: GameClock;
+  /** 오늘의 하루 (기본 하루 + 작은 사건, DayComposer) */
   day!: DayDef;
+  /** 오늘 일어나는 작은 사건 */
+  happenings: HappeningDef[] = [];
+  /** 조급함 0~1: 달리면 차오르고 걸으면 가라앉는다 */
+  hurry = 0;
   dayIndex = 0;
   objectives!: Objectives;
   npcs: Npc[] = [];
@@ -189,6 +195,11 @@ export class GameSession {
   private nextMax: number;
   private dayStart!: { life: LifeSnapshot; max: number };
   private rngState = 12345;
+  private hurryNoted = false;
+  /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
+  private readonly seed: number | null;
+  /** 같은 날을 다시 할 때마다 다른 하루가 되도록 */
+  private attempt = 0;
   private firedPhone = new Set<number>();
   private pendingEscalations: string[] = [];
   private personalSpaceCd = 0;
@@ -202,11 +213,13 @@ export class GameSession {
   constructor(
     readonly cfg: GameConfig,
     save?: SaveState,
+    options: { seed?: number } = {},
   ) {
+    this.seed = options.seed ?? null;
     this.world = buildWorld(cfg.world, cfg.tiles);
     this.sim = new Simulation(simConfigOf(cfg), cfg.stimuli);
     this.phone = new Phone({ ringSec: 12, replyWaitSec: 25, maxVisible: 4 });
-    this.monologue = new MonologueDirector(cfg.monologueTriggers, cfg.monologue);
+    this.monologue = new MonologueDirector(cfg.monologueTriggers, cfg.monologue, () => this.rng());
     this.crowd = new Crowd(cfg.world.crowdLanes, () => this.rng());
     this.clock = new GameClock(0);
     this.nextMax = cfg.balance.battery.start;
@@ -249,7 +262,10 @@ export class GameSession {
 
   startDay(index: number): void {
     this.dayIndex = index;
-    this.day = this.cfg.days[index]!;
+    if (this.seed !== null) this.rngState = mix(this.seed, index, this.attempt++);
+    const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null);
+    this.day = composed.day;
+    this.happenings = composed.happenings;
     this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax };
     this.sim.startDay(this.nextMax);
     this.clock = new GameClock(parseTime(this.day.start));
@@ -265,6 +281,8 @@ export class GameSession {
     this.rehearsed = false;
     this.choresDone.clear();
     this.soakedToday = false;
+    this.hurry = 0;
+    this.hurryNoted = false;
     this.hobbyDone = false;
     this.calmBuff = false;
     this.sosUsed = false;
@@ -357,6 +375,7 @@ export class GameSession {
         if (c.confirm) {
           this.mode = { kind: 'free' };
           this.gameEvent(`dayStart:${this.day.id}`);
+          for (const h of this.happenings) this.gameEvent(`happening:${h.id}`);
         }
         return;
       case 'night':
@@ -451,6 +470,14 @@ export class GameSession {
       p.moveDir = { x: mx, y: my };
       p.walkPhase += dt * speed * 2.2;
     } else p.moveDir = null;
+    // 조급함: 서두를수록 마음도 급해진다. 멈춰도 바로 풀리지 않는다
+    const hc = this.cfg.balance.hurry;
+    this.hurry = p.running ? Math.min(1, this.hurry + dt / hc.fullAfterSec) : Math.max(0, this.hurry - dt / hc.calmSec);
+    if (this.hurry > 0) this.sim.energy.addStress(this.hurry * hc.stressPerSec * dt);
+    if (this.hurry >= 1 && !this.hurryNoted) {
+      this.hurryNoted = true;
+      this.gameEvent('hurry:full');
+    } else if (this.hurry <= 0) this.hurryNoted = false;
     if (push && !p.lockedSafe && this.mode.kind === 'free') this.world.map.moveCircle(p.pos, push[0] * dt, push[1] * dt, this.cfg.player.radius);
 
     // 바라보는 방향: 마우스, 없으면 이동 방향. 편두통이면 시선이 흔들린다
@@ -658,6 +685,11 @@ export class GameSession {
       return;
     }
     const it = target.def!;
+    const blocked = this.day.blocked?.find((b) => b.interactable === it.id);
+    if (blocked) {
+      this.toast(blocked.toastKey);
+      return;
+    }
     const r = this.cfg.balance.recovery;
     const life = this.sim.life;
     const canEndDay = this.objectives.canEndDay;
@@ -1774,4 +1806,11 @@ export class GameSession {
   profileOf(n: Npc): NpcProfile {
     return n.profile;
   }
+}
+
+/** 씨앗·하루·시도 횟수 → 난수 상태 */
+function mix(seed: number, day: number, attempt: number): number {
+  let h = (seed ^ Math.imul(day + 1, 0x9e3779b1) ^ Math.imul(attempt + 1, 0x85ebca6b)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d) >>> 0;
+  return (h ^ (h >>> 15)) >>> 0;
 }

@@ -285,6 +285,8 @@
 - Boss 최소 대화 180초 → 40초: 대화 중 −1/초와 함께면 180초는 확정 번아웃이라 플레이 불가. `npcProfiles.json`의 `minDurationSec`
 - 스트레스 상승 계수 1.5 → 1.0, 업무 알림 데미지 0.5: 첫날 업무만으로 번아웃되는 문제 (`balance.json`, `stimuli.json`)
 - 업무를 마치면 오후를 건너뛰며 +15 회복 (`balance.recovery.workAfternoon`)
+- 같은 요일이어도 매번 다른 하루: `data/happenings.json`(작은 사건, 하루 최대 3개)과 하루 데이터의 `alt`·`chance`·`textKeys`·`jitterMin`을 하루 시작마다 섞는다 (`src/gameplay/DayComposer.ts`). 실패 후 다시 해도 바뀐다. `?seed=N`으로 고정, 테스트는 씨앗 없이 기본 하루
+- 조급함: 달리면 4초에 걸쳐 차오르고 걸으면 8초에 걸쳐 가라앉는다. 차 있는 만큼 스트레스 +5/초 (자연 감소 2/초를 넘는다) (`balance.hurry`)
 - 편두통은 지속형 자극 60초 + stress ≥ 신체화 문턱(60)일 때만 오른다: 긴장이 낮은데도 사무실·군중 소음만으로 화면이 흔들리던 문제 (5.2 '60부터 신체화 판정'에 맞춤)
 
 ## 10. 작업 방식

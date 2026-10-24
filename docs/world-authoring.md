@@ -91,6 +91,21 @@
 
 독백 트리거(`data/monologue/triggers.json`)의 `when.day`로 특정 하루에만 나오게 할 수 있습니다.
 
+### 같은 요일도 매번 조금 다르게
+
+하루를 시작할 때마다(실패 후 다시 할 때도) 아래 변화를 섞습니다 (`src/gameplay/DayComposer.ts`).
+
+- `npcs[].chance`: 나타날 확률. `npcs[].alt`: 위치·경로·시간 대안 목록 (기본값 또는 대안 중 하나)
+- `phone[].textKeys`: 문구 후보 중 하나. `phone[].jitterMin`: `at` 시각을 ±분 흔들기
+- `blocked[]`: 그날 쓸 수 없는 상호작용과 안내 문구 (엘리베이터 점검 등)
+- 작은 사건 `data/happenings.json`: 하루 최대 `maxPerDay`개를 확률(`chance`)로 고른다
+  - 조건: `days`(이 하루들에만), `weather`(이 날씨일 때만), `group`(같은 그룹은 하루에 하나)
+  - 내용: `npcs`, `phone`, `crowdLanes`, `areaStimuli`, `stalls`, `blocked`, `removeNpcs`(그날 쉬는 사람), `setWeather`
+  - `introKey`가 있으면 하루 시작 화면에 한 줄로 알린다
+  - 시작하면 `happening:<id>` 이벤트가 나므로 독백 트리거를 걸 수 있다
+- 독백 변형: `mono.wake`에 `mono.wake~2`, `mono.wake~3` … 을 csv에 더하면 그중 하나가 나온다
+- 개발: `?seed=N`으로 변화를 고정. 테스트(`new GameSession(cfg)`)는 씨앗 없이 기본 하루
+
 ## 확인
 
 ```bash

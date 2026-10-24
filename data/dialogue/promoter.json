@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "안녕하세요~ 잠깐만요! 헬스장 새로 오픈했어요!",
+    "kind": "opening",
+    "durationSec": 2.0
+  },
+  "lines": [
+    {
+      "text": "지금 등록하시면 한 달 무료예요. 체험만 해 보세요!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "운동 하세요? 요즘 다들 하시더라고요.",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "전단지만 가져가셔도 돼요. 진짜로요!",
+      "kind": "opening",
+      "durationSec": 2.0
+    },
+    {
+      "text": "PT 상담 10분이면 끝나요.",
+      "kind": "question",
+      "durationSec": 2.0
+    }
+  ],
+  "flushRemark": {
+    "text": "오늘 덥죠? 얼굴이 좀 빨개 보이세요!",
+    "kind": "remark",
+    "durationSec": 2.0
+  },
+  "closers": {
+    "satisfied": "좋은 하루 되세요~!",
+    "parried": "네네, 다음에 꼭 오세요~",
+    "endured": "아무튼 생각 있으시면 연락 주세요!",
+    "sos": "아 전화 받으세요! 전단지만…",
+    "awkward": "…아, 네. 감사합니다."
+  }
+}

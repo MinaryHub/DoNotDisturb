@@ -175,3 +175,20 @@ describe('GameSession: 모든 날이 시작된다', () => {
     expect(s.mode.kind).not.toBe('burnout');
   });
 });
+
+describe('조급함', () => {
+  it('계속 달리면 조급함이 차고 스트레스가 오르며, 걸으면 천천히 가라앉는다', () => {
+    const s = newDay();
+    // 집 안을 왔다 갔다 달린다 (자극 없는 곳)
+    for (let k = 0; k < 4; k++) {
+      step(s, 1.2, { move: { x: 1, y: 0 }, sprint: true });
+      step(s, 1.2, { move: { x: -1, y: 0 }, sprint: true });
+    }
+    expect(s.hurry).toBeGreaterThan(0.95);
+    const stressed = s.snapshot.stress;
+    expect(stressed).toBeGreaterThan(8);
+    step(s, 3, { move: { x: 1, y: 0 } });
+    expect(s.hurry).toBeLessThan(0.7);
+    expect(s.hurry).toBeGreaterThan(0.4);
+  });
+});

@@ -37,6 +37,7 @@ export class MonologueDirector {
   constructor(
     private readonly triggers: readonly MonologueTrigger[],
     private readonly texts: Readonly<Record<string, string>>,
+    private readonly rng: () => number = Math.random,
   ) {}
 
   /** 이벤트 기반 독백 ("phone:ring", "onset:flush" …) */
@@ -103,6 +104,17 @@ export class MonologueDirector {
     this.lastArea = null;
   }
 
+  /** 같은 상황도 매번 같은 말만 하지 않도록: "key", "key~2", "key~3" … 중 하나 */
+  private variant(key: string): string | undefined {
+    const options: string[] = [];
+    for (let n = 1; ; n++) {
+      const text = this.texts[n === 1 ? key : `${key}~${n}`];
+      if (text === undefined) break;
+      options.push(text);
+    }
+    return options.length ? options[Math.floor(this.rng() * options.length)] : undefined;
+  }
+
   private today(tr: MonologueTrigger): boolean {
     return tr.when.day === undefined || tr.when.day === this.dayId;
   }
@@ -111,7 +123,7 @@ export class MonologueDirector {
     const tr = this.triggers[i]!;
     if (tr.once && this.fired.has(i)) return;
     if ((this.cooldown.get(i) ?? 0) > 0) return;
-    const text = this.texts[tr.key];
+    const text = this.variant(tr.key);
     if (!text) return;
     this.fired.add(i);
     this.cooldown.set(i, tr.cooldownSec ?? 30);

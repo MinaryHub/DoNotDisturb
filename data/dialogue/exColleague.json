@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "어? 이게 누구야! 진짜 오랜만이다!",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "나 거기 그만두고 지금 다른 데 다니잖아. 들었어?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "그 팀 아직 그대로야? 누구누구 남았어?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "요즘 업계가 다 그렇지 뭐. 너는 어때?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "우리 그때 야근 진짜 많이 했는데, 하하.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "나중에 사람들 한번 모이자. 단톡방 만들게!",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "너 얼굴 빨개졌다, 하하. 그대로네.",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "반가웠어! 연락할게~",
+    "parried": "그래 그래, 바쁘구나. 다음에 보자!",
+    "endured": "아무튼 잘 지내~",
+    "sos": "전화 왔네, 받아! 또 보자!",
+    "awkward": "…어, 그래. 들어가."
+  }
+}

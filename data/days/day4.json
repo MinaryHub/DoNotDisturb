@@ -170,7 +170,8 @@
       "at": "10:45",
       "kind": "message",
       "contact": "friend",
-      "textKey": "phone.friend.cafe"
+      "textKey": "phone.friend.cafe",
+      "jitterMin": 20
     },
     {
       "at": "11:30",
@@ -182,7 +183,8 @@
       "at": "13:00",
       "kind": "message",
       "contact": "mom",
-      "textKey": "phone.mom.weekend"
+      "textKey": "phone.mom.weekend",
+      "jitterMin": 20
     },
     {
       "at": "15:00",
@@ -196,7 +198,8 @@
       "contact": "friend",
       "textKey": "phone.friend.cancel",
       "effect": "plansCancelled",
-      "chance": 0.35
+      "chance": 0.35,
+      "jitterMin": 20
     }
   ],
   "npcs": [
@@ -255,7 +258,8 @@
       "id": "parkWalker",
       "profile": "neighbor",
       "at": "parkWalker",
-      "path": "parkLoop"
+      "path": "parkLoop",
+      "chance": 0.8
     },
     {
       "id": "cat",
@@ -277,7 +281,8 @@
     {
       "id": "laundryRegular",
       "profile": "regular",
-      "at": "laundryRegular"
+      "at": "laundryRegular",
+      "chance": 0.6
     },
     {
       "id": "kid",

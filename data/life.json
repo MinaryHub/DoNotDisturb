@@ -39,6 +39,11 @@
       "answer": { "essentials": 5 }, "avoid": { "essentials": -6 }, "texted": { "essentials": 2 },
       "reply": { "essentials": 3 }, "readIgnored": { "essentials": -3 }, "unread": { "essentials": -5 }
     },
+    "unknownNumber": {
+      "nameKey": "contact.unknownNumber", "answerStimulus": "spamCall",
+      "answer": {}, "avoid": {}, "texted": {},
+      "reply": {}, "readIgnored": {}, "unread": {}
+    },
     "mom": {
       "nameKey": "contact.mom", "answerStimulus": "voiceCall",
       "answer": { "bond": 10 }, "avoid": { "bond": -8 }, "texted": { "bond": 4 },

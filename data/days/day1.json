@@ -76,7 +76,12 @@
       "on": "done:meeting",
       "kind": "message",
       "contact": "teamChat",
-      "textKey": "phone.team.lunch"
+      "textKey": "phone.team.lunch",
+      "textKeys": [
+        "phone.team.lunch",
+        "phone.team.lunch.2",
+        "phone.team.lunch.3"
+      ]
     },
     {
       "on": "done:work",
@@ -88,7 +93,13 @@
       "at": "19:30",
       "kind": "call",
       "contact": "mom",
-      "textKey": "phone.mom.dinner"
+      "textKey": "phone.mom.dinner",
+      "textKeys": [
+        "phone.mom.dinner",
+        "phone.mom.dinner.2",
+        "phone.mom.dinner.3"
+      ],
+      "jitterMin": 20
     }
   ],
   "npcs": [
@@ -97,7 +108,20 @@
       "profile": "neighbor",
       "at": "neighbor302",
       "path": "aptHall",
-      "to": "09:30"
+      "to": "09:30",
+      "alt": [
+        {
+          "at": "lobbyWalk",
+          "path": "lobbyLoop",
+          "to": "09:30"
+        },
+        {
+          "at": "neighbor302",
+          "path": "aptHall",
+          "from": "08:05",
+          "to": "09:10"
+        }
+      ]
     },
     {
       "id": "manager",
@@ -112,7 +136,12 @@
     {
       "id": "flyer",
       "profile": "flyer",
-      "at": "flyer"
+      "at": "flyer",
+      "alt": [
+        {
+          "at": "flyer2"
+        }
+      ]
     },
     {
       "id": "barista",
@@ -148,7 +177,14 @@
       "profile": "coworker",
       "at": "coworkerC",
       "path": "officeLoop",
-      "from": "09:00"
+      "from": "09:00",
+      "alt": [
+        {
+          "at": "pantryB",
+          "path": "pantryIdle",
+          "from": "09:00"
+        }
+      ]
     },
     {
       "id": "friend",
@@ -176,7 +212,8 @@
     {
       "id": "laundryRegular",
       "profile": "regular",
-      "at": "laundryRegular"
+      "at": "laundryRegular",
+      "chance": 0.6
     }
   ],
   "work": {

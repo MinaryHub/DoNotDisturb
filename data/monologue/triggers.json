@@ -73,5 +73,18 @@
   {"key": "mono.halfday.out", "when": {"event": "done:work", "day": "dayWed"}, "once": true},
   {"key": "mono.market", "when": {"area": "park", "day": "day4"}, "cooldownSec": 600},
   {"key": "mono.rain.morning", "when": {"event": "dayStart:day2"}, "once": true},
-  {"key": "mono.rain.soaked", "when": {"event": "rain:soaked"}, "once": true}
+  {"key": "mono.rain.soaked", "when": {"event": "rain:soaked"}, "once": true},
+  {"key": "mono.hap.elevator", "when": {"event": "happening:elevatorCheck"}, "once": true},
+  {"key": "mono.hap.moving", "when": {"npcProfile": "mover", "distMax": 7, "visible": true}, "cooldownSec": 180},
+  {"key": "mono.hap.neighborAway", "when": {"event": "happening:neighborAway"}, "once": true},
+  {"key": "mono.hap.busker", "when": {"npcProfile": "busker", "distMax": 14, "visible": true}, "cooldownSec": 300},
+  {"key": "mono.hap.quiet", "when": {"event": "happening:quietStreet"}, "once": true},
+  {"key": "mono.hap.roadwork", "when": {"event": "happening:roadwork"}, "once": true},
+  {"key": "mono.hap.promoter", "when": {"npcProfile": "promoter", "distMax": 10, "visible": true}, "cooldownSec": 150},
+  {"key": "mono.hap.exColleague.far", "when": {"npcProfile": "exColleague", "distMin": 7, "distMax": 16, "visible": true}, "cooldownSec": 120},
+  {"key": "mono.hap.exColleague.near", "when": {"npcProfile": "exColleague", "distMax": 6, "noticed": true}, "cooldownSec": 120},
+  {"key": "mono.hap.dog", "when": {"npcProfile": "dogWalker", "distMax": 9, "visible": true}, "cooldownSec": 200},
+  {"key": "mono.hap.cafeQuiet", "when": {"event": "happening:cafeQuiet"}, "once": true},
+  {"key": "mono.hap.shower", "when": {"event": "happening:shower"}, "once": true},
+  {"key": "mono.hurry", "when": {"event": "hurry:full"}, "cooldownSec": 90}
 ]

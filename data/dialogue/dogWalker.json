@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "어머, 안녕하세요~ 얘가 사람을 좋아해서요.",
+    "kind": "opening",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "만져 보셔도 돼요. 안 물어요!",
+      "kind": "question",
+      "durationSec": 2.0
+    },
+    {
+      "text": "이름이 콩이에요. 세 살이요.",
+      "kind": "story",
+      "durationSec": 2.0
+    },
+    {
+      "text": "고양이 키우시죠? 냄새 맡나 봐요, 하하.",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "더우세요? 얼굴이 발그레하시네.",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "콩아, 인사해~ 안녕히 가세요!",
+    "parried": "네~ 좋은 하루 되세요!",
+    "endured": "콩아 가자~",
+    "sos": "전화 받으세요~",
+    "awkward": "…아, 네. 콩아 가자."
+  }
+}

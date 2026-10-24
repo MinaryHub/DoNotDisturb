@@ -106,13 +106,15 @@
       "at": "15:30",
       "kind": "call",
       "contact": "mom",
-      "textKey": "phone.mom.wed"
+      "textKey": "phone.mom.wed",
+      "jitterMin": 20
     },
     {
       "at": "19:00",
       "kind": "message",
       "contact": "friend",
-      "textKey": "phone.friend.market"
+      "textKey": "phone.friend.market",
+      "jitterMin": 20
     }
   ],
   "npcs": [
@@ -136,7 +138,12 @@
     {
       "id": "flyer",
       "profile": "flyer",
-      "at": "flyer"
+      "at": "flyer",
+      "alt": [
+        {
+          "at": "flyer2"
+        }
+      ]
     },
     {
       "id": "barista",
@@ -185,20 +192,29 @@
     {
       "id": "laundryRegular",
       "profile": "regular",
-      "at": "laundryRegular"
+      "at": "laundryRegular",
+      "chance": 0.6
     },
     {
       "id": "surveyor",
       "profile": "surveyor",
       "at": "surveyor",
-      "from": "13:00"
+      "from": "13:00",
+      "chance": 0.7
     },
     {
       "id": "kid",
       "profile": "kid",
       "at": "eastWalker",
       "path": "eastLaneLoop",
-      "from": "15:00"
+      "from": "15:00",
+      "alt": [
+        {
+          "at": "eastWalker",
+          "path": "eastLaneLoop",
+          "from": "16:00"
+        }
+      ]
     },
     {
       "id": "cat",

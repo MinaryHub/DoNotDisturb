@@ -72,7 +72,8 @@
       "at": "08:40",
       "kind": "message",
       "contact": "teamChat",
-      "textKey": "phone.team.morning"
+      "textKey": "phone.team.morning",
+      "jitterMin": 20
     },
     {
       "on": "done:work",
@@ -90,7 +91,8 @@
       "at": "20:30",
       "kind": "message",
       "contact": "friend",
-      "textKey": "phone.friend.howsday"
+      "textKey": "phone.friend.howsday",
+      "jitterMin": 20
     }
   ],
   "npcs": [
@@ -99,7 +101,20 @@
       "profile": "neighbor",
       "at": "neighbor302",
       "path": "aptHall",
-      "to": "09:30"
+      "to": "09:30",
+      "alt": [
+        {
+          "at": "lobbyWalk",
+          "path": "lobbyLoop",
+          "to": "09:30"
+        },
+        {
+          "at": "neighbor302",
+          "path": "aptHall",
+          "from": "08:05",
+          "to": "09:10"
+        }
+      ]
     },
     {
       "id": "manager",
@@ -160,7 +175,15 @@
       "at": "coworkerC",
       "path": "officeLoop",
       "from": "09:00",
-      "to": "18:30"
+      "to": "18:30",
+      "alt": [
+        {
+          "at": "pantryB",
+          "path": "pantryIdle",
+          "from": "09:00",
+          "to": "18:30"
+        }
+      ]
     },
     {
       "id": "sampler",
@@ -172,7 +195,14 @@
       "profile": "acquaintance",
       "at": "acquaintance",
       "path": "martLoop",
-      "from": "17:00"
+      "from": "17:00",
+      "alt": [
+        {
+          "at": "acquaintance",
+          "path": "martLoop",
+          "from": "17:40"
+        }
+      ]
     },
     {
       "id": "cashier",
@@ -199,13 +229,15 @@
     {
       "id": "laundryRegular",
       "profile": "regular",
-      "at": "laundryRegular"
+      "at": "laundryRegular",
+      "chance": 0.6
     },
     {
       "id": "surveyor",
       "profile": "surveyor",
       "at": "surveyor",
-      "from": "17:00"
+      "from": "17:00",
+      "chance": 0.7
     }
   ],
   "work": {

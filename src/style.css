@@ -759,6 +759,10 @@ kbd {
   background: #6fb3e0;
 }
 
+.symptoms__row--hurry .symptoms__fill {
+  background: #f29e4c;
+}
+
 /* ───── 아이템 아이콘 ───── */
 .icon {
   vertical-align: middle;
@@ -894,6 +898,23 @@ kbd {
   font-size: 17px;
   line-height: 1.65;
   color: #ddd5c6;
+}
+
+.screen__today {
+  margin: -6px 0 18px;
+  padding: 10px 14px;
+  list-style: none;
+  border-left: 3px solid rgba(242, 201, 76, 0.7);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+  line-height: 1.7;
+  color: #e9dfc9;
+}
+
+.screen__today li::before {
+  content: '· ';
+  color: #f2c94c;
 }
 
 .screen__cta {

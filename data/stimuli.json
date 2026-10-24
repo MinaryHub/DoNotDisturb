@@ -48,5 +48,10 @@
   "laundryHum": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.02 },
   "rainSoaked": { "kind": "continuous", "channel": "visual", "ratePerSec": 0.08 },
   "marketChatter": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.15 },
+  "buskingMusic": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.12 },
+  "roadworkNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.2 },
+  "movingNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.1 },
+  "dogTalk": { "kind": "encounter", "channel": "social", "damage": 3 },
+  "spamCall": { "kind": "ambush", "channel": "auditory", "damage": 8 },
   "rumination": { "kind": "rumination", "channel": "social", "ratePerSec": 0.5, "durationSec": 20 }
 }

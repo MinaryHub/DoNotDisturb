@@ -1,0 +1,149 @@
+{
+  "maxPerDay": 3,
+  "list": [
+    {
+      "id": "elevatorCheck",
+      "introKey": "hap.elevatorCheck",
+      "chance": 0.3,
+      "group": "apt",
+      "days": ["day1", "day2", "dayWed", "day3"],
+      "blocked": [
+        { "interactable": "elevator3F", "toastKey": "hap.elevatorCheck.toast" },
+        { "interactable": "elevator1F", "toastKey": "hap.elevatorCheck.toast" }
+      ]
+    },
+    {
+      "id": "neighborMoving",
+      "introKey": "hap.neighborMoving",
+      "chance": 0.3,
+      "group": "apt",
+      "npcs": [
+        { "id": "moverA", "profile": "mover", "at": "courierHall", "path": "aptHall", "to": "11:00" },
+        { "id": "moverB", "profile": "mover", "at": "lobbyWalk", "path": "lobbyLoop", "to": "11:00" }
+      ],
+      "areaStimuli": [{ "area": "apt3f", "id": "movingNoise", "intensity": 1 }]
+    },
+    {
+      "id": "neighborAway",
+      "introKey": "hap.neighborAway",
+      "chance": 0.25,
+      "group": "apt",
+      "days": ["day1", "day2", "day3", "day4"],
+      "removeNpcs": ["neighbor"]
+    },
+    {
+      "id": "kidMorning",
+      "chance": 0.4,
+      "days": ["day1", "day2", "day3"],
+      "npcs": [{ "id": "kidMorning", "profile": "kid", "at": "lobbyWalk", "path": "lobbyLoop", "to": "08:40" }]
+    },
+    {
+      "id": "busker",
+      "introKey": "hap.busker",
+      "chance": 0.3,
+      "group": "boulevard",
+      "weather": "clear",
+      "npcs": [{ "id": "busker", "profile": "busker", "at": "busker", "from": "17:00" }],
+      "areaStimuli": [{ "area": "boulevard", "id": "buskingMusic", "intensity": 1 }],
+      "crowdLanes": [{ "id": "buskerAudience", "from": [136, 73.4], "to": [144, 73.4], "width": 1.2, "count": 6, "speed": 0.25, "zone": "boulevard" }]
+    },
+    {
+      "id": "quietStreet",
+      "introKey": "hap.quietStreet",
+      "chance": 0.2,
+      "group": "boulevard",
+      "areaStimuli": [{ "area": "boulevard", "id": "trafficNoise", "intensity": 0.4 }]
+    },
+    {
+      "id": "promoBooth",
+      "chance": 0.35,
+      "group": "boulevardPeople",
+      "days": ["day1", "day2", "dayWed", "day3"],
+      "npcs": [{ "id": "promoter", "profile": "promoter", "at": "promoter", "from": "08:00", "to": "20:00" }]
+    },
+    {
+      "id": "surveyBlvd",
+      "chance": 0.25,
+      "group": "boulevardPeople",
+      "npcs": [{ "id": "surveyorBlvd", "profile": "surveyor", "at": "blvdSurvey", "from": "11:00", "to": "19:00" }]
+    },
+    {
+      "id": "roadwork",
+      "introKey": "hap.roadwork",
+      "chance": 0.25,
+      "group": "boulevard",
+      "days": ["day1", "day2", "dayWed", "day3"],
+      "areaStimuli": [{ "area": "avenue", "id": "roadworkNoise", "intensity": 1 }]
+    },
+    {
+      "id": "exColleague",
+      "chance": 0.25,
+      "group": "meet",
+      "npcs": [{ "id": "exColleague", "profile": "exColleague", "at": "strollWest", "path": "southStroll", "from": "12:00" }]
+    },
+    {
+      "id": "dogWalker",
+      "chance": 0.35,
+      "group": "park",
+      "days": ["day1", "day2", "dayWed", "day3"],
+      "npcs": [{ "id": "dogWalker", "profile": "dogWalker", "at": "parkWalker", "path": "parkLoop", "to": "10:00" }]
+    },
+    {
+      "id": "cafeQuiet",
+      "introKey": "hap.cafeQuiet",
+      "chance": 0.2,
+      "group": "cafe",
+      "areaStimuli": [{ "area": "cafe", "id": "cafeChatter", "intensity": 0.35 }]
+    },
+    {
+      "id": "shower",
+      "introKey": "hap.shower",
+      "chance": 0.15,
+      "group": "weather",
+      "weather": "clear",
+      "days": ["day1", "dayWed", "day3", "day4"],
+      "setWeather": "rain"
+    },
+    {
+      "id": "momSideDish",
+      "chance": 0.3,
+      "group": "phoneFamily",
+      "phone": [
+        { "at": "12:10", "jitterMin": 40, "kind": "message", "contact": "mom", "textKey": "hap.phone.momSideDish" },
+        { "at": "15:30", "jitterMin": 60, "kind": "message", "contact": "delivery", "textKey": "hap.phone.sideDishDelivery" }
+      ]
+    },
+    {
+      "id": "groupChatStorm",
+      "chance": 0.3,
+      "group": "phoneWork",
+      "days": ["day1", "day2", "dayWed", "day3"],
+      "phone": [
+        { "at": "10:40", "jitterMin": 30, "kind": "message", "contact": "teamChat", "textKey": "hap.phone.storm1" },
+        { "at": "10:42", "jitterMin": 30, "kind": "message", "contact": "teamChat", "textKey": "hap.phone.storm2" },
+        { "at": "10:44", "jitterMin": 30, "kind": "message", "contact": "teamChat", "textKey": "hap.phone.storm3" }
+      ]
+    },
+    {
+      "id": "friendCat",
+      "chance": 0.35,
+      "group": "phoneFriend",
+      "phone": [
+        {
+          "at": "13:00",
+          "jitterMin": 90,
+          "kind": "message",
+          "contact": "friend",
+          "textKey": "hap.phone.friendCat",
+          "textKeys": ["hap.phone.friendCat", "hap.phone.friendSong", "hap.phone.friendBread"]
+        }
+      ]
+    },
+    {
+      "id": "spamCall",
+      "chance": 0.35,
+      "group": "phoneSpam",
+      "phone": [{ "at": "11:20", "jitterMin": 120, "kind": "call", "contact": "unknownNumber", "textKey": "hap.phone.spam" }]
+    }
+  ]
+}

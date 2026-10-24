@@ -422,7 +422,7 @@
     "bookseller": [244, 35.2],
     "surveyor": [229.5, 50],
     "laundryRegular": [210, 43],
-    "eastWalker": [229.5, 8]
+    "eastWalker": [229.5, 8], "busker": [140, 74.6], "promoter": [150, 61.8], "blvdSurvey": [80, 61.8], "strollWest": [20, 76], "lobbyWalk": [16, 40]
   },
 
   "paths": {

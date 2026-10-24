@@ -21,6 +21,11 @@
     "freezeSec": 0.5,
     "shakeSec": 0.6
   },
+  "hurry": {
+    "fullAfterSec": 4,
+    "calmSec": 8,
+    "stressPerSec": 5
+  },
   "recovery": {
     "homeLockedPerSec": 0.6,
     "allyNearPerSec": 1,

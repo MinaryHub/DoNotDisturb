@@ -84,7 +84,9 @@ function boot(): void {
 
   const start = (fresh: boolean) => {
     audio.resume();
-    session = new GameSession(cfg, fresh ? undefined : (readSave() ?? undefined));
+    // 씨앗: 같은 요일도 할 때마다 마주치는 사람·사건이 조금씩 다르다 (?seed=N으로 고정 가능)
+    const seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : Math.floor(Math.random() * 2 ** 32);
+    session = new GameSession(cfg, fresh ? undefined : (readSave() ?? undefined), { seed });
     if (params.has('day')) session.startDay(Math.min(cfg.days.length - 1, Number(params.get('day')) || 0));
     renderer = new Renderer(canvas, cfg, session.world.map);
     renderer.resize();

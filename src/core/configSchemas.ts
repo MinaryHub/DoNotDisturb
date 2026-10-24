@@ -80,6 +80,8 @@ export const balanceConfigSchema = z.object({
     decayDelaySec: nonNegative,
   }),
   ambush: z.object({ freezeSec: nonNegative, shakeSec: nonNegative }),
+  /** 조급함: 달리면 차오르고(fullAfterSec), 걸으면 천천히 가라앉는다(calmSec). 차 있는 만큼 스트레스가 오른다 */
+  hurry: z.object({ fullAfterSec: positive, calmSec: positive, stressPerSec: nonNegative }),
   recovery: z.object({
     homeLockedPerSec: nonNegative,
     allyNearPerSec: nonNegative,
@@ -540,6 +542,21 @@ export type PortalDef = WorldDef['portals'][number];
 export type SafeDef = WorldDef['safes'][number];
 
 // ───── 하루 ─────
+const dayNpcSchema = z.object({
+  id: z.string(),
+  profile: z.string(),
+  at: z.string(),
+  path: z.string().optional(),
+  from: hhmm.optional(),
+  to: hhmm.optional(),
+  seated: z.boolean().optional(),
+  /** 나타날 확률 (기본 1) */
+  chance: unit.optional(),
+  /** 위치·경로·시간 대안: 하루를 시작할 때 기본값 또는 이 중 하나를 고른다 */
+  alt: z.array(z.object({ at: z.string(), path: z.string().optional(), from: hhmm.optional(), to: hhmm.optional() })).optional(),
+});
+export type DayNpcDef = z.infer<typeof dayNpcSchema>;
+
 export const daySchema = z.object({
   id: z.string(),
   weekdayKey: z.string(),
@@ -587,20 +604,16 @@ export const daySchema = z.object({
         effect: z.enum(['plansCancelled']).optional(),
         /** 발생 확률 (기본 1) */
         chance: unit.optional(),
+        /** 문구 후보: 있으면 textKey 대신 이 중 하나 (같은 날도 매번 조금 다르게) */
+        textKeys: z.array(z.string()).optional(),
+        /** at 시각을 ±분 만큼 흔든다 */
+        jitterMin: nonNegative.optional(),
       })
       .refine((p) => (p.at === undefined) !== (p.on === undefined), 'at(시각) 또는 on(이벤트) 중 하나만 지정'),
   ),
-  npcs: z.array(
-    z.object({
-      id: z.string(),
-      profile: z.string(),
-      at: z.string(),
-      path: z.string().optional(),
-      from: hhmm.optional(),
-      to: hhmm.optional(),
-      seated: z.boolean().optional(),
-    }),
-  ),
+  npcs: z.array(dayNpcSchema),
+  /** 그날 쓸 수 없는 상호작용 (엘리베이터 점검 등). 시도하면 toastKey */
+  blocked: z.array(z.object({ interactable: z.string(), toastKey: z.string() })).optional(),
   work: z
     .object({ endTime: hhmm, tasks: positive, focusPerSec: positive, pingEverySec: z.tuple([positive, positive]), pingTimeoutSec: positive })
     .optional(),
@@ -622,6 +635,39 @@ export type DayDef = z.infer<typeof daySchema>;
 export type ObjectiveDef = DayDef['objectives'][number];
 
 export const campaignSchema = z.object({ days: z.array(z.string()).min(1) });
+
+/**
+ * 작은 사건 (data/happenings.json). 같은 요일이어도 하루를 시작할 때마다 몇 개를 골라 그날에 섞는다.
+ * 사람·전화·군중·소음·노점·날씨·막힌 시설을 더하고, 하루 시작 화면에 한 줄로 알린다.
+ */
+export const happeningsConfigSchema = z.object({
+  maxPerDay: z.number().int().min(0),
+  list: z.array(
+    z.object({
+      id: z.string(),
+      /** 하루 시작 화면에 붙는 한 줄 (없으면 조용히 일어난다) */
+      introKey: z.string().optional(),
+      chance: unit,
+      /** 이 하루(id)들에만. 없으면 모든 날 */
+      days: z.array(z.string()).optional(),
+      /** 이 날씨일 때만 */
+      weather: z.enum(['clear', 'rain']).optional(),
+      /** 같은 group은 하루에 하나만 */
+      group: z.string().optional(),
+      setWeather: z.enum(['clear', 'rain']).optional(),
+      npcs: z.array(dayNpcSchema).optional(),
+      phone: z.array(daySchema.shape.phone.element).optional(),
+      crowdLanes: z.array(crowdLaneSchema).optional(),
+      areaStimuli: z.array(z.object({ area: z.string(), id: z.string(), intensity: nonNegative })).optional(),
+      stalls: z.array(z.object({ rect, color: z.string() })).optional(),
+      blocked: z.array(z.object({ interactable: z.string(), toastKey: z.string() })).optional(),
+      /** 그날 쉬는 사람 (옆집 아주머니 여행 등) */
+      removeNpcs: z.array(z.string()).optional(),
+    }),
+  ),
+});
+export type HappeningsConfig = z.infer<typeof happeningsConfigSchema>;
+export type HappeningDef = HappeningsConfig['list'][number];
 
 export const monologueTriggersSchema = z.array(
   z.object({

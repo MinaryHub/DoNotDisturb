@@ -41,7 +41,7 @@ export class GameUI {
   private readonly status = el('div', 'status', this.root);
   private readonly stressGauge = el('div', 'stress', this.root);
   private readonly symptomGauge = el('div', 'symptoms', this.root);
-  private readonly symptomRows: { key: Symptom; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
+  private readonly symptomRows: { key: Symptom | 'hurry'; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
   private readonly optionInputs = new Map<string, HTMLInputElement>();
   private readonly stressFill: HTMLDivElement;
   private stressShown = 0;
@@ -61,7 +61,7 @@ export class GameUI {
     setText(this.hint, this.tx('hud.controls'));
     el('span', 'stress__label', this.stressGauge, this.tx('hud.stress'));
     this.stressFill = el('div', 'stress__fill', el('div', 'stress__bar', this.stressGauge));
-    for (const key of symptoms) {
+    for (const key of [...symptoms, 'hurry' as const]) {
       const row = el('div', `symptoms__row symptoms__row--${key}`, this.symptomGauge);
       el('span', 'symptoms__label', row, this.tx(`hud.symptom.${key}`));
       const fill = el('div', 'symptoms__fill', el('div', 'symptoms__bar', row));
@@ -160,14 +160,21 @@ export class GameUI {
     this.stressGauge.classList.toggle('stress--high', v >= 0.6);
   }
 
-  /** 증상별 게이지: 숫자 없이 길이로. 0이면 흐리게 */
+  /** 하루 시작 화면: 오늘만의 작은 사건 */
+  private happeningsHtml(s: GameSession): string {
+    const lines = s.happenings.filter((h) => h.introKey).map((h) => `<li>${escapeHtml(this.tx(h.introKey!))}</li>`);
+    return lines.length ? `<ul class="screen__today">${lines.join('')}</ul>` : '';
+  }
+
+  /** 증상별 게이지 + 조급함: 숫자 없이 길이로. 0이면 흐리게 */
   private updateSymptoms(dt: number, s: GameSession, playing: boolean): void {
     const visible = playing && this.settings.symptomGauge;
     show(this.symptomGauge, visible);
     if (!visible) return;
     const snap = s.snapshot;
     for (const r of this.symptomRows) {
-      r.shown += (snap[r.key] - r.shown) * Math.min(1, dt * 6);
+      const v = r.key === 'hurry' ? s.hurry : snap[r.key];
+      r.shown += (v - r.shown) * Math.min(1, dt * 6);
       r.fill.style.width = `${(r.shown * 100).toFixed(1)}%`;
       r.row.classList.toggle('symptoms__row--on', r.shown > 0.05);
     }
@@ -611,6 +618,7 @@ export class GameUI {
           <p class="screen__kicker">${escapeHtml(this.tx(s.day.weekdayKey))} · ${escapeHtml(formatTime(s.clock.minutes))}</p>
           <h1 class="screen__title">${escapeHtml(this.tx(s.day.titleKey))}</h1>
           <p class="screen__body">${escapeHtml(this.tx(s.day.introKey))}</p>
+          ${this.happeningsHtml(s)}
           <p class="screen__cta">${escapeHtml(this.tx('screen.dayIntro.hint'))}</p>
           <p class="screen__hint">${escapeHtml(this.tx('hud.controls'))}</p>
         </div>`;

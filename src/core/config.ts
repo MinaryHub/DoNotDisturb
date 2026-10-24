@@ -8,6 +8,7 @@ import {
   inputConfigSchema,
   itemsConfigSchema,
   choresConfigSchema,
+  happeningsConfigSchema,
   lifeConfigSchema,
   monologueTriggersSchema,
   npcProfilesSchema,
@@ -27,6 +28,7 @@ import {
   type InputConfig,
   type ItemsConfig,
   type ChoresConfig,
+  type HappeningsConfig,
   type LifeConfig,
   type MonologueTrigger,
   type NpcProfile,
@@ -48,6 +50,7 @@ export interface GameConfig {
   balance: BalanceConfig;
   items: ItemsConfig;
   chores: ChoresConfig;
+  happenings: HappeningsConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -95,6 +98,7 @@ export function parseGameConfig(raw: RawConfig): GameConfig {
     balance: parseConfig(balanceConfigSchema, j('balance.json'), 'data/balance.json'),
     items: parseConfig(itemsConfigSchema, j('items.json'), 'data/items.json'),
     chores: parseConfig(choresConfigSchema, j('chores.json'), 'data/chores.json'),
+    happenings: parseConfig(happeningsConfigSchema, j('happenings.json'), 'data/happenings.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -212,14 +216,55 @@ export function crossCheck(cfg: GameConfig): string[] {
       if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
       needStim(a.id, `${where} areaStimuli`);
     }
-    for (const p of d.phone) {
+    checkPhone(d.phone, where);
+    checkNpcs(d.npcs, where);
+    checkBlocked(d.blocked ?? [], where);
+  }
+  const dayIds = new Set(cfg.days.map((d) => d.id));
+  const happeningIds = new Set<string>();
+  for (const h of cfg.happenings.list) {
+    const where = `happening ${h.id}`;
+    if (happeningIds.has(h.id)) errors.push(`${where}: id 중복`);
+    happeningIds.add(h.id);
+    if (h.introKey) needText(h.introKey, where);
+    for (const id of h.days ?? []) if (!dayIds.has(id)) errors.push(`${where}: 하루 없음 "${id}" (data/campaign.json)`);
+    for (const a of h.areaStimuli ?? []) {
+      if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
+      needStim(a.id, `${where} areaStimuli`);
+    }
+    for (const l of h.crowdLanes ?? []) if (!w.areas.some((x) => x.id === l.zone)) errors.push(`${where} crowdLane ${l.id}: 영역 없음 "${l.zone}"`);
+    checkPhone(h.phone ?? [], where);
+    checkNpcs(h.npcs ?? [], where);
+    checkBlocked(h.blocked ?? [], where);
+    for (const id of h.removeNpcs ?? []) {
+      if (!cfg.days.some((d) => (!h.days || h.days.includes(d.id)) && d.npcs.some((n) => n.id === id))) errors.push(`${where} removeNpcs: 어느 날에도 없는 NPC "${id}"`);
+    }
+    // 사건 NPC id가 그 사건이 일어날 수 있는 날의 NPC와 겹치면 조용히 빠지므로 알려 준다
+    for (const d of cfg.days) {
+      if (h.days && !h.days.includes(d.id)) continue;
+      for (const n of h.npcs ?? []) if (d.npcs.some((x) => x.id === n.id)) errors.push(`${where} npc ${n.id}: ${d.id}의 NPC id와 겹침`);
+    }
+  }
+  function checkPhone(list: DayDef['phone'], where: string): void {
+    for (const p of list) {
       if (!has(cfg.life.contacts, p.contact)) errors.push(`${where} phone: 연락처 없음 "${p.contact}"`);
       needText(p.textKey, `${where} phone`);
+      for (const k of p.textKeys ?? []) needText(k, `${where} phone`);
     }
-    for (const n of d.npcs) {
+  }
+  function checkNpcs(list: DayDef['npcs'], where: string): void {
+    for (const n of list) {
       if (!has(cfg.npcProfiles, n.profile)) errors.push(`${where} npc ${n.id}: 프로필 없음 "${n.profile}"`);
-      if (!has(w.spawns, n.at)) errors.push(`${where} npc ${n.id}: 스폰 없음 "${n.at}"`);
-      if (n.path && !has(w.paths, n.path)) errors.push(`${where} npc ${n.id}: 경로 없음 "${n.path}"`);
+      for (const o of [n, ...(n.alt ?? [])]) {
+        if (!has(w.spawns, o.at)) errors.push(`${where} npc ${n.id}: 스폰 없음 "${o.at}"`);
+        if (o.path && !has(w.paths, o.path)) errors.push(`${where} npc ${n.id}: 경로 없음 "${o.path}"`);
+      }
+    }
+  }
+  function checkBlocked(list: NonNullable<DayDef['blocked']>, where: string): void {
+    for (const b of list) {
+      if (!w.interactables.some((i) => i.id === b.interactable)) errors.push(`${where} blocked: 상호작용 없음 "${b.interactable}"`);
+      needText(b.toastKey, `${where} blocked`);
     }
   }
   for (const tr of cfg.monologueTriggers) {

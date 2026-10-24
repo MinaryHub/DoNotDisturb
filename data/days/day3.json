@@ -78,7 +78,8 @@
       "at": "08:20",
       "kind": "message",
       "contact": "teamChat",
-      "textKey": "phone.team.dinner"
+      "textKey": "phone.team.dinner",
+      "jitterMin": 20
     },
     {
       "at": "08:45",
@@ -105,7 +106,20 @@
       "profile": "neighbor",
       "at": "neighbor302",
       "path": "aptHall",
-      "to": "09:30"
+      "to": "09:30",
+      "alt": [
+        {
+          "at": "lobbyWalk",
+          "path": "lobbyLoop",
+          "to": "09:30"
+        },
+        {
+          "at": "neighbor302",
+          "path": "aptHall",
+          "from": "08:05",
+          "to": "09:10"
+        }
+      ]
     },
     {
       "id": "manager",
@@ -120,7 +134,12 @@
     {
       "id": "flyer",
       "profile": "flyer",
-      "at": "flyer"
+      "at": "flyer",
+      "alt": [
+        {
+          "at": "flyer2"
+        }
+      ]
     },
     {
       "id": "barista",
@@ -160,7 +179,15 @@
       "at": "coworkerC",
       "path": "officeLoop",
       "from": "09:00",
-      "to": "18:00"
+      "to": "18:00",
+      "alt": [
+        {
+          "at": "pantryB",
+          "path": "pantryIdle",
+          "from": "09:00",
+          "to": "18:00"
+        }
+      ]
     },
     {
       "id": "restBoss",
@@ -231,7 +258,8 @@
     {
       "id": "laundryRegular",
       "profile": "regular",
-      "at": "laundryRegular"
+      "at": "laundryRegular",
+      "chance": 0.6
     }
   ],
   "work": {
