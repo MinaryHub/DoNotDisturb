@@ -509,5 +509,7 @@
   "touch.eyes": "눈 감기",
   "touch.mask": "😷 마스크",
   "touch.phone": "📱 폰",
-  "touch.map": "🗺 지도"
+  "touch.map": "🗺 지도",
+  "memo.pending": "미뤄 둔 연락",
+  "memo.unread": "읽지 않은 메시지 {n}"
 }

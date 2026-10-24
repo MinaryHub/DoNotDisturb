@@ -86,5 +86,10 @@
   {"key": "mono.hap.dog", "when": {"npcProfile": "dogWalker", "distMax": 9, "visible": true}, "cooldownSec": 200},
   {"key": "mono.hap.cafeQuiet", "when": {"event": "happening:cafeQuiet"}, "once": true},
   {"key": "mono.hap.shower", "when": {"event": "happening:shower"}, "once": true},
-  {"key": "mono.hurry", "when": {"event": "hurry:full"}, "cooldownSec": 90}
+  {"key": "mono.hurry", "when": {"event": "hurry:full"}, "cooldownSec": 90},
+  {"key": "mono.avoid.income", "when": {"event": "avoided:income"}, "cooldownSec": 45},
+  {"key": "mono.avoid.housing", "when": {"event": "avoided:housing"}, "cooldownSec": 45},
+  {"key": "mono.avoid.essentials", "when": {"event": "avoided:essentials"}, "cooldownSec": 45},
+  {"key": "mono.avoid.bond", "when": {"event": "avoided:bond"}, "cooldownSec": 45},
+  {"key": "mono.avoid.almost", "when": {"event": "avoided:almost"}, "cooldownSec": 20}
 ]

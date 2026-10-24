@@ -1196,7 +1196,10 @@ export class GameSession {
       if (e.type === 'ping') {
         this.sim.bus.emit('workPing');
         this.fx.push({ type: 'sound', id: 'vibrate' });
-      } else if (e.type === 'pingIgnored') this.sim.life.apply(rw.workPingIgnored);
+      } else if (e.type === 'pingIgnored') {
+        this.sim.life.apply(rw.workPingIgnored);
+        this.gameEvent('avoided:income');
+      }
       else if (e.type === 'task') this.sim.life.addMoney(rw.workPerTask);
       else if (e.type === 'done') {
         this.sim.life.apply(rw.workDone);
@@ -1512,6 +1515,15 @@ export class GameSession {
     }
     const out = applyContactOutcome(contactId, contact, how, this.sim.life);
     if (out.stimulus) this.sim.bus.emit(out.stimulus, contactId);
+    if (out.avoided) {
+      // 회피의 대가를 그 자리에서 느끼게: 어떤 생활이 흔들리는지 독백으로
+      const delta = how === 'readIgnored' ? contact.readIgnored : how === 'unread' ? contact.unread : contact.avoid;
+      const worst = (Object.entries(delta) as [string, number][]).sort((a, b) => a[1] - b[1])[0];
+      if (worst && worst[1] < 0) this.gameEvent(`avoided:${worst[0]}`);
+      if (contact.escalation && this.sim.life.avoidCount(contactId) % this.cfg.life.stats.escalateAfter === this.cfg.life.stats.escalateAfter - 1) {
+        this.gameEvent('avoided:almost');
+      }
+    }
     if (how === 'answered' && contact.ally) this.sim.energy.recover(8);
     if (how === 'answered') {
       this.gameEvent(`answered:${contactId}`);

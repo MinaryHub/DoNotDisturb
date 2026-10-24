@@ -212,7 +212,35 @@ export class GameUI {
       if (n > 0) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
     for (const g of this.cfg.items.gear) if (inv.gear.includes(g.id)) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(g.nameKey))}">${itemIcon(g.icon, 16)}</span>`);
-    setHtml(this.memoFoot, parts.join(' '));
+    setHtml(this.memoFoot, parts.join(' ') + this.pendingHtml(s));
+  }
+
+  /** 폰 상태 표시줄의 생활 지표: 숫자 없이 아이콘 아래 막대 (낮으면 붉게) */
+  private lifeIconsHtml(s: GameSession): string {
+    const icons: Record<string, string> = { income: '💼', housing: '🏠', essentials: '🛒', bond: '💛' };
+    return `<span class="lifeicons">${lifeStatIds
+      .map((id) => {
+        const v = s.sim.life.get(id) / 100;
+        return `<span class="lifeicon${v < 0.3 ? ' lifeicon--low' : ''}" title="${escapeHtml(this.tx(`life.${id}`))}">${icons[id] ?? ''}<i style="width:${(v * 100).toFixed(0)}%"></i></span>`;
+      })
+      .join('')}</span>`;
+  }
+
+  /** 미뤄 둔 연락: 피할수록 쌓이는 점(●). 다 차면 직접 찾아온다. 읽지 않은 메시지 수 */
+  private pendingHtml(s: GameSession): string {
+    const life = s.sim.life;
+    const rows: string[] = [];
+    const max = this.cfg.life.stats.escalateAfter;
+    for (const [id, c] of Object.entries(this.cfg.life.contacts)) {
+      const n = life.avoidCount(id);
+      if (n <= 0 || id === 'unknownNumber') continue;
+      const k = c.escalation ? n % max || max : Math.min(n, max);
+      const dots = c.escalation ? `${'●'.repeat(k)}${'○'.repeat(max - k)}` : '●'.repeat(k);
+      rows.push(`<li class="${c.escalation && k >= max - 1 ? 'memo__pending--hot' : ''}">${escapeHtml(this.tx(c.nameKey))} <span class="memo__dots">${dots}</span></li>`);
+    }
+    const unread = s.phone.unread.length;
+    if (unread > 0) rows.push(`<li>${escapeHtml(this.tx('memo.unread', { n: unread }))}</li>`);
+    return rows.length ? `<div class="memo__pending"><b>${escapeHtml(this.tx('memo.pending'))}</b><ul>${rows.join('')}</ul></div>` : '';
   }
 
   /** 화면 가장자리 화살표: 지금 할 일 쪽 */
@@ -392,7 +420,7 @@ export class GameUI {
       : `<li class="empty">${escapeHtml(this.tx('phone.empty'))}</li>`;
     setHtml(
       this.phonePanel,
-      `<div class="phone__bar"><span>${s.clock.label}</span>${batt}</div>
+      `<div class="phone__bar"><span>${s.clock.label}</span>${this.lifeIconsHtml(s)}${batt}</div>
        <div class="phone__title">${escapeHtml(this.tx('phone.title'))}</div>
        <ul class="phone__list">${list}</ul>
        ${phone.waitingReply ? `<div class="phone__wait">${escapeHtml(this.tx('phone.waiting'))}</div>` : ''}

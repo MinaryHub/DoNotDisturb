@@ -1316,3 +1316,70 @@ body.is-touch .hint {
     transform: scale(0.82);
   }
 }
+
+/* ───── 미뤄 둔 연락 (메모 아래) ───── */
+.memo__pending {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(59, 52, 44, 0.25);
+  font-size: 12px;
+  color: rgba(59, 52, 44, 0.85);
+}
+
+.memo__pending ul {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memo__dots {
+  letter-spacing: 1px;
+  color: #b0573f;
+}
+
+.memo__pending--hot {
+  color: #a3361f;
+  font-weight: 700;
+  animation: pending-hot 1.4s ease-in-out infinite;
+}
+
+@keyframes pending-hot {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ───── 폰 상태 표시줄의 생활 지표 ───── */
+.lifeicons {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.lifeicon {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  padding-bottom: 4px;
+}
+
+.lifeicon i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: #9fd38a;
+}
+
+.lifeicon--low i {
+  background: #e05a5a;
+}
+
+.lifeicon--low {
+  animation: pending-hot 1.4s ease-in-out infinite;
+}
