@@ -52,6 +52,8 @@ export interface Controls {
   note: number | null;
   slot: number | null;
   retry: boolean;
+  /** 미니게임·휴식 그만두기 (Esc) */
+  cancel: boolean;
 }
 
 export const NO_CONTROLS: Controls = {
@@ -84,6 +86,7 @@ export const NO_CONTROLS: Controls = {
   note: null,
   slot: null,
   retry: false,
+  cancel: false,
 };
 
 export interface PlayerState {
@@ -473,10 +476,11 @@ export class GameSession {
         if (m.game.done) {
           m.doneTime += dt;
           if (m.doneTime > 1.6 || c.interactPressed) this.finishPiano();
-        } else if (c.note !== null) {
+        } else if (c.cancel) this.mode = { kind: 'free' };
+        else if (c.note !== null) {
           const ok = m.game.press(c.note);
           this.fx.push({ type: 'sound', id: 'piano', note: c.note + (ok ? 0 : 0.5) });
-        } else if (c.interactPressed) this.mode = { kind: 'free' };
+        }
         break;
       case 'travel':
         m.timer += dt;
@@ -502,7 +506,7 @@ export class GameSession {
         const r = this.cfg.balance.recovery;
         this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : r.windowPerSec) * dt);
         if (m.what === 'window' && m.time > 4) this.calmBuff = true;
-        if (c.interactPressed || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
+        if (c.interactPressed || c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
         break;
       }
       case 'priceTag': {
@@ -517,7 +521,7 @@ export class GameSession {
         if (m.progress >= 1) {
           this.toast('priceTag.done');
           this.mode = { kind: 'free' };
-        } else if (c.interactPressed || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
+        } else if (c.interactPressed || c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
         break;
       }
       case 'seated':
@@ -1070,7 +1074,7 @@ export class GameSession {
         return;
       }
     }
-    if (c.interactPressed) this.mode = { kind: 'free' };
+    if (c.interactPressed || c.cancel) this.mode = { kind: 'free' };
   }
 
   private finishPiano(): void {

@@ -129,6 +129,17 @@ describe('GameSession: 월요일 하루 진행', () => {
     expect(s.snapshot.flush).toBe(0);
   });
 
+  it('건반 연주: F(파)는 음을 치고, Esc로 언제든 그만둘 수 있다', () => {
+    const s = newDay();
+    goTo(s, 'piano');
+    press(s, { interactPressed: true });
+    expect(s.mode.kind).toBe('piano');
+    press(s, { interactPressed: true, note: 3 });
+    expect(s.mode.kind).toBe('piano');
+    press(s, { cancel: true });
+    expect(s.mode.kind).toBe('free');
+  });
+
   it('번아웃 → 위로 화면 → R로 오늘 다시', () => {
     const s = newDay();
     s.sim.energy.debugSet({ battery: 1 });

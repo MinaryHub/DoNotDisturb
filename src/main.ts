@@ -165,6 +165,7 @@ function boot(): void {
       note,
       slot,
       retry: input.codePressed('KeyR'),
+      cancel: input.wasPressed('pause'),
     };
   };
 
