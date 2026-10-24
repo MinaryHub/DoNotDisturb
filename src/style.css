@@ -195,7 +195,7 @@ kbd {
 .notifs {
   position: absolute;
   right: 16px;
-  bottom: 18px;
+  bottom: calc(18px + var(--panel-h, 0px));
   width: 280px;
 }
 
@@ -223,7 +223,7 @@ kbd {
 .call {
   position: absolute;
   left: 50%;
-  bottom: 120px;
+  bottom: calc(max(120px, var(--panel-h, 0px) + 16px));
   min-width: 300px;
   padding: 14px 20px;
   border-radius: 18px;

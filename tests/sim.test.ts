@@ -161,9 +161,14 @@ describe('SomaticController', () => {
     expect(s.intensity('flush')).toBeLessThan(high - 0.3);
   });
 
-  it('지속형 자극 60초 이상 → 편두통, 눈 감기·찬 음료로 완화', () => {
+  it('지속형 자극 60초 이상 + 신체화 문턱 이상 스트레스 → 편두통, 눈 감기·찬 음료로 완화', () => {
+    const calm = new SomaticController(cfg);
+    const calmBase = { stress: 20, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    for (let i = 0; i < 120; i++) calm.step(1, calmBase);
+    expect(calm.active('migraine')).toBe(false);
+
     const s = new SomaticController(cfg);
-    const base = { stress: 0, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    const base = { stress: 65, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
     for (let i = 0; i < 59; i++) s.step(1, base);
     expect(s.active('migraine')).toBe(false);
     for (let i = 0; i < 20; i++) s.step(1, base);

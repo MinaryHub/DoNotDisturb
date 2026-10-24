@@ -110,10 +110,10 @@ export class SomaticController {
     if (input.sanctuary) flush -= c.flush.decayPerSec * 4 * dt;
     this.set('flush', flush);
 
-    // 편두통: 지속형 자극 노출이 길어지면
+    // 편두통: 지속형 자극 노출이 길어지고 스트레스도 신체화 문턱을 넘었을 때 (긴장이 낮으면 시끄러워도 두통까지 가지 않는다)
     this.exposureSec = input.continuousExposure && !input.sanctuary ? this.exposureSec + dt : Math.max(0, this.exposureSec - dt * 2);
     let migraine = this.level.migraine;
-    if (this.exposureSec >= c.migraine.onsetSec) migraine += c.migraine.risePerSec * dt;
+    if (somatic && this.exposureSec >= c.migraine.onsetSec) migraine += c.migraine.risePerSec * dt;
     else migraine -= c.migraine.decayPerSec * dt;
     if (input.eyesClosed) migraine -= c.migraine.eyesClosedDecayPerSec * dt;
     if (input.sanctuary) migraine -= c.migraine.decayPerSec * 4 * dt;

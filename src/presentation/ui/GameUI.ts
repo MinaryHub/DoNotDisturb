@@ -35,6 +35,7 @@ export class GameUI {
   private readonly call = el('div', 'call', this.root);
   private readonly phonePanel = el('div', 'phone', this.root);
   private readonly panel = el('div', 'panel', this.root);
+  private panelH = -1;
   private readonly qte = el('div', 'qte', this.root);
   private readonly status = el('div', 'status', this.root);
   private readonly stressGauge = el('div', 'stress', this.root);
@@ -388,6 +389,12 @@ export class GameUI {
     show(this.panel, html !== '');
     this.panel.dataset['kind'] = m.kind;
     setHtml(this.panel, html);
+    // 하단 패널이 떠 있으면 전화 수신 창·알림을 그 위로 올린다 (업무 중 전화 안내가 가려지지 않게)
+    const panelH = html !== '' ? this.panel.offsetHeight + 28 : 0;
+    if (panelH !== this.panelH) {
+      this.panelH = panelH;
+      this.root.style.setProperty('--panel-h', `${panelH}px`);
+    }
     if (m.kind === 'dialogue') {
       // 미소 유지 중: 화면 가장자리 떨림 / 편두통: 선택지 진동
       const choices = this.panel.querySelector<HTMLElement>('.dlg__choices');
