@@ -802,7 +802,6 @@ export class GameSession {
   private startTravel(portal: PortalDef): void {
     const target = this.world.portals.find((p) => p.id === portal.to)!;
     this.mode = { kind: 'travel', portal, target, timer: 0, total: Math.max(0.6, portal.travelSec) };
-    this.clock.advance(portal.travelSec * 2, 1);
     this.gameEvent(`portal:${portal.kind}`);
     if (portal.kind === 'stairs') this.fx.push({ type: 'sound', id: 'stairs' });
   }

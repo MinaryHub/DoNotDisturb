@@ -36,6 +36,21 @@ function writeSave(s: SaveState | null): void {
   }
 }
 
+/** 아직 소비되지 않은 눌림(prev)과 새 입력(next)을 합친다 */
+function mergePressed(prev: Controls, next: Controls): Controls {
+  const out: Controls = { ...next };
+  for (const key of Object.keys(prev) as (keyof Controls)[]) {
+    const a = prev[key];
+    if (typeof a === 'boolean' && a && !next[key]) (out as unknown as Record<string, unknown>)[key] = true;
+  }
+  out.reply = next.reply ?? prev.reply;
+  out.note = next.note ?? prev.note;
+  out.slot = next.slot ?? prev.slot;
+  out.dodge = next.dodge || prev.dodge;
+  out.phoneNav = next.phoneNav || prev.phoneNav;
+  return out;
+}
+
 function boot(): void {
   let cfg: GameConfig;
   try {
@@ -93,6 +108,7 @@ function boot(): void {
 
   // 한 렌더 프레임 동안 모은 입력 → 첫 고정 스텝에만 '눌림'을 전달
   let pending: Controls | null = null;
+  let pendingFresh = false;
 
   const buildControls = (s: GameSession): Controls => {
     const mode = s.mode.kind;
@@ -157,7 +173,11 @@ function boot(): void {
     fixedUpdate(dt) {
       if (screen !== 'game' || !session || paused || ui.optionsOpen) return;
       session.step(dt, pending ?? NO_CONTROLS);
-      if (pending) pending = { ...NO_CONTROLS, move: pending.move, sprint: pending.sprint, aim: pending.aim, interactHeld: pending.interactHeld, phonePretend: pending.phonePretend, cover: pending.cover, eyesClosed: pending.eyesClosed, smile: pending.smile };
+      // '눌림'은 첫 스텝에만 전달하고, 이후 스텝에는 '누르고 있음'만 남긴다
+      if (pending && pendingFresh) {
+        pending = { ...NO_CONTROLS, move: pending.move, sprint: pending.sprint, aim: pending.aim, interactHeld: pending.interactHeld, phonePretend: pending.phonePretend, cover: pending.cover, eyesClosed: pending.eyesClosed, smile: pending.smile };
+        pendingFresh = false;
+      }
     },
     render(frameDt) {
       if (screen === 'title') {
@@ -179,7 +199,10 @@ function boot(): void {
         paused = !paused;
         ui.toast(paused ? 'screen.paused' : 'screen.resume');
       }
-      pending = buildControls(s);
+      // 고정 스텝이 한 번도 돌지 않은 프레임의 눌림은 잃지 않도록 합친다
+      const fresh = buildControls(s);
+      pending = pending && pendingFresh ? mergePressed(pending, fresh) : fresh;
+      pendingFresh = true;
       input.endFrame(frameDt);
 
       // 진행 저장: 하루가 바뀌면

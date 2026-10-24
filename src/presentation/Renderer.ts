@@ -72,7 +72,8 @@ export class Renderer {
     this.layer = this.cfg.world.layers.find((l) => inRect(l.rect, target.x, target.y)) ?? this.cfg.world.layers[0]!;
     cam.follow(target, dt, pc.camera.followLerp, this.firstFrame || s.mode.kind === 'travel');
     this.firstFrame = false;
-    const zoom = 1 - pc.camera.dangerZoomOut * (ps.danger * 0.7 + ps.critical * 0.3) * dist + ps.phone * 0.12 + ps.sanctuary * 0.05;
+    const peep = s.mode.kind === 'peephole' ? -0.35 : 0;
+    const zoom = 1 + peep - pc.camera.dangerZoomOut * (ps.danger * 0.7 + ps.critical * 0.3) * dist + ps.phone * 0.12 + ps.sanctuary * 0.05;
     cam.scale = pc.camera.tilePx * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
     const shake = st.shake ? ps.trauma * ps.trauma * pc.camera.shakePx : 0;
     cam.shakeX = (Math.random() * 2 - 1) * shake + (st.shake ? Math.sin(ps.time * 40) * ps.sweat * 0.6 : 0);
@@ -717,6 +718,21 @@ export class Renderer {
       g.addColorStop(1, `rgba(0,0,0,${Math.min(1, k * 1.5)})`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
+    }
+
+    // 외시경: 둥근 렌즈 너머로만 보인다
+    if (s.mode.kind === 'peephole') {
+      const r = Math.min(W, H) * 0.32;
+      const g = ctx.createRadialGradient(W / 2, H / 2, r * 0.85, W / 2, H / 2, r);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.arc(W / 2, H / 2, r, 0, Math.PI * 2, true);
+      ctx.fill();
     }
 
     // 이동 중 페이드 (계단·지하철)
