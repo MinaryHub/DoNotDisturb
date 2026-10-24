@@ -497,6 +497,7 @@ export class GameUI {
     const sosPending = b.sosPending ? `<span class="dlg__sos">${escapeHtml(this.tx('dialogue.sosPending'))} ${Math.ceil(b.sosRemaining)}</span>` : '';
     const boss = !b.canExitNow ? `<span class="dlg__boss">${escapeHtml(this.tx('dialogue.waitBoss'))}</span>` : '';
     return `<div class="dlg ${ally ? 'dlg--ally' : ''}">
+      ${m.practice && !b.ended ? `<div class="dlg__coach">💡 ${escapeHtml(this.tx(this.coachKey(m)))}</div>` : ''}
       <div class="dlg__who"><span class="dlg__face" style="background:${npc.profile.color}">${mood}</span>${escapeHtml(this.tx(npc.profile.displayTagKey))}</div>
       <div class="dlg__bubble" style="opacity:${volume.toFixed(2)};font-size:${(15 + volume * 4).toFixed(1)}px">${escapeHtml(npcText)}</div>
       ${shownMy ? `<div class="dlg__me">${escapeHtml(shownMy)}</div>` : ''}
@@ -508,6 +509,16 @@ export class GameUI {
              <div class="dlg__foot">${smile}${sos}${sosPending}${boss}</div>`
       }
     </div>`;
+  }
+
+  /** 연습 대화: 지금 무엇을 하면 되는지 한 줄씩 */
+  private coachKey(m: Extract<Mode, { kind: 'dialogue' }>): string {
+    const b = m.battle;
+    if (m.wrongAge < 2.5) return 'coach.wrong';
+    if (!m.smiling) return 'coach.smile';
+    const kind = b.currentLine.kind;
+    if (kind === 'opening') return b.inWindow ? 'coach.parryNow' : 'coach.opening';
+    return `coach.${kind}`;
   }
 
   private shopHtml(s: GameSession, m: Extract<Mode, { kind: 'shop' }>): string {

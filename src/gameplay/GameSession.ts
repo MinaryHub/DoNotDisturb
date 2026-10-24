@@ -114,7 +114,7 @@ export interface PlayerState {
 export type Mode =
   | { kind: 'dayIntro' }
   | { kind: 'free' }
-  | { kind: 'dialogue'; battle: DialogueBattle; npc: Npc; pool: string; closer: string | null; closerTime: number; myLine: string | null; myLineTime: number }
+  | { kind: 'dialogue'; battle: DialogueBattle; npc: Npc; pool: string; closer: string | null; closerTime: number; myLine: string | null; myLineTime: number; practice: boolean; smiling: boolean; wrongAge: number }
   | { kind: 'speech'; challenge: SpeechChallenge; speechId: string; time: number }
   | { kind: 'work'; game: WorkGame }
   | { kind: 'piano'; game: PianoGame; doneTime: number }
@@ -158,6 +158,8 @@ export interface SaveState {
   reports: DayReport[];
   /** 산 장비 (우산 등). 날이 바뀌어도 남는다 */
   gear?: string[];
+  /** 첫 연습 대화를 마쳤는지 */
+  practiced?: boolean;
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -206,6 +208,8 @@ export class GameSession {
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
   private ownedGear = new Set<string>();
+  /** 첫 대화는 연습 (규칙을 하나씩 알려 준다) */
+  private practiced = false;
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
   private readonly seed: number | null;
   /** 같은 날을 다시 할 때마다 다른 하루가 되도록 */
@@ -223,9 +227,10 @@ export class GameSession {
   constructor(
     readonly cfg: GameConfig,
     save?: SaveState,
-    options: { seed?: number } = {},
+    options: { seed?: number; practiced?: boolean } = {},
   ) {
     this.seed = options.seed ?? null;
+    if (options.practiced) this.practiced = true;
     this.world = buildWorld(cfg.world, cfg.tiles);
     this.sim = new Simulation(simConfigOf(cfg), cfg.stimuli);
     this.phone = new Phone({ ringSec: 12, replyWaitSec: 25, maxVisible: 4 });
@@ -239,6 +244,7 @@ export class GameSession {
       this.nextMax = save.nextMax;
       this.reports = save.reports;
       for (const g of save.gear ?? []) this.ownedGear.add(g);
+      this.practiced = save.practiced ?? save.dayIndex > 0;
     }
     this.startDay(this.dayIndex);
   }
@@ -266,7 +272,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear] };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -1040,18 +1046,22 @@ export class GameSession {
     this.phoneOpen = false;
     npc.beginDialogue();
     this.sim.life.recordAccept(npc.id);
+    const practice = !this.practiced && !ally;
     const battle = new DialogueBattle(this.cfg.dialogueRules, pool, {
-      minDurationSec: p.minDurationSec,
-      baseDurationSec: p.baseDurationSec,
+      minDurationSec: practice ? 0 : p.minDurationSec,
+      baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec,
       ally,
       rng: () => this.rng(),
+      practice,
     });
-    this.mode = { kind: 'dialogue', battle, npc, pool: p.dialogue, closer: null, closerTime: 0, myLine: null, myLineTime: 0 };
+    this.mode = { kind: 'dialogue', battle, npc, pool: p.dialogue, closer: null, closerTime: 0, myLine: null, myLineTime: 0, practice, smiling: false, wrongAge: 99 };
   }
 
   private updateDialogue(dt: number, c: Controls, m: Extract<Mode, { kind: 'dialogue' }>): void {
     const b = m.battle;
     m.myLineTime += dt;
+    m.wrongAge += dt;
+    m.smiling = c.smile;
     if (b.ended) {
       m.closerTime += dt;
       if (m.closerTime > 1.8 || (m.closerTime > 0.4 && c.confirm)) this.finishDialogue(m);
@@ -1076,6 +1086,8 @@ export class GameSession {
     for (const e of b.drainEvents()) {
       switch (e.type) {
         case 'wrong':
+          m.wrongAge = 0;
+          if (m.practice) break;
           this.sim.somatic.trigger('flush', this.cfg.somatic.flush.slip, this.flushScale());
           this.gameEvent('dialogue:wrong');
           break;
@@ -1108,6 +1120,10 @@ export class GameSession {
     const b = m.battle;
     const npc = m.npc;
     this.sim.bus.setContinuous('dialogue', 'dialogue', 0);
+    if (m.practice) {
+      this.practiced = true;
+      this.toast('coach.done');
+    }
     if (npc.type === 'ally') {
       this.sim.life.apply(this.cfg.life.rewards.allyMeet);
       this.gameEvent(`met:${npc.id}`);

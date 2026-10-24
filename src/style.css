@@ -1397,3 +1397,15 @@ body.is-touch .hint {
 .memo__bag--full {
   color: #b0402b;
 }
+
+/* ───── 연습 대화 코치 ───── */
+.dlg__coach {
+  margin: -4px 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(242, 201, 76, 0.16);
+  border-left: 3px solid #f2c94c;
+  color: #fff3c9;
+  font-size: 13px;
+  line-height: 1.5;
+}

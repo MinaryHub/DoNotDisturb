@@ -57,6 +57,8 @@ export interface DialogueOptions {
   ally: boolean;
   /** 0~1 난수 (테스트에서 고정) */
   rng: () => number;
+  /** 연습 대화: 어색한 반응도 시간·만족도 손해가 없고, 미소를 놓쳐도 덜 떨어진다 */
+  practice?: boolean;
 }
 
 export interface DialogueFrameInput {
@@ -189,7 +191,7 @@ export class DialogueBattle {
 
     if (!this.opts.ally && !input.smiling) {
       this.smileDroppedSec += dt;
-      this.satisfaction = Math.max(0, this.satisfaction - this.cfg.smileDropPerSec * dt);
+      this.satisfaction = Math.max(0, this.satisfaction - this.cfg.smileDropPerSec * (this.opts.practice ? 0.5 : 1) * dt);
     }
 
     if (this.sosLeft >= 0) {
@@ -252,10 +254,11 @@ export class DialogueBattle {
   }
 
   private wrong(reply: Reply): void {
+    this.events.push({ type: 'wrong', reply });
+    if (this.opts.practice) return;
     this.wrongCount++;
     this.extraSec += this.cfg.wrongExtraSec;
     this.satisfaction = Math.max(0, this.satisfaction - this.cfg.wrongSatisfactionLoss);
-    this.events.push({ type: 'wrong', reply });
   }
 
   private finish(outcome: DialogueOutcome): void {

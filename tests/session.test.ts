@@ -110,7 +110,8 @@ describe('GameSession: 월요일 하루 진행', () => {
   });
 
   it('Phase 2 흐름: 대화 오선택 → 이불킥 DoT → 홍조 발동 → 찬물 세수로 해제', () => {
-    const s = newDay();
+    const s = new GameSession(cfg, undefined, { practiced: true });
+    press(s, { confirm: true });
     const neighbor = s.npcs.find((x) => x.id === 'neighbor')!;
     s.player.pos.x = neighbor.pos.x + 1.5;
     s.player.pos.y = neighbor.pos.y;
@@ -262,5 +263,22 @@ describe('회복 조이기', () => {
       step(s, 0.05);
     }
     expect(s.bagCount()).toBe(cfg.items.bagMax);
+  });
+});
+
+describe('연습 대화', () => {
+  it('첫 대화는 연습: 어색한 반응도 홍조·이불킥이 없고, 두 번째부터는 진짜', () => {
+    const s = newDay();
+    const neighbor = s.npcs.find((x) => x.id === 'neighbor')!;
+    s.startDialogue(neighbor, false);
+    expect(s.mode.kind === 'dialogue' && s.mode.practice).toBe(true);
+    press(s, { reply: 'exit' });
+    expect(s.snapshot.flush).toBeLessThan(0.05);
+    for (let i = 0; i < 60 * 60 && s.mode.kind === 'dialogue'; i++) s.step(dt, { ...NO_CONTROLS, smile: true, confirm: true });
+    expect(s.snapshot.ruminations).toBe(0);
+    expect(s.saveState().practiced).toBe(true);
+    const manager = s.npcs.find((x) => x.id === 'manager')!;
+    s.startDialogue(manager, false);
+    expect(s.mode.kind === 'dialogue' && s.mode.practice).toBe(false);
   });
 });
