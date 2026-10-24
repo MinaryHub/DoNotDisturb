@@ -67,6 +67,12 @@
 - `laundry`: 세탁 기다리기 (`balance.laundry`), `browse`: 책 구경 휴식
 상호작용 지점은 **걸을 수 있는 칸**에 두세요 (검증 도구가 확인).
 
+### 소품 (`props`)
+`{ "kind": "lamp", "at": [x, y], "rot": 0 }` — 충돌 없는 장식. `lamp`(밤에 불빛), `bin`, `bike`, `aircon`, `pot`, `hydrant`, `manhole`, `recycleGreen/Blue/Yellow`, `catBowl`.
+
+### 생활 행동 (`kind: "chore"`)
+`chore`에 `data/chores.json`의 id. 하루 한 번, 효과(배터리·스트레스·증상)와 생활 지표 변화, 시계 진행(`minutes`).
+
 ### 간판 (`labels`)
 `{ "at": [x, y], "textKey": "sign.cafe", "color": "#5b7d63" }` — `color`가 있으면 색 간판, 없으면 어두운 이름표.
 
@@ -79,6 +85,7 @@
 - `requires`, `mandatory`(필수 상호작용), `optional` + `skip`(안 하면 생활 지표 감소), `deadline` + `late`/`lateStimulus`, `marker`(지도·화살표가 가리킬 상호작용 id 또는 영역 id), `endsDay`(침대)
 - `phone[]`: `at`(시각) 또는 `on`(이벤트)에 전화·문자
 - `npcs[]`: `profile`(data/npcProfiles.json), `at`(스폰 이름), `path`, `from`/`to`(활동 시간), `seated`
+- `weather: "rain"`: 바깥이 흐려지고 빗줄기·물웅덩이·우산. 우산(`items.json` gear) 없이 실외에 있으면 `rainSoaked` 자극
 - 그날만 생기는 것 (플리마켓 등): `crowdLanes`(군중 동선 추가), `areaStimuli`(영역 자극 덮어쓰기), `stalls`(노점 천막, 충돌 없음)
 - 하루 순서는 `data/campaign.json`. 바꾸면 `src/main.ts`의 `SAVE_KEY` 버전을 올린다
 

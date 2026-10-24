@@ -27,11 +27,12 @@
     "markerRange": 9,
     "zoneRange": 14
   },
-  "night": { "duskStart": "17:30", "duskEnd": "19:30", "darkness": 0.62, "lampRadius": 4.5 },
+  "night": { "duskStart": "17:30", "duskEnd": "19:30", "darkness": 0.62, "lampRadius": 4.5, "rainOvercast": 0.4 },
   "audio": {
     "masterVolume": 0.8,
     "murmurGain": 0.32,
     "murmurTiredBonus": 0.12,
+    "rainGain": 0.3,
     "heartbeatMinBpm": 62,
     "heartbeatMaxBpm": 132,
     "heartbeatGain": 0.85,

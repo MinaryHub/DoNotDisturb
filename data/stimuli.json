@@ -46,6 +46,7 @@
   "storeMusic": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.08 },
   "subwayNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.12 },
   "laundryHum": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.02 },
+  "rainSoaked": { "kind": "continuous", "channel": "visual", "ratePerSec": 0.08 },
   "marketChatter": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.15 },
   "rumination": { "kind": "rumination", "channel": "social", "ratePerSec": 0.5, "durationSec": 20 }
 }

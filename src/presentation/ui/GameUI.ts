@@ -168,6 +168,7 @@ export class GameUI {
       const n = inv.consumables[d.id] ?? 0;
       if (n > 0) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
+    for (const g of this.cfg.items.gear) if (inv.gear.includes(g.id)) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(g.nameKey))}">${itemIcon(g.icon, 16)}</span>`);
     setHtml(this.memoFoot, parts.join(' '));
   }
 
@@ -433,9 +434,9 @@ export class GameUI {
     const inv = s.player.inventory.consumables;
     const rows = shop.stock
       .map((e, i) => {
-        const def = this.cfg.items.consumables.find((d) => d.id === e.item)!;
-        const have = inv[e.item] ?? 0;
-        return `<li class="${i === m.cursor ? 'sel' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have ? `×${have}` : ''}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
+        const def = this.cfg.items.consumables.find((d) => d.id === e.item) ?? this.cfg.items.gear.find((g) => g.id === e.item)!;
+        const have = s.player.inventory.gear.includes(e.item) ? '✓' : inv[e.item] ? `×${inv[e.item]}` : '';
+        return `<li class="${i === m.cursor ? 'sel' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
       })
       .join('');
     return `<div class="shop">

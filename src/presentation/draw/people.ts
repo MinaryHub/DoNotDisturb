@@ -288,34 +288,38 @@ export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.fill();
     }
   } else if (look.accessory === 'umbrella') {
-    // 우산: 위에서 보면 머리 위를 덮는 팔각 천
-    ctx.fillStyle = look.accent;
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2 + facing;
-      const rr = r * 1.55;
-      if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
-      else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    ctx.globalAlpha = 0.92;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = r * 0.05;
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI + facing;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5);
-      ctx.lineTo(-Math.cos(a) * r * 1.5, -Math.sin(a) * r * 1.5);
-      ctx.stroke();
-    }
-    ctx.fillStyle = shade(look.accent, -0.3);
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.1, 0, Math.PI * 2);
-    ctx.fill();
+    drawUmbrella(ctx, 0, 0, r, facing, look.accent);
   }
   ctx.restore();
+}
+
+/** 위에서 본 우산: 머리 위를 덮는 팔각 천 + 살 */
+export function drawUmbrella(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, facing: number, color: string, alpha = 0.92): void {
+  const rr = r * 1.55;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + facing;
+    if (i === 0) ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    else ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = r * 0.05;
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI + facing;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    ctx.lineTo(x - Math.cos(a) * rr, y - Math.sin(a) * rr);
+    ctx.stroke();
+  }
+  ctx.fillStyle = shade(color, -0.3);
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.1, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /** HSL(도, %, %) → #rrggbb */

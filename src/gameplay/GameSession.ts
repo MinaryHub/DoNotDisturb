@@ -106,7 +106,7 @@ export interface PlayerState {
   safeTime: number;
   knockTimer: number;
   /** consumables: 소모품 id → 개수, items: 장바구니 */
-  inventory: { consumables: Record<string, number>; clothes: boolean; items: string[] };
+  inventory: { consumables: Record<string, number>; gear: string[]; clothes: boolean; items: string[] };
   walkPhase: number;
 }
 
@@ -173,6 +173,7 @@ export class GameSession {
   area: AreaDef | null = null;
   phoneOpen = false;
   phoneCursor = 0;
+  private soakedToday = false;
   /** 오늘 이미 한 생활 행동 */
   private readonly choresDone = new Set<string>();
   /** 이번 프레임 상호작용 안내 */
@@ -263,6 +264,7 @@ export class GameSession {
     this.homeLocked = true;
     this.rehearsed = false;
     this.choresDone.clear();
+    this.soakedToday = false;
     this.hobbyDone = false;
     this.calmBuff = false;
     this.sosUsed = false;
@@ -293,7 +295,7 @@ export class GameSession {
       lockedSafe: null,
       safeTime: 0,
       knockTimer: 0,
-      inventory: { consumables: {}, clothes: false, items: [] },
+      inventory: { consumables: {}, gear: [], clothes: false, items: [] },
       walkPhase: 0,
     };
     this.spawnNpcs();
@@ -840,6 +842,10 @@ export class GameSession {
     this.toast(def.useKey);
   }
 
+  get raining(): boolean {
+    return this.day.weather === 'rain';
+  }
+
   private applyEffects(e: RecoveryEffects): void {
     if (e.battery) this.sim.energy.recover(e.battery);
     if (e.stress) this.sim.energy.relieveStress(e.stress);
@@ -856,6 +862,18 @@ export class GameSession {
     }
     if (!(c.interactPressed || c.phoneReply)) return;
     const entry = stock[m.cursor]!;
+    const gear = this.cfg.items.gear.find((g) => g.id === entry.item);
+    if (gear) {
+      // 우산 같은 물건은 하나면 충분하다
+      if (this.player.inventory.gear.includes(gear.id)) {
+        this.toast('shop.owned');
+        return;
+      }
+      if (!this.pay(entry.price)) return;
+      this.player.inventory.gear.push(gear.id);
+      this.toast('shop.bought', { item: this.cfg.text[gear.nameKey] ?? gear.id });
+      return;
+    }
     if (!this.pay(entry.price)) return;
     this.addItem(entry.item);
     this.toast('shop.bought', { item: this.cfg.text[this.consumable(entry.item)!.nameKey] ?? entry.item });
@@ -1591,6 +1609,13 @@ export class GameSession {
     let crowd = Math.min(b.crowdDensity.max, near * b.crowdDensity.perAgent);
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
+    // 비: 우산 없이 바깥에 있으면 축축하고 불편하다
+    const soaked = this.raining && this.area?.kind === 'outdoor' && !this.player.inventory.gear.includes('umbrella');
+    bus.setContinuous('weather', 'rainSoaked', soaked ? 1 : 0);
+    if (soaked && !this.soakedToday) {
+      this.soakedToday = true;
+      this.gameEvent('rain:soaked');
+    }
     // 아이컨택
     const eye = this.activeNpcs().filter((n) => n.percept.eyeContact && n.type !== 'ally' && n.type !== 'pet').length;
     bus.setContinuous('eye', 'eyeContact', eye);

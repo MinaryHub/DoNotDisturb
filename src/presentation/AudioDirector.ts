@@ -20,6 +20,7 @@ export class AudioDirector {
   private musicBus!: GainNode;
   private murmurGain!: GainNode;
   private trafficGain!: GainNode;
+  private rainGain!: GainNode;
   private tinnitusGain!: GainNode;
   private whineGain!: GainNode;
   private bloodGain!: GainNode;
@@ -79,6 +80,7 @@ export class AudioDirector {
     }
     this.murmurGain = this.loopNoise('bandpass', 650, 0.9, this.worldBus);
     this.trafficGain = this.loopNoise('lowpass', 220, 0.7, this.worldBus);
+    this.rainGain = this.loopNoise('highpass', 1800, 0.5, this.worldBus);
     this.bloodGain = this.loopNoise('lowpass', 120, 1, this.innerBus);
     this.tinnitusGain = this.tone(this.cfg.tinnitusHz, this.innerBus);
     this.whineGain = this.tone(3200, this.innerBus);
@@ -134,6 +136,8 @@ export class AudioDirector {
     const murmur = (Math.min(1.5, people * 0.12 + zone * 0.5) * c.murmurGain + ps.tired * c.murmurTiredBonus) * wobble;
     this.murmurGain.gain.setTargetAtTime(murmur, now, 0.2);
     this.trafficGain.gain.setTargetAtTime(s.area?.kind === 'outdoor' ? 0.25 : 0.04, now, 0.5);
+    // 빗소리: 바깥이면 크게, 실내에선 창밖으로 작게
+    this.rainGain.gain.setTargetAtTime(s.raining ? c.rainGain * (s.area?.kind === 'outdoor' ? 1 : 0.25) : 0, now, 0.8);
 
     // 몸 안의 소리
     const inner = ps.burnoutTime >= 0 ? 0.4 : 1;

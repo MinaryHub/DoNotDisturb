@@ -1,6 +1,6 @@
 // 소모품 아이콘 (인라인 SVG, 도형 조합). items.json의 icon 이름으로 고른다.
 
-export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch';
+export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella';
 
 const SVG: Record<ItemIcon, string> = {
   // 찬 음료: 얼음 든 플라스틱 컵 + 빨대
@@ -17,6 +17,8 @@ const SVG: Record<ItemIcon, string> = {
   tea: '<path d="M5 8h11v8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z" fill="#f2e8cf"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" stroke="#f2e8cf" stroke-width="1.6" fill="none"/><rect x="6" y="10" width="9" height="2" fill="#e0b85a"/><path d="M11 3v7" stroke="#b9b2a4" stroke-width=".7"/><rect x="9.5" y="2" width="3" height="3" fill="#9fd38a"/>',
   // 쿨링 시트
   patch: '<rect x="3" y="7" width="18" height="10" rx="3" fill="#cfe8f3"/><rect x="6" y="9" width="12" height="6" rx="2" fill="#8cc7e0"/><path d="M9 12h6M12 10v4" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>',
+  // 우산
+  umbrella: '<path d="M2 12a10 9 0 0 1 20 0z" fill="#3b6fb6"/><path d="M7 12a5 9 0 0 1 10 0" fill="#5b8fd6"/><path d="M12 12v7a2 2 0 0 1-4 0" stroke="#4b4f58" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M12 3v1" stroke="#4b4f58" stroke-width="1.6" stroke-linecap="round"/>',
   // 두통약: 알약 + 포장
   pill: '<rect x="4" y="6" width="16" height="12" rx="2" fill="#eef0f3"/><rect x="4" y="6" width="16" height="3.5" rx="1.5" fill="#6fb3ff"/><g transform="rotate(-35 12 13.5)"><rect x="7.5" y="11.5" width="9" height="4" rx="2" fill="#fff" stroke="#c9cdd2" stroke-width=".6"/><rect x="12" y="11.5" width="4.5" height="4" rx="2" fill="#e05a5a"/></g>',
 };

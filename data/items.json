@@ -9,6 +9,9 @@
     { "id": "herbalTea", "nameKey": "item.herbalTea", "useKey": "use.herbalTea", "icon": "tea", "effects": { "stress": 20, "battery": 5 } },
     { "id": "coolPatch", "nameKey": "item.coolPatch", "useKey": "use.coolPatch", "icon": "patch", "effects": { "flush": 0.6, "migraine": 0.3 } }
   ],
+  "gear": [
+    { "id": "umbrella", "nameKey": "item.umbrella", "icon": "umbrella" }
+  ],
   "shops": {
     "convStore": {
       "titleKey": "shop.convStore",
@@ -17,7 +20,8 @@
         { "item": "coldDrink", "price": 1500 },
         { "item": "snack", "price": 2000 },
         { "item": "energyDrink", "price": 2500 },
-        { "item": "painkiller", "price": 4000 }
+        { "item": "painkiller", "price": 4000 },
+        { "item": "umbrella", "price": 5000 }
       ]
     },
     "pharmacy": {

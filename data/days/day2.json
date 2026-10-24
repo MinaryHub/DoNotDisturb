@@ -9,6 +9,7 @@
     "weeklyEval": false,
     "monthEnd": false
   },
+  "weather": "rain",
   "objectives": [
     {
       "id": "commute",

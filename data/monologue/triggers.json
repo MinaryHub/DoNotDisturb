@@ -71,5 +71,7 @@
   {"key": "mono.surveyor", "when": {"npcProfile": "surveyor", "distMax": 10, "visible": true}, "cooldownSec": 120},
   {"key": "mono.wake.halfday", "when": {"event": "dayStart:dayWed"}, "once": true},
   {"key": "mono.halfday.out", "when": {"event": "done:work", "day": "dayWed"}, "once": true},
-  {"key": "mono.market", "when": {"area": "park", "day": "day4"}, "cooldownSec": 600}
+  {"key": "mono.market", "when": {"area": "park", "day": "day4"}, "cooldownSec": 600},
+  {"key": "mono.rain.morning", "when": {"event": "dayStart:day2"}, "once": true},
+  {"key": "mono.rain.soaked", "when": {"event": "rain:soaked"}, "once": true}
 ]

@@ -151,6 +151,8 @@ export const itemsConfigSchema = z.object({
       }),
     )
     .max(8),
+  /** 쓰면 없어지지 않는 물건 (우산 등). 상점 품목 item에 소모품 대신 이 id를 쓸 수 있다 */
+  gear: z.array(z.object({ id: z.string(), nameKey: z.string(), icon: z.enum(['umbrella']).optional() })),
   shops: z.record(z.string(), z.object({ titleKey: z.string(), stock: z.array(z.object({ item: z.string(), price: nonNegative })).min(1) })),
 });
 export type ItemsConfig = z.infer<typeof itemsConfigSchema>;
@@ -299,11 +301,12 @@ export const presentationConfigSchema = z.object({
     zoneRange: positive,
   }),
   /** 해 질 녘: duskStart~duskEnd 사이에 어두워진다. 실내·가로등·창문은 밝게 남는다 */
-  night: z.object({ duskStart: hhmm, duskEnd: hhmm, darkness: unit, lampRadius: positive }),
+  night: z.object({ duskStart: hhmm, duskEnd: hhmm, darkness: unit, lampRadius: positive, rainOvercast: unit }),
   audio: z.object({
     masterVolume: unit,
     murmurGain: nonNegative,
     murmurTiredBonus: nonNegative,
+    rainGain: nonNegative,
     heartbeatMinBpm: positive,
     heartbeatMaxBpm: positive,
     heartbeatGain: nonNegative,
@@ -544,6 +547,8 @@ export const daySchema = z.object({
   start: hhmm,
   spawn: z.string(),
   flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean() }),
+  /** 비 오는 날: 바깥이 흐려지고, 우산 없이 실외에 있으면 rainSoaked 자극 */
+  weather: z.enum(['clear', 'rain']).optional(),
   /** 그날만 생기는 군중 동선 (플리마켓 등) */
   crowdLanes: z.array(crowdLaneSchema).optional(),
   /** 그날만 영역 자극을 덮어쓴다 */

@@ -165,9 +165,13 @@ export function crossCheck(cfg: GameConfig): string[] {
     needText(c.useKey, `item ${c.id}`);
   }
   for (const [id, ch] of Object.entries(cfg.chores)) needText(ch.toastKey, `chore ${id}`);
+  for (const g of cfg.items.gear) {
+    needText(g.nameKey, `gear ${g.id}`);
+    needText(`${g.nameKey}.desc`, `gear ${g.id}`);
+  }
   for (const [id, shop] of Object.entries(cfg.items.shops)) {
     needText(shop.titleKey, `shop ${id}`);
-    for (const s of shop.stock) if (!itemIds.has(s.item)) errors.push(`shop ${id}: 아이템 없음 "${s.item}"`);
+    for (const s of shop.stock) if (!itemIds.has(s.item) && !cfg.items.gear.some((g) => g.id === s.item)) errors.push(`shop ${id}: 아이템 없음 "${s.item}"`);
   }
   const portalIds = new Set(w.portals.map((p) => p.id));
   for (const p of w.portals) {

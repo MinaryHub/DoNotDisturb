@@ -7,7 +7,7 @@ import { Camera2D } from './Camera2D';
 import { parseTime } from '../sim/DayCycle';
 import { drawProp } from './draw/props';
 import { paintDeco } from './draw/tiles';
-import { drawPerson, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
+import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
 import type { Settings } from './Settings';
 
@@ -15,6 +15,8 @@ import type { Settings } from './Settings';
 //   월드 → 오프스크린 캔버스 → (채도·블러·앰버·색수차·늘림) 합성 → 심리 오버레이(비네팅·터널·홍조·암전)
 
 const PLAYER_LOOK_BASE = (top: string): Look => ({ skin: '#f0dac4', hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563', pattern: 'plain', shoes: '#f4f1ea' });
+
+const UMBRELLAS = ['#3b6fb6', '#2f3e46', '#c0392b', '#f2c94c', '#5b7d63', '#e8e2d6', '#6c5b7b'];
 
 const CHUNK = 16;
 const CHUNK_PX = 48;
@@ -143,6 +145,8 @@ export class Renderer {
     this.drawStalls(s);
     const night = this.nightLevel(s);
     this.drawProps(night, ps.time);
+    const rainHere = s.raining && this.layer!.id === 'ground';
+    if (rainHere) this.drawPuddles(ps.time);
     if (night > 0.01 && this.layer!.id === 'ground') this.drawNight(s, night);
     this.drawZones(s, ps);
     this.drawLabels(s);
@@ -152,6 +156,7 @@ export class Renderer {
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
     this.drawGaze(s, ps);
+    if (rainHere) this.drawRain(ps.time);
     this.updateRings(s, ps, st, dt);
     ctx.restore();
   }
@@ -161,7 +166,78 @@ export class Renderer {
     const n = this.cfg.presentation.night;
     const a = parseTime(n.duskStart);
     const b = parseTime(n.duskEnd);
-    return Math.min(1, Math.max(0, (s.clock.minutes - a) / (b - a)));
+    const dusk = Math.min(1, Math.max(0, (s.clock.minutes - a) / (b - a)));
+    return Math.max(dusk, s.raining ? n.rainOvercast : 0);
+  }
+
+  private outdoorAt(p: Vec2): boolean {
+    return this.map.areaAt(p.x, p.y)?.kind === 'outdoor';
+  }
+
+  /** 비 오는 날 물웅덩이: 바깥 바닥 몇 칸에 고인 물과 퍼지는 파문 */
+  private drawPuddles(time: number): void {
+    const ctx = this.wctx;
+    const v = this.camera.visibleTiles(1);
+    for (let y = Math.max(0, v.y0); y <= Math.min(this.map.height - 1, v.y1); y++) {
+      for (let x = Math.max(0, v.x0); x <= Math.min(this.map.width - 1, v.x1); x++) {
+        let h = Math.imul(x * 73856093 ^ y * 19349663, 2654435761) >>> 0;
+        if (h % 17 !== 0) continue;
+        const d = this.map.def(x, y);
+        if (!d.walk || d.id === 'door' || !this.outdoorAt({ x: x + 0.5, y: y + 0.5 }) || !this.visible({ x, y })) continue;
+        h >>>= 5;
+        const px = x + 0.3 + (h % 5) * 0.1;
+        const py = y + 0.3 + ((h >> 3) % 5) * 0.1;
+        ctx.fillStyle = 'rgba(150, 175, 205, 0.32)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 0.42, 0.26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        for (let i = 0; i < 2; i++) {
+          const k = (time * 0.9 + (h % 10) / 10 + i * 0.5) % 1;
+          ctx.strokeStyle = `rgba(230, 240, 255, ${(1 - k) * 0.5})`;
+          ctx.lineWidth = 0.025;
+          ctx.beginPath();
+          ctx.ellipse(px + ((i * 0.2) % 0.3) - 0.1, py, 0.05 + k * 0.25, 0.03 + k * 0.15, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  /** 빗줄기: 화면 공간에 그리고, 실내 영역은 지워 낸다 */
+  private drawRain(time: number): void {
+    const cam = this.camera;
+    const l = this.lctx;
+    const W = this.light.width;
+    const H = this.light.height;
+    l.setTransform(1, 0, 0, 1, 0, 0);
+    l.globalCompositeOperation = 'source-over';
+    l.clearRect(0, 0, W, H);
+    l.strokeStyle = 'rgba(205, 220, 245, 0.42)';
+    l.lineWidth = this.dpr;
+    l.beginPath();
+    const len = 16 * this.dpr;
+    for (let i = 0; i < 260; i++) {
+      const a = ((i * 2654435761) >>> 0) / 4294967296;
+      const b = ((i * 40503 + 7) % 997) / 997;
+      const speed = 900 + b * 500;
+      const x = (a * W + time * 120 * this.dpr) % W;
+      const y = (b * H + time * speed * this.dpr) % H;
+      l.moveTo(x, y);
+      l.lineTo(x - len * 0.25, y + len);
+    }
+    l.stroke();
+    l.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    l.translate(cam.viewW / 2 + cam.shakeX, cam.viewH / 2 + cam.shakeY);
+    l.scale(cam.scale, cam.scale);
+    l.translate(-cam.x, -cam.y);
+    l.globalCompositeOperation = 'destination-out';
+    l.fillStyle = '#000';
+    for (const a of this.cfg.world.areas) if (a.kind !== 'outdoor') l.fillRect(a.rect[0], a.rect[1], a.rect[2], a.rect[3]);
+    const ctx = this.wctx;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.light, 0, 0);
+    ctx.restore();
   }
 
   private drawProps(night: number, time: number): void {
@@ -557,10 +633,12 @@ export class Renderer {
       // 피곤할수록 군중은 얼굴 없는 회색 덩어리처럼 보인다
       const grey = Math.min(1, ps.tired * 0.6 + ps.danger * 0.4);
       const sat = Math.round(30 * (1 - grey));
-      const base = lookFor(`crowd${a.id}`, '#000000');
+      let base = lookFor(`crowd${a.id}`, '#000000');
+      // 비 오는 날 바깥 행인은 대부분 우산을 쓴다
+      if (s.raining && a.id % 5 !== 0 && this.outdoorAt(a.pos)) base = { ...base, accessory: 'umbrella', accent: UMBRELLAS[a.id % UMBRELLAS.length]! };
       const look: Look =
         grey > 0.5
-          ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: 'none' }
+          ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: base.accessory === 'umbrella' ? 'umbrella' : 'none' }
           : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
       drawPerson(ctx, a.pos.x, a.pos.y, look, { r, facing: Math.atan2(a.dir.y, a.dir.x), walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3 });
     }
@@ -595,7 +673,9 @@ export class Renderer {
     const fy = Math.sin(n.facing);
     // 손 내밀기(전단지·시식)·손 흔들기
     const reach = n.gesture === 'reach' ? 0.45 : n.gesture === 'wave' ? 0.25 + 0.1 * Math.sin(ps.time * 10) : 0;
-    drawPerson(ctx, x, y, this.lookOf(n), { r, facing: n.facing, walkPhase: phase, walking, bob, reach });
+    let look = this.lookOf(n);
+    if (s.raining && this.outdoorAt(n.pos)) look = { ...look, accessory: 'umbrella', accent: UMBRELLAS[hashOf(n.id) % UMBRELLAS.length]! };
+    drawPerson(ctx, x, y, look, { r, facing: n.facing, walkPhase: phase, walking, bob, reach });
     if (n.gesture === 'reach') {
       const hx = x - fy * r * 0.98 + fx * (reach + r * 0.28 + 0.12);
       const hy = y + fx * r * 0.98 + fy * (reach + r * 0.28 + 0.12) + bob;
@@ -732,6 +812,8 @@ export class Renderer {
       ctx.fillStyle = `rgba(160, 210, 255, ${0.8 * ps.phone})`;
       ctx.fillRect(fx * r * 0.95 - 0.07, fy * r * 0.95 - 0.1, 0.14, 0.2);
     }
+    // 우산 (내 표정이 보이도록 반투명)
+    if (s.raining && p.inventory.gear.includes('umbrella') && this.outdoorAt(p.pos)) drawUmbrella(ctx, 0, 0, r, p.facing, '#3b6fb6', 0.55);
     // 진땀
     if (ps.sweat > 0.3) {
       ctx.fillStyle = 'rgba(170, 215, 255, 0.85)';
