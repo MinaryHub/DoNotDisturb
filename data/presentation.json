@@ -28,6 +28,29 @@
     "zoneRange": 14
   },
   "night": { "duskStart": "17:30", "duskEnd": "19:30", "darkness": 0.62, "lampRadius": 4.5, "rainOvercast": 0.4 },
+  "ambient": {
+    "roofFadeSec": 0.35,
+    "cloudAlpha": 0.09,
+    "cloudSpeed": 0.5,
+    "pigeonFlocks": [
+      { "at": [65, 42], "count": 7 },
+      { "at": [22, 16], "count": 5 },
+      { "at": [116, 58], "count": 6 },
+      { "at": [40, 62], "count": 5 },
+      { "at": [246, 47], "count": 4 }
+    ],
+    "pigeonScareRadius": 2.6,
+    "pigeonRunScareRadius": 6.5,
+    "pigeonReturnSec": 25,
+    "timeTint": [
+      { "at": "06:30", "color": "#7f9cd0", "alpha": 0.16 },
+      { "at": "09:30", "color": "#ffffff", "alpha": 0 },
+      { "at": "15:30", "color": "#ffffff", "alpha": 0 },
+      { "at": "17:00", "color": "#ffb35c", "alpha": 0.18 },
+      { "at": "18:30", "color": "#d9725a", "alpha": 0.14 },
+      { "at": "20:00", "color": "#5a6aa8", "alpha": 0.1 }
+    ]
+  },
   "audio": {
     "masterVolume": 0.8,
     "murmurGain": 0.32,

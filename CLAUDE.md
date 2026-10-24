@@ -223,6 +223,7 @@
 - 나를 보는 시선 = NPC에서 나에게 이어지는 가늘고 떨리는 선 (아이컨택이면 붉게)
 - 소리의 시각 대체 = 발소리·말소리 파동 (이어폰을 끼면 보이지 않음)
 - 안전지대: 앰버 톤으로 전환
+- 배경 연출(`src/presentation/draw/ambient.ts`, `presentation.json`의 `ambient`): 바깥에선 건물이 지붕으로 덮여 안이 보이지 않고 들어서면 그 건물만 걷힘(문을 열기 전의 긴장), 시간대 빛깔(아침 푸르스름·노을), 맑은 날 구름 그림자, 다가가면(뛰면 더 멀리서) 날아오르는 비둘기
 
 ### 오디오 (`AudioDirector`, Web Audio 노드 그래프)
 - 파라미터: `stress`, `battery`, `migraine`, `flush`, `noiseCancel`, `safeZone`

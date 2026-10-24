@@ -305,6 +305,17 @@ export const presentationConfigSchema = z.object({
   }),
   /** 해 질 녘: duskStart~duskEnd 사이에 어두워진다. 실내·가로등·창문은 밝게 남는다 */
   night: z.object({ duskStart: hhmm, duskEnd: hhmm, darkness: unit, lampRadius: positive, rainOvercast: unit }),
+  /** 배경 연출: 지붕, 구름 그림자, 비둘기, 시간대 빛깔 (src/presentation/draw/ambient.ts) */
+  ambient: z.object({
+    roofFadeSec: positive,
+    cloudAlpha: unit,
+    cloudSpeed: nonNegative,
+    pigeonFlocks: z.array(z.object({ at: vec2, count: z.number().int().min(1) })),
+    pigeonScareRadius: positive,
+    pigeonRunScareRadius: positive,
+    pigeonReturnSec: positive,
+    timeTint: z.array(z.object({ at: hhmm, color: z.string().regex(/^#[0-9a-fA-F]{6}$/), alpha: unit })),
+  }),
   audio: z.object({
     masterVolume: unit,
     murmurGain: nonNegative,

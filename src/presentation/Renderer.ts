@@ -7,6 +7,7 @@ import { Camera2D } from './Camera2D';
 import { parseTime } from '../sim/DayCycle';
 import { drawProp } from './draw/props';
 import { paintDeco } from './draw/tiles';
+import { Pigeons, Roofs, drawCloudShadows, timeTint } from './draw/ambient';
 import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
 import type { Settings } from './Settings';
@@ -50,6 +51,10 @@ export class Renderer {
   private readonly looks = new Map<string, Look>();
   /** 지금 그리는 층 (플레이어가 있는 층만 보인다) */
   private layer: { id: string; rect: Rect } | null = null;
+  private readonly roofs: Roofs;
+  private readonly pigeons: Pigeons;
+  /** 바깥에 있는 정도 (시간대 빛깔을 실내에서는 약하게) */
+  private outdoorness = 1;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -61,6 +66,9 @@ export class Renderer {
     this.wctx = this.world.getContext('2d')!;
     this.light = document.createElement('canvas');
     this.lctx = this.light.getContext('2d')!;
+    const ground = cfg.world.layers.find((l) => l.id === 'ground') ?? cfg.world.layers[0]!;
+    this.roofs = new Roofs(cfg.world, ground.rect, cfg.presentation.ambient);
+    this.pigeons = new Pigeons(cfg.presentation.ambient);
   }
 
   resize(): void {
@@ -142,22 +150,66 @@ export class Renderer {
     }
 
     // 밤 어둠은 바닥·소품까지만 덮는다. 시야 콘·표식·간판·사람은 그 위에 그려 밤에도 잘 보이게
+    const onGround = this.layer!.id === 'ground';
+    const viewRect: Rect = [v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0];
     this.drawStalls(s);
     const night = this.nightLevel(s);
     this.drawProps(night, ps.time);
-    const rainHere = s.raining && this.layer!.id === 'ground';
+    const rainHere = s.raining && onGround;
     if (rainHere) this.drawPuddles(ps.time);
-    if (night > 0.01 && this.layer!.id === 'ground') this.drawNight(s, night);
+    if (night > 0.01 && onGround) this.drawNight(s, night);
     this.drawZones(s, ps);
-    this.drawLabels(s);
     this.drawInteractHints(s, ps);
     this.drawViewCones(s, ps);
+    const others = s.crowd.agents.filter((a) => a.active).map((a) => a.pos);
+    this.pigeons.update(dt, s.player.pos, s.player.running, others);
+    if (onGround) this.pigeons.draw(ctx, viewRect, ps.time, false);
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
+    // 지붕: 바깥에서는 건물 안이 보이지 않는다. 들어서는 순간 그 건물만 걷힌다
+    this.roofs.update(dt, s.player.pos);
+    if (onGround) {
+      this.roofs.draw(ctx, viewRect, night);
+      this.drawCoveredMarkers(s, ps);
+    }
+    this.drawTimeTint(s, dt, viewRect);
+    this.drawLabels(s);
     this.drawGaze(s, ps);
+    if (onGround) {
+      this.pigeons.draw(ctx, viewRect, ps.time, true);
+      drawCloudShadows(ctx, viewRect, { w: this.map.width, h: this.map.height }, ps.time, s.raining ? 0 : this.cfg.presentation.ambient.cloudAlpha * (1 - night), this.cfg.presentation.ambient.cloudSpeed);
+    }
     if (rainHere) this.drawRain(ps.time);
     this.updateRings(s, ps, st, dt);
+    ctx.restore();
+  }
+
+  /** 지붕 아래 목표 지점: 지붕 위에 표식만 올려 둔다 */
+  private drawCoveredMarkers(s: GameSession, ps: PresentationState): void {
+    const markers = new Set(s.objectives.visible().map((o) => o.def.marker).filter((m): m is string => !!m));
+    for (const it of this.cfg.world.interactables) {
+      if (!markers.has(it.id)) continue;
+      const p = { x: it.at[0], y: it.at[1] };
+      if (this.roofs.covers(p)) this.drawBeacon(p.x, p.y, ps.time);
+    }
+  }
+
+  /** 시간대 빛깔 (아침 푸르스름, 노을빛). 실내에서는 약하게 */
+  private drawTimeTint(s: GameSession, dt: number, view: Rect): void {
+    const target = this.layer!.id === 'ground' && this.outdoorAt(s.player.pos) ? 1 : 0.35;
+    this.outdoorness += (target - this.outdoorness) * Math.min(1, dt * 3);
+    const c = timeTint(this.cfg.presentation.ambient, s.clock.minutes);
+    const a = c.a * this.outdoorness;
+    if (a < 0.005) return;
+    const ctx = this.wctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillStyle = `rgba(${c.r.toFixed(0)}, ${c.g.toFixed(0)}, ${c.b.toFixed(0)}, ${(a * 2.2).toFixed(3)})`;
+    ctx.fillRect(view[0], view[1], view[2], view[3]);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(${c.r.toFixed(0)}, ${c.g.toFixed(0)}, ${c.b.toFixed(0)}, ${(a * 0.35).toFixed(3)})`;
+    ctx.fillRect(view[0], view[1], view[2], view[3]);
     ctx.restore();
   }
 
