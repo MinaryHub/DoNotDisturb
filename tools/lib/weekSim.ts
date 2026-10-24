@@ -50,7 +50,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     sim.bus.setContinuous('crowd', 'crowd', density);
     const ctx = { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS };
     for (let i = 0; i < Math.round(sec * 60); i++) {
-      sim.energy.addStress(density * cd.stressPerSec / 60, density >= cd.sustainFrom);
+      sim.energy.addMood('tension', (density * cd.stressPerSec) / 60, density >= cd.sustainFrom);
       sim.step(1 / 60, ctx);
     }
     sim.bus.setContinuous('crowd', 'crowd', 0);
@@ -101,14 +101,14 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     if (day.work) {
       const w = game.balance.work;
       for (let i = 0; i < 40; i++) {
-        sim.energy.addStress(w.pressureStressPerSec + (i % 6 < 2 ? w.pendingPingStressPerSec : 0), true);
+        sim.energy.addMood('stress', w.pressureStressPerSec + (i % 6 < 2 ? w.pendingPingStressPerSec : 0), true);
         if (i % 6 === 0) sim.bus.emit('workPing');
         run(1, false);
       }
       sim.life.apply(game.life.rewards.workDone);
       sim.life.addMoney(game.life.rewards.workPerTask * day.work.tasks);
       sim.energy.recover(game.balance.recovery.workAfternoon);
-      sim.energy.addStress(w.afternoonStress);
+      sim.energy.addMood('stress', w.afternoonStress);
     }
     commute(opts.commuteSec / 2);
     // 선택 목표·장보기·집밥
@@ -125,7 +125,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     const collapsed = sim.life.collapsed;
     if (collapsed) return { failed: 'collapse', day: day.id, stat: collapsed, rows };
     nextMax = nightRecovery(game.life.night, {
-      stressAtBed: sim.energy.stress,
+      stressAtBed: sim.energy.load,
       ruminations: sim.bus.activeRuminations,
       hobbyDone: false,
       bedMinutes: parseTime('22:00'),

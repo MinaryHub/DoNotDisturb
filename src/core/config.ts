@@ -122,7 +122,7 @@ export function parseGameConfig(raw: RawConfig): GameConfig {
 export function simConfigOf(cfg: GameConfig): SimConfig {
   return {
     energy: cfg.balance,
-    somatic: { stressThreshold: cfg.balance.stress.somaticThreshold, ...cfg.somatic },
+    somatic: { symptomFrom: cfg.balance.psyche.symptomFrom, ...cfg.somatic },
     life: cfg.life.stats,
   };
 }

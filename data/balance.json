@@ -2,7 +2,7 @@
   "battery": {
     "max": 100,
     "start": 100,
-    "outdoorDrainPerSec": 0.05,
+    "outdoorDrainPerSec": 0.02,
     "safeRecoverPerSec": 1,
     "tiers": {
       "tired": 69,
@@ -10,13 +10,17 @@
       "critical": 14
     }
   },
-  "stress": {
+  "psyche": {
     "max": 100,
-    "decayPerSec": 2,
-    "somaticThreshold": 60,
-    "gainPerDamage": 0.6,
-    "decayDelaySec": 1.5
+    "gain": { "ambush": 2.2, "encounter": 2.5, "continuous": 3, "rumination": 3 },
+    "hitEnergy": 0.4,
+    "drain": { "tension": 0.9, "stress": 0.6, "panic": 1.2, "meltdown": 2.0 },
+    "decay": { "tension": 3, "stress": 1.2, "panic": 8 },
+    "decayDelaySec": { "tension": 1.5, "stress": 3, "panic": 0.5 },
+    "meltdown": { "threshold": 60, "risePerSec": 6, "decayPerSec": 1.5 },
+    "symptomFrom": 60
   },
+  "respawn": { "battery": 35, "hours": 2, "latestTime": "22:30" },
   "ambush": {
     "freezeSec": 0.5,
     "shakeSec": 0.6

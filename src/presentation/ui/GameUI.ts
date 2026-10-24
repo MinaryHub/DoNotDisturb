@@ -4,7 +4,7 @@ import { replies } from '../../sim/DialogueBattle';
 import { formatTime } from '../../sim/DayCycle';
 import { mergeReports } from '../../sim/DayReport';
 import { lifeStatIds } from '../../sim/LifeStats';
-import { symptoms, type Symptom } from '../../sim/SomaticController';
+import { moods } from '../../sim/EnergyModel';
 import { stutterText } from '../../sim/SpeechChallenge';
 import type { Camera2D } from '../Camera2D';
 import type { PresentationState } from '../PresentationState';
@@ -39,16 +39,16 @@ export class GameUI {
   private panelH = -1;
   private readonly qte = el('div', 'qte', this.root);
   private readonly status = el('div', 'status', this.root);
-  /** 기운(배터리) 게이지: 화면이 좁아지고 어두워지는 이유를 보여 준다 (숫자 없음) */
-  private readonly energyGauge = el('div', 'stress stress--energy', this.root);
-  private readonly stressGauge = el('div', 'stress', this.root);
-  private readonly symptomGauge = el('div', 'symptoms', this.root);
-  private readonly symptomRows: { key: Symptom | 'hurry'; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
-  private readonly optionInputs = new Map<string, HTMLInputElement>();
-  private readonly stressFill: HTMLDivElement;
+  /** 오른쪽 위 게이지: 에너지(핵심) → 심리 상태(에너지를 깎는 원인) → 증상(겉모습). 숫자 없이 길이·색으로 */
+  private readonly gauges = el('div', 'gauges', this.root);
+  private readonly energyRow = el('div', 'gauge gauge--energy', this.gauges);
   private readonly energyFill: HTMLDivElement;
+  private readonly drainEl: HTMLSpanElement;
   private energyShown = 1;
-  private stressShown = 0;
+  private readonly moodGroup = el('div', 'gauges__group', this.gauges);
+  private readonly symptomGroup = el('div', 'gauges__group gauges__group--symptoms', this.gauges);
+  private readonly bars: { key: string; get: (s: GameSession) => number; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
+  private readonly optionInputs = new Map<string, HTMLInputElement>();
   private readonly screen = el('div', 'screen', document.body);
   private readonly mapEl = el('div', 'map', document.body);
   private readonly mapCanvas = el('canvas', 'map__canvas', this.mapEl);
@@ -63,16 +63,18 @@ export class GameUI {
     private readonly onSettings: (s: Settings) => void,
   ) {
     setText(this.hint, this.tx('hud.controls'));
-    el('span', 'stress__label', this.energyGauge, this.tx('hud.energy'));
-    this.energyFill = el('div', 'stress__fill', el('div', 'stress__bar', this.energyGauge));
-    el('span', 'stress__label', this.stressGauge, this.tx('hud.stress'));
-    this.stressFill = el('div', 'stress__fill', el('div', 'stress__bar', this.stressGauge));
-    for (const key of [...symptoms, 'hurry' as const]) {
-      const row = el('div', `symptoms__row symptoms__row--${key}`, this.symptomGauge);
-      el('span', 'symptoms__label', row, this.tx(`hud.symptom.${key}`));
-      const fill = el('div', 'symptoms__fill', el('div', 'symptoms__bar', row));
-      this.symptomRows.push({ key, row, fill, shown: 0 });
-    }
+    el('span', 'gauge__label', this.energyRow, this.tx('hud.energy'));
+    this.energyFill = el('div', 'gauge__fill', el('div', 'gauge__bar', this.energyRow));
+    this.drainEl = el('span', 'gauge__drain', this.energyRow);
+    const bar = (host: HTMLElement, key: string, get: (s: GameSession) => number) => {
+      const row = el('div', `gauge gauge--${key}`, host);
+      el('span', 'gauge__label', row, this.tx(`hud.${key}`));
+      const fill = el('div', 'gauge__fill', el('div', 'gauge__bar', row));
+      this.bars.push({ key, get, row, fill, shown: 0 });
+    };
+    for (const m of moods) bar(this.moodGroup, m, (s) => s.snapshot[m] / 100);
+    for (const sy of ['flush', 'stutter', 'sweat', 'migraine'] as const) bar(this.symptomGroup, sy, (s) => s.snapshot[sy]);
+    bar(this.symptomGroup, 'hurry', (s) => s.hurry);
     this.buildOptions();
     el('div', 'map__title', this.mapEl, this.tx('map.title'));
     el('div', 'map__hint', this.mapEl, this.tx('map.hint'));
@@ -154,23 +156,14 @@ export class GameUI {
     this.updateMap(s);
   }
 
-  /** 스트레스 게이지: 숫자 없이 길이·색·떨림으로만 */
+  /** 에너지: 가득(초록) → 지침(노랑) → 위험(주황) → 바닥(빨강, 떨림). 옆의 ▼는 지금 심리 상태 때문에 닳는 속도 */
   private updateStress(dt: number, s: GameSession, playing: boolean): void {
     const visible = playing && this.settings.stressGauge;
-    show(this.stressGauge, visible, 'flex');
+    show(this.gauges, playing && (this.settings.stressGauge || this.settings.symptomGauge));
+    show(this.energyRow, visible, 'flex');
+    show(this.moodGroup, visible);
     if (!visible) return;
     const snap = s.snapshot;
-    const target = Math.min(1, snap.stress / snap.stressMax);
-    this.stressShown += (target - this.stressShown) * Math.min(1, dt * 6);
-    const v = this.stressShown;
-    // 초록빛 회색(차분) → 노랑 → 빨강
-    const hue = 140 - v * 140;
-    this.stressFill.style.width = `${(v * 100).toFixed(1)}%`;
-    this.stressFill.style.background = `hsl(${hue.toFixed(0)}, ${(35 + v * 45).toFixed(0)}%, ${(52 - v * 8).toFixed(0)}%)`;
-    this.stressGauge.classList.toggle('stress--high', v >= 0.6);
-
-    // 기운: 가득(초록) → 지침(노랑) → 위험(주황) → 바닥(빨강, 떨림). 구간 경계는 balance.battery.tiers
-    show(this.energyGauge, visible, 'flex');
     const e = Math.min(1, snap.battery / 100);
     this.energyShown += (e - this.energyShown) * Math.min(1, dt * 6);
     const tiers = this.cfg.balance.battery.tiers;
@@ -178,7 +171,9 @@ export class GameUI {
     const color = pct > tiers.tired ? '#7fbf7a' : pct > tiers.danger ? '#e0c25a' : pct > tiers.critical ? '#e0904a' : '#e05a5a';
     this.energyFill.style.width = `${(this.energyShown * 100).toFixed(1)}%`;
     this.energyFill.style.background = color;
-    this.energyGauge.classList.toggle('stress--high', pct <= tiers.critical);
+    this.energyRow.classList.toggle('gauge--alert', pct <= tiers.critical);
+    const d = snap.drainPerSec;
+    setText(this.drainEl, d >= 1.2 ? '▼▼▼' : d >= 0.6 ? '▼▼' : d >= 0.2 ? '▼' : '');
   }
 
   /** 하루 시작 화면: 오늘만의 작은 사건 */
@@ -187,17 +182,15 @@ export class GameUI {
     return lines.length ? `<ul class="screen__today">${lines.join('')}</ul>` : '';
   }
 
-  /** 증상별 게이지 + 조급함: 숫자 없이 길이로. 0이면 흐리게 */
+  /** 심리 상태·증상 막대: 숫자 없이 길이로. 0이면 흐리게 */
   private updateSymptoms(dt: number, s: GameSession, playing: boolean): void {
-    const visible = playing && this.settings.symptomGauge;
-    show(this.symptomGauge, visible);
-    if (!visible) return;
-    const snap = s.snapshot;
-    for (const r of this.symptomRows) {
-      const v = r.key === 'hurry' ? s.hurry : snap[r.key];
-      r.shown += (v - r.shown) * Math.min(1, dt * 6);
+    show(this.symptomGroup, playing && this.settings.symptomGauge);
+    if (!playing) return;
+    for (const r of this.bars) {
+      r.shown += (Math.min(1, r.get(s)) - r.shown) * Math.min(1, dt * 6);
       r.fill.style.width = `${(r.shown * 100).toFixed(1)}%`;
-      r.row.classList.toggle('symptoms__row--on', r.shown > 0.05);
+      r.row.classList.toggle('gauge--on', r.shown > 0.05);
+      r.row.classList.toggle('gauge--alert', r.shown >= 0.6 && (r.key === 'meltdown' || r.key === 'panic'));
     }
   }
 
@@ -694,7 +687,7 @@ export class GameUI {
         else
           html = `<div class="screen__box"><h1 class="screen__title">${escapeHtml(this.tx('result.burnout.title'))}</h1>
             <p class="screen__body">${escapeHtml(this.tx('result.burnout.body'))}</p>
-            <p class="screen__cta">${escapeHtml(this.tx('result.retry'))}</p></div>`;
+            <p class="screen__cta">${escapeHtml(this.tx('result.wakeHome'))}</p></div>`;
         break;
       case 'collapse':
         html = `<div class="screen__box"><h1 class="screen__title">${escapeHtml(this.tx('result.collapse.title'))}</h1>

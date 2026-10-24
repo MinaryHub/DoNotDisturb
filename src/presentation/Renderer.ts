@@ -803,7 +803,9 @@ export class Renderer {
     const scale = 1 - sink * 0.25;
     ctx.save();
     ctx.translate(x, y + bob + sink * 0.12);
-    ctx.scale(scale, scale);
+    // 흐물흐물: 옆으로 퍼지며 꺼지고, 잠깐 출렁인다
+    const wobble = sink * (1 - sink * 0.6) * 0.08 * Math.sin(ps.burnoutTime * 9);
+    ctx.scale(scale * (1 + sink * 0.35 + wobble), scale * (1 - sink * 0.35 - wobble));
     // 후드티 (모자 부분은 등 뒤 반원)
     const hoodie = s.player.hidden ? '#567a8f' : '#6c8fb2';
     const fx = Math.cos(p.facing);

@@ -332,6 +332,41 @@ export class GameSession {
     this.lastTier = 'stable';
   }
 
+  /**
+   * 주저앉은 뒤 집 침대에서 다시 일어난다: 시간이 흐르고(respawn.hours), 에너지는 일부만(respawn.battery),
+   * 심리 상태·증상은 가라앉은 채로. 목표·생활 지표·소지품은 그대로 이어진다.
+   * 일어난 시각이 respawn.latestTime을 넘으면 오늘은 그대로 끝난다 (못 한 필수 목표는 생활 지표 감소).
+   */
+  respawnHome(): void {
+    const r = this.cfg.balance.respawn;
+    const wake = this.clock.minutes + r.hours * 60;
+    for (const n of this.npcs) if (n.state === 'dialogue') n.endDialogue();
+    this.sim.revive(r.battery);
+    this.phoneOpen = false;
+    this.qte = null;
+    this.viewTarget = null;
+    this.hurry = 0;
+    const p = this.player;
+    Object.assign(p, { frozen: 0, winded: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null });
+    const bed = this.world.interactables.find((i) => i.kind === 'bed');
+    const home = bed ? { x: bed.at[0], y: bed.at[1] + 1.2 } : this.world.spawns[this.day.spawn]!;
+    this.teleport({ ...home });
+    this.area = this.world.map.areaAt(p.pos.x, p.pos.y);
+    this.homeLocked = true;
+    this.mode = { kind: 'free' };
+    const latest = parseTime(r.latestTime);
+    if (wake >= latest) {
+      this.clock.skipTo(latest);
+      for (const o of this.objectives.list) if (o.def.mandatory && !o.done) this.sim.life.apply(this.cfg.life.rewards.mandatorySkipped);
+      this.toast('respawn.late');
+      this.endDay();
+      return;
+    }
+    this.clock.skipTo(wake);
+    this.toast('respawn.home');
+    this.gameEvent('respawn');
+  }
+
   /** 실패 후 오늘 다시 */
   retryDay(): void {
     this.sim.life.restore(this.dayStart.life);
@@ -400,6 +435,10 @@ export class GameSession {
         }
         return;
       case 'burnout':
+        // 에너지 0: 흐물흐물 주저앉은 뒤, 집에서 다시 일어난다
+        this.mode.time += dt;
+        if ((c.confirm || c.retry) && this.mode.time > 2) this.respawnHome();
+        return;
       case 'collapse':
         this.mode.time += dt;
         if (c.retry && this.mode.time > 1) this.retryDay();
@@ -483,7 +522,8 @@ export class GameSession {
     // 조급함: 서두를수록 마음도 급해진다. 멈춰도 바로 풀리지 않는다
     const hc = this.cfg.balance.hurry;
     this.hurry = p.running ? Math.min(1, this.hurry + dt / hc.fullAfterSec) : Math.max(0, this.hurry - dt / hc.calmSec);
-    if (this.hurry > 0) this.sim.energy.addStress(this.hurry * hc.stressPerSec * dt);
+    // 서두르는 동안(조급함 절반 이상)은 긴장이 가라앉지 않는다
+    if (this.hurry > 0) this.sim.energy.addMood('tension', this.hurry * hc.stressPerSec * dt, this.hurry > 0.5);
     if (this.hurry >= 1 && !this.hurryNoted) {
       this.hurryNoted = true;
       this.gameEvent('hurry:full');
@@ -549,7 +589,7 @@ export class GameSession {
         m.time += dt;
         const r = this.cfg.balance.recovery;
         this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : m.what === 'books' ? r.booksPerSec : r.windowPerSec) * dt);
-        if (m.what === 'books') this.sim.energy.relieveStress(r.booksStressPerSec * dt);
+        if (m.what === 'books') this.sim.energy.calm(r.booksStressPerSec * dt);
         if (m.what === 'window' && m.time > 4) this.calmBuff = true;
         if (c.interactPressed || c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
         break;
@@ -734,7 +774,7 @@ export class GameSession {
         break;
       case 'sink':
         this.sim.somatic.clearAll();
-        this.sim.energy.relieveStress(r.washStressRelief);
+        this.sim.energy.calm(r.washStressRelief);
         this.toast('sink.done');
         break;
       case 'mirror':
@@ -900,7 +940,7 @@ export class GameSession {
 
   private applyEffects(e: RecoveryEffects): void {
     if (e.battery) this.sim.energy.recover(e.battery);
-    if (e.stress) this.sim.energy.relieveStress(e.stress);
+    if (e.stress) this.sim.energy.calm(e.stress);
     if (e.flush) this.sim.somatic.relieve('flush', e.flush);
     if (e.migraine) this.sim.somatic.relieve('migraine', e.migraine);
   }
@@ -938,7 +978,7 @@ export class GameSession {
 
   private petCat(): void {
     this.sim.somatic.clearAll();
-    this.sim.energy.relieveStress(this.cfg.balance.recovery.petStressRelief);
+    this.sim.energy.calm(this.cfg.balance.recovery.petStressRelief);
     this.calmBuff = true;
     this.gameEvent('pet');
   }
@@ -1081,6 +1121,8 @@ export class GameSession {
         case 'wrong':
           m.wrongAge = 0;
           if (m.practice) break;
+          // 어색한 대답: 당황 + 얼굴이 달아오른다
+          this.sim.energy.addMood('panic', this.cfg.dialogueRules.wrongPanic);
           this.sim.somatic.trigger('flush', this.cfg.somatic.flush.slip, this.flushScale());
           this.gameEvent('dialogue:wrong');
           break;
@@ -1218,7 +1260,7 @@ export class GameSession {
     // 업무 스트레스: 일하는 동안 긴장이 쌓이고, 답 못 한 메신저(팀장은 더)가 짓누른다
     const wc = this.cfg.balance.work;
     const pending = g.pings.reduce((a, pg) => a + (pg.from === 'boss' ? wc.bossPingMultiplier : 1), 0);
-    this.sim.energy.addStress((wc.pressureStressPerSec + pending * wc.pendingPingStressPerSec) * dt, true);
+    this.sim.energy.addMood('stress', (wc.pressureStressPerSec + pending * wc.pendingPingStressPerSec) * dt, true);
     for (const e of g.drainEvents()) {
       if (e.type === 'ping') {
         this.sim.bus.emit('workPing');
@@ -1234,7 +1276,7 @@ export class GameSession {
         this.clock.skipTo(parseTime(this.day.work!.endTime));
         this.sim.energy.recover(this.cfg.balance.recovery.workAfternoon);
         // 오후 업무를 마친 피로: 긴장을 안고 퇴근한다
-        this.sim.energy.addStress(wc.afternoonStress);
+        this.sim.energy.addMood('stress', wc.afternoonStress);
         this.toast('work.done');
         this.mode = { kind: 'free' };
         this.gameEvent('done:work');
@@ -1246,7 +1288,7 @@ export class GameSession {
 
   private finishPiano(): void {
     const n = this.sim.bus.clearRuminations();
-    this.sim.energy.relieveStress(this.cfg.balance.recovery.hobbyStressRelief);
+    this.sim.energy.calm(this.cfg.balance.recovery.hobbyStressRelief);
     this.hobbyDone = true;
     this.sim.report.hobbies.push('piano');
     this.toast('piano.done');
@@ -1662,7 +1704,7 @@ export class GameSession {
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
     // 사람이 많을수록 긴장이 오른다. 빽빽하면 그동안 가라앉지 않는다
-    if (crowd > 0 && !p.lockedSafe) this.sim.energy.addStress(crowd * b.crowdDensity.stressPerSec * dt, crowd >= b.crowdDensity.sustainFrom);
+    if (crowd > 0 && !p.lockedSafe) this.sim.energy.addMood('tension', crowd * b.crowdDensity.stressPerSec * dt, crowd >= b.crowdDensity.sustainFrom);
     this.crowdLevel = p.lockedSafe ? 0 : crowd;
     // 비: 우산 없이 바깥에 있으면 축축하고 불편하다
     const soaked = this.raining && this.area?.kind === 'outdoor' && !this.player.inventory.gear.includes('umbrella');
@@ -1697,7 +1739,7 @@ export class GameSession {
     });
     // 모자·마스크: 홍조는 가려지지만 답답하다
     // 마스크: 답답해서 긴장이 가라앉지 않고 조금씩 오른다
-    if (p.mask) this.sim.energy.addStress(this.cfg.skills.mask.stuffyStressPerSec * dt, true);
+    if (p.mask) this.sim.energy.addMood('stress', this.cfg.skills.mask.stuffyStressPerSec * dt, true);
 
     for (const e of this.sim.drainEvents()) {
       switch (e.type) {
@@ -1792,7 +1834,7 @@ export class GameSession {
     for (const o of this.objectives.skippedOptional()) if (o.def.skip) life.apply(o.def.skip);
     const settlement = settleDay(this.cfg.life.settlement, life, this.day.flags);
     const night = nightRecovery(this.cfg.life.night, {
-      stressAtBed: this.sim.energy.stress,
+      stressAtBed: this.sim.energy.load,
       ruminations: this.sim.bus.activeRuminations,
       hobbyDone: this.hobbyDone,
       bedMinutes: this.clock.minutes,

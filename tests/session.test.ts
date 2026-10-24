@@ -141,16 +141,32 @@ describe('GameSession: 월요일 하루 진행', () => {
     expect(s.mode.kind).toBe('free');
   });
 
-  it('번아웃 → 위로 화면 → R로 오늘 다시', () => {
+  it('에너지 0 → 주저앉음 → 집에서 다시 일어남 (시간이 흐르고 에너지 일부, 목표는 그대로)', () => {
     const s = newDay();
-    s.sim.energy.debugSet({ battery: 1 });
+    s.player.pos.x = 104;
+    s.player.pos.y = 30;
+    const minutes = s.clock.minutes;
+    s.sim.energy.debugSet({ battery: 1, panic: 80 });
     s.sim.bus.emit('voiceCall');
     step(s, 0.1);
     expect(s.mode.kind).toBe('burnout');
-    step(s, 1.2);
-    press(s, { retry: true });
-    expect(s.mode.kind).toBe('dayIntro');
-    expect(s.snapshot.battery).toBe(s.snapshot.batteryMax);
+    step(s, 2.2);
+    press(s, { confirm: true });
+    expect(s.mode.kind).toBe('free');
+    expect(s.atHome).toBe(true);
+    expect(s.snapshot.battery).toBeCloseTo(cfg.balance.respawn.battery, 0);
+    expect(s.snapshot.load).toBe(0);
+    expect(s.clock.minutes).toBeGreaterThanOrEqual(minutes + cfg.balance.respawn.hours * 60);
+  });
+
+  it('너무 늦게 정신을 차리면 오늘은 그대로 끝난다', () => {
+    const s = newDay();
+    s.clock.skipTo(22 * 60);
+    s.sim.energy.debugSet({ battery: 1 });
+    s.sim.bus.emit('voiceCall');
+    step(s, 2.3);
+    press(s, { confirm: true });
+    expect(['night', 'collapse']).toContain(s.mode.kind);
   });
 
   it('집 도어락을 잠그면 안전지대: 회복, 열면 해제', () => {
@@ -178,7 +194,7 @@ describe('GameSession: 모든 날이 시작된다', () => {
 });
 
 describe('조급함', () => {
-  it('계속 달리면 조급함이 차고 스트레스가 오르며, 걸으면 천천히 가라앉는다', () => {
+  it('계속 달리면 조급함이 차고 긴장이 오르며, 걸으면 천천히 가라앉는다', () => {
     const s = newDay();
     // 집 안을 왔다 갔다 달린다 (자극 없는 곳)
     for (let k = 0; k < 4; k++) {
@@ -186,7 +202,7 @@ describe('조급함', () => {
       step(s, 1.2, { move: { x: -1, y: 0 }, sprint: true });
     }
     expect(s.hurry).toBeGreaterThan(0.95);
-    const stressed = s.snapshot.stress;
+    const stressed = s.snapshot.tension;
     expect(stressed).toBeGreaterThan(8);
     step(s, 3, { move: { x: 1, y: 0 } });
     expect(s.hurry).toBeLessThan(0.7);
@@ -259,14 +275,14 @@ describe('군중 밀도', () => {
     s.player.pos.x = (lane.from[0] + lane.to[0]) / 2;
     s.player.pos.y = lane.from[1];
     const stressAt = (n: number) => {
-      s.sim.energy.debugSet({ stress: 0 });
+      s.sim.energy.debugSet({ tension: 0 });
       const agents = s.crowd.agents.filter((a) => a.active).slice(0, n);
       for (let k = 0; k < 60; k++) {
         for (const a of agents) Object.assign(a.pos, { x: s.player.pos.x + 1.2, y: s.player.pos.y + 1.2 });
         step(s, 1 / 30);
         expect(s.qte).toBeNull();
       }
-      return s.snapshot.stress;
+      return s.snapshot.tension;
     };
     const few = stressAt(1);
     const many = stressAt(6);

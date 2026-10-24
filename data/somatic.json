@@ -9,7 +9,7 @@
     "remarkThreshold": 0.55
   },
   "migraine": { "onsetSec": 60, "risePerSec": 0.02, "decayPerSec": 0.01, "eyesClosedDecayPerSec": 0.08 },
-  "stutter": { "stress": 80 },
+  "stutter": { "panic": 70 },
   "sweat": { "stress": 70, "sustainSec": 30, "slipChance": 0.05 },
   "remedies": { "washFaceStressRelief": 25 }
 }

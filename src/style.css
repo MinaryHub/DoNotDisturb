@@ -680,80 +680,40 @@ kbd {
   font-size: 14px;
 }
 
-/* ───── 긴장 게이지 (숫자 없음) ───── */
-.stress {
+/* ───── 오른쪽 위 게이지: 에너지 → 심리 상태 → 증상 (숫자 없음) ───── */
+.gauges {
   position: absolute;
   right: 22px;
   top: 46px;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ink-dim);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.stress__bar {
-  width: 160px;
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-}
-
-.stress__fill {
-  height: 100%;
-  width: 0;
-  border-radius: 4px;
-}
-
-.stress--high .stress__bar {
-  animation: stress-throb 0.9s ease-in-out infinite;
-}
-
-@keyframes stress-throb {
-  50% {
-    transform: scale(1.06, 1.25);
-    box-shadow: 0 0 10px rgba(224, 90, 90, 0.55);
-  }
-}
-
-/* 기운 게이지는 긴장 위에, 긴장은 한 줄 아래로 */
-.stress--energy {
-  top: 46px;
-}
-
-.stress:not(.stress--energy) {
-  top: 64px;
-}
-
-/* ───── 증상 게이지 (숫자 없음, 긴장 게이지 아래) ───── */
-.symptoms {
-  position: absolute;
-  right: 22px;
-  top: 84px;
   display: grid;
-  gap: 4px;
+  gap: 6px;
+  justify-items: end;
   font-size: 11px;
   color: var(--ink-dim);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-.symptoms__row {
+.gauges__group {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.gauge {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
   opacity: 0.45;
   transition: opacity 0.4s;
 }
 
-.symptoms__row--on {
+.gauge--on,
+.gauge--energy {
   opacity: 1;
   color: var(--ink);
 }
 
-.symptoms__bar {
+.gauge__bar {
   width: 120px;
   height: 5px;
   border-radius: 3px;
@@ -761,29 +721,88 @@ kbd {
   overflow: hidden;
 }
 
-.symptoms__fill {
+.gauge__fill {
   height: 100%;
   width: 0;
   border-radius: 3px;
 }
 
-.symptoms__row--flush .symptoms__fill {
+/* 에너지: 가장 크게 */
+.gauge--energy {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gauge--energy .gauge__bar {
+  width: 180px;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.gauge__drain {
+  min-width: 26px;
+  color: #ff9a7a;
+  font-size: 10px;
+  letter-spacing: -1px;
+}
+
+.gauge--alert .gauge__bar {
+  animation: gauge-throb 0.9s ease-in-out infinite;
+}
+
+@keyframes gauge-throb {
+  50% {
+    transform: scale(1.06, 1.3);
+    box-shadow: 0 0 10px rgba(224, 90, 90, 0.55);
+  }
+}
+
+/* 심리 상태 색 */
+.gauge--tension .gauge__fill {
+  background: #e0c25a;
+}
+
+.gauge--stress .gauge__fill {
+  background: #d98a5a;
+}
+
+.gauge--panic .gauge__fill {
+  background: #e06a8a;
+}
+
+.gauge--meltdown .gauge__fill {
+  background: #b05ae0;
+}
+
+/* 증상: 한 단계 작게 */
+.gauges__group--symptoms {
+  margin-top: 2px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gauges__group--symptoms .gauge__bar {
+  width: 90px;
+  height: 4px;
+}
+
+.gauge--flush .gauge__fill {
   background: #e06a6a;
 }
 
-.symptoms__row--migraine .symptoms__fill {
-  background: #a98be0;
-}
-
-.symptoms__row--stutter .symptoms__fill {
+.gauge--stutter .gauge__fill {
   background: #e0b85a;
 }
 
-.symptoms__row--sweat .symptoms__fill {
+.gauge--sweat .gauge__fill {
   background: #6fb3e0;
 }
 
-.symptoms__row--hurry .symptoms__fill {
+.gauge--migraine .gauge__fill {
+  background: #a98be0;
+}
+
+.gauge--hurry .gauge__fill {
   background: #f29e4c;
 }
 
@@ -1302,14 +1321,9 @@ body.is-touch .hint {
     transform-origin: top left;
   }
 
-  .stress,
-  .symptoms {
-    transform: scale(0.8);
+  .gauges {
+    transform: scale(0.78);
     transform-origin: top right;
-  }
-
-  .symptoms {
-    top: 72px;
   }
 
   .panel {

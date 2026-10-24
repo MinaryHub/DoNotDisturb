@@ -9,5 +9,6 @@
   "ignoredLoss": 6,
   "sosDelaySec": 10,
   "flushRemarkChance": 0.35,
+  "wrongPanic": 25,
   "speech": { "beatSec": 1.5, "zoneCenter": 0.72, "zoneWidth": 0.24 }
 }

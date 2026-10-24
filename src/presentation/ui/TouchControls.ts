@@ -94,7 +94,8 @@ export class TouchControls {
       ? [{ code: 'KeyY', label: 'touch.accept', big: true }, { code: 'KeyN', label: 'touch.decline' }, { code: 'KeyU', label: 'touch.textInstead' }]
       : [];
     if (m === 'dayIntro' || m === 'night' || m === 'final') return { main: [{ code: 'Enter', label: 'touch.continue', big: true }], top, stick: false };
-    if (m === 'burnout' || m === 'collapse') return { main: [{ code: 'KeyR', label: 'touch.retry', big: true }], top, stick: false };
+    if (m === 'burnout') return { main: [{ code: 'Enter', label: 'touch.wakeHome', big: true }], top, stick: false };
+    if (m === 'collapse') return { main: [{ code: 'KeyR', label: 'touch.retry', big: true }], top, stick: false };
     if (s.phoneOpen) {
       return {
         main: [

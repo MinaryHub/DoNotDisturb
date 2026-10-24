@@ -1,12 +1,13 @@
 // 신체화 디버프 (CLAUDE.md 5.7). 증상마다 강도 0~1 상태 머신.
-// 홍조·편두통은 강도가 연속적으로 오르내리고, 말더듬·진땀은 스트레스 조건으로 켜지고 꺼진다.
+// 증상은 심리 상태의 겉모습이다: 홍조 ← 긴장·당황(+시선), 말더듬 ← 당황, 진땀·편두통 ← 스트레스.
+// 홍조·편두통은 강도가 연속적으로 오르내리고, 말더듬·진땀은 상태 조건으로 켜지고 꺼진다.
 
 export type Symptom = 'flush' | 'migraine' | 'stutter' | 'sweat';
 export const symptoms: readonly Symptom[] = ['flush', 'migraine', 'stutter', 'sweat'];
 
 export interface SomaticConfig {
-  /** 이 스트레스 이상부터 신체화 판정 (balance.stress.somaticThreshold) */
-  stressThreshold: number;
+  /** 심리 상태가 이 이상부터 증상 판정 (balance.psyche.symptomFrom) */
+  symptomFrom: number;
   flush: {
     /** 동시에 나를 보는 시선 수가 이 이상이면 홍조 상승 */
     gazeCount: number;
@@ -27,13 +28,15 @@ export interface SomaticConfig {
     /** 눈 감기 중 추가 감소 */
     eyesClosedDecayPerSec: number;
   };
-  stutter: { stress: number };
+  stutter: { panic: number };
   sweat: { stress: number; sustainSec: number; slipChance: number };
   remedies: { washFaceStressRelief: number };
 }
 
 export interface SomaticInput {
+  tension: number;
   stress: number;
+  panic: number;
   /** 지금 나를 보고 있는 시선 수 */
   gazeCount: number;
   /** 청각·시각 지속 자극에 노출 중인지 */
@@ -97,9 +100,8 @@ export class SomaticController {
 
   step(dt: number, input: SomaticInput): void {
     const c = this.cfg;
-    const somatic = input.stress >= c.stressThreshold;
-
-    // 홍조: 다수 시선 + 스트레스가 높을 때 상승
+    // 홍조: 다수 시선 + 긴장(또는 당황)이 높을 때 상승
+    const somatic = Math.max(input.tension, input.panic) >= c.symptomFrom;
     let flush = this.level.flush;
     if (!input.sanctuary && somatic && input.gazeCount >= c.flush.gazeCount) {
       flush += c.flush.gazeRisePerSec * (input.gazeCount - c.flush.gazeCount + 1) * input.flushRiseScale * dt;
@@ -110,17 +112,17 @@ export class SomaticController {
     if (input.sanctuary) flush -= c.flush.decayPerSec * 4 * dt;
     this.set('flush', flush);
 
-    // 편두통: 지속형 자극 노출이 길어지고 스트레스도 신체화 문턱을 넘었을 때 (긴장이 낮으면 시끄러워도 두통까지 가지 않는다)
+    // 편두통: 지속형 자극 노출이 길어지고 스트레스도 문턱을 넘었을 때 (스트레스가 낮으면 시끄러워도 두통까지 가지 않는다)
     this.exposureSec = input.continuousExposure && !input.sanctuary ? this.exposureSec + dt : Math.max(0, this.exposureSec - dt * 2);
     let migraine = this.level.migraine;
-    if (somatic && this.exposureSec >= c.migraine.onsetSec) migraine += c.migraine.risePerSec * dt;
+    if (input.stress >= c.symptomFrom && this.exposureSec >= c.migraine.onsetSec) migraine += c.migraine.risePerSec * dt;
     else migraine -= c.migraine.decayPerSec * dt;
     if (input.eyesClosed) migraine -= c.migraine.eyesClosedDecayPerSec * dt;
     if (input.sanctuary) migraine -= c.migraine.decayPerSec * 4 * dt;
     this.set('migraine', migraine);
 
-    // 말더듬: 스트레스가 문턱 이상이면 즉시
-    this.set('stutter', input.stress >= c.stutter.stress ? Math.min(1, (input.stress - c.stutter.stress) / 20 + 0.5) : 0);
+    // 말더듬: 당황이 문턱 이상이면 즉시
+    this.set('stutter', input.panic >= c.stutter.panic ? Math.min(1, (input.panic - c.stutter.panic) / 20 + 0.5) : 0);
 
     // 진땀: 높은 스트레스가 일정 시간 지속
     this.highStressSec = input.stress >= c.sweat.stress ? this.highStressSec + dt : 0;

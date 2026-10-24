@@ -29,8 +29,15 @@ export interface SimSnapshot {
   readonly time: number;
   readonly battery: number;
   readonly batteryMax: number;
+  /** 심리 상태 0~100 (에너지를 깎는 원인) */
+  readonly tension: number;
   readonly stress: number;
-  readonly stressMax: number;
+  readonly panic: number;
+  readonly meltdown: number;
+  /** 마음의 부하 = 심리 상태 중 최댓값 (연출용) */
+  readonly load: number;
+  /** 지금 심리 상태 때문에 초당 깎이는 에너지 */
+  readonly drainPerSec: number;
   readonly tier: BatteryTier;
   readonly burnedOut: boolean;
   /** 이번 프레임까지 누적된 최근 데미지 (연출용, 초당 감쇠) */
@@ -78,6 +85,16 @@ export class Simulation {
     this.report = emptyReport(this.life.all(), this.life.money);
   }
 
+  /** 주저앉은 뒤 집에서 다시 일어남: 에너지 일부, 심리 상태·증상·지속 자극 초기화 (하루 기록은 이어진다) */
+  revive(battery: number): void {
+    this.bus.clear();
+    this.energy.revive(battery);
+    this.somatic.clearAll();
+    this.somatic.drainEvents();
+    this.awkwardness = 0;
+    this.recentDamage = 0;
+  }
+
   /** 새 하루: 배터리 상한 설정, 하루 기록 초기화 */
   startDay(batteryMax: number): void {
     this.bus.clear();
@@ -115,14 +132,16 @@ export class Simulation {
 
     const damage = this.energy.applyHits(result.hits, input.modifiers, dt);
     const batteryBefore = this.energy.battery;
-    this.energy.tick(dt, input);
+    this.energy.tick(dt, { ...input, calming: input.sanctuary ?? false });
     const recovered = this.energy.battery - batteryBefore;
     if (recovered > 0) this.report.recoveredBattery += recovered;
     if (damage > 0) this.events.push({ type: 'damage', amount: damage });
     this.recentDamage = Math.max(0, this.recentDamage * Math.exp(-3 * dt)) + damage;
 
     this.somatic.step(dt, {
-      stress: this.energy.stress,
+      tension: this.energy.mood('tension'),
+      stress: this.energy.mood('stress'),
+      panic: this.energy.mood('panic'),
       gazeCount: input.gazeCount ?? 0,
       continuousExposure,
       coveringCheeks: input.coveringCheeks ?? false,
@@ -152,8 +171,12 @@ export class Simulation {
       time: this.time,
       battery: this.energy.battery,
       batteryMax: this.energy.max,
-      stress: this.energy.stress,
-      stressMax: this.cfg.energy.stress.max,
+      tension: this.energy.mood('tension'),
+      stress: this.energy.mood('stress'),
+      panic: this.energy.mood('panic'),
+      meltdown: this.energy.mood('meltdown'),
+      load: this.energy.load,
+      drainPerSec: this.energy.drainPerSec,
       tier: this.energy.tier,
       burnedOut: this.energy.burnedOut,
       recentDamage: this.recentDamage,

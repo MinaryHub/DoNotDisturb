@@ -70,13 +70,19 @@ export const balanceConfigSchema = z.object({
       .object({ tired: positive, danger: positive, critical: positive })
       .refine((t) => t.tired > t.danger && t.danger > t.critical, '구간은 tired > danger > critical 이어야 합니다'),
   }),
-  stress: z.object({
+  /** 심리 상태 (src/sim/EnergyModel.ts): 자극 → 긴장·스트레스·당황·멘붕 → 에너지 소모 */
+  psyche: z.object({
     max: positive,
-    decayPerSec: nonNegative,
-    somaticThreshold: nonNegative,
-    gainPerDamage: nonNegative,
-    decayDelaySec: nonNegative,
+    gain: z.object({ ambush: nonNegative, encounter: nonNegative, continuous: nonNegative, rumination: nonNegative }),
+    hitEnergy: nonNegative,
+    drain: z.object({ tension: nonNegative, stress: nonNegative, panic: nonNegative, meltdown: nonNegative }),
+    decay: z.object({ tension: nonNegative, stress: nonNegative, panic: nonNegative }),
+    decayDelaySec: z.object({ tension: nonNegative, stress: nonNegative, panic: nonNegative }),
+    meltdown: z.object({ threshold: positive, risePerSec: nonNegative, decayPerSec: nonNegative }),
+    symptomFrom: nonNegative,
   }),
+  /** 에너지 0: 주저앉은 뒤 집에서 다시 일어난다 (시간이 흐르고 에너지 일부만) */
+  respawn: z.object({ battery: positive, hours: nonNegative, latestTime: hhmm }),
   ambush: z.object({ freezeSec: nonNegative, shakeSec: nonNegative }),
   /** 업무 스트레스: 일하는 동안 긴장이 쌓이고(쌓이는 동안 가라앉지 않음), 답 못 한 메신저마다 더. 오후를 건너뛰면 그만큼 지쳐서 퇴근 */
   work: z.object({ pressureStressPerSec: nonNegative, pendingPingStressPerSec: nonNegative, bossPingMultiplier: positive, afternoonStress: nonNegative }),
@@ -194,7 +200,7 @@ export const somaticConfigSchema = z.object({
     remarkThreshold: unit,
   }),
   migraine: z.object({ onsetSec: nonNegative, risePerSec: nonNegative, decayPerSec: nonNegative, eyesClosedDecayPerSec: nonNegative }),
-  stutter: z.object({ stress: nonNegative }),
+  stutter: z.object({ panic: nonNegative }),
   sweat: z.object({ stress: nonNegative, sustainSec: nonNegative, slipChance: unit }),
   remedies: z.object({ washFaceStressRelief: nonNegative }),
 });
@@ -410,6 +416,8 @@ export const dialogueConfigSchema = z.object({
   ignoredLoss: nonNegative,
   sosDelaySec: positive,
   flushRemarkChance: unit,
+  /** 어색한 대답 한 번에 오르는 당황 */
+  wrongPanic: nonNegative,
   speech: z.object({ beatSec: positive, zoneCenter: unit, zoneWidth: unit }),
 });
 export type DialogueFileConfig = z.infer<typeof dialogueConfigSchema>;

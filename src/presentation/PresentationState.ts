@@ -43,7 +43,8 @@ export class PresentationState {
     const k = 1 - Math.exp(-3 * dt);
     const slow = 1 - Math.exp(-1.2 * dt);
     const p = s.player;
-    this.stress += (snap.stress / snap.stressMax - this.stress) * k;
+    // 마음의 부하(심리 상태 중 최댓값)가 비네팅·심박을 움직인다
+    this.stress += (snap.load / 100 - this.stress) * k;
     this.tired += (ramp(b, tiers.tired + 1, tiers.danger + 1) - this.tired) * k;
     this.danger += (ramp(b, tiers.danger + 1, tiers.critical + 1) - this.danger) * k;
     this.critical += (ramp(b, tiers.critical + 1, 0) - this.critical) * k;

@@ -17,7 +17,16 @@ const game = readConfig();
 /** 테스트용 고정 설정 (데이터 파일 수치가 바뀌어도 규칙 검증은 유지) */
 const energy: EnergyConfig = {
   battery: { max: 100, start: 100, outdoorDrainPerSec: 0.05, safeRecoverPerSec: 1, tiers: { tired: 69, danger: 39, critical: 14 } },
-  stress: { max: 100, decayPerSec: 2, gainPerDamage: 1, decayDelaySec: 0 },
+  psyche: {
+    max: 100,
+    gain: { ambush: 2, encounter: 2, continuous: 2, rumination: 2 },
+    hitEnergy: 0.5,
+    drain: { tension: 1, stress: 1, panic: 1, meltdown: 2 },
+    decay: { tension: 2, stress: 2, panic: 2 },
+    decayDelaySec: { tension: 0.5, stress: 0.5, panic: 0.5 },
+    meltdown: { threshold: 60, risePerSec: 5, decayPerSec: 1 },
+    symptomFrom: 60,
+  },
 };
 const simCfg: SimConfig = { ...simConfigOf(game), energy };
 const table: StimulusTable = {
@@ -86,12 +95,46 @@ describe('EnergyModel', () => {
     ]);
   });
 
-  it('감소량 = 기본 데미지 × (1 + stress/100) × 채널 배율', () => {
+  it('자극은 심리 상태로: 기습 → 당황, 대면·시선 → 긴장, 소음 → 스트레스 (채널 배율 적용, 기습·대면은 순간 에너지도)', () => {
     const e = new EnergyModel(energy);
-    e.debugSet({ stress: 50 });
-    const dealt = e.applyHits([{ stimulusId: 'call', kind: 'ambush', channel: 'auditory', amount: 20 }], { ...NO_MODIFIERS, auditory: 0.5 });
-    expect(dealt).toBeCloseTo(15);
-    expect(e.battery).toBeCloseTo(85);
+    const jolt = e.applyHits([{ stimulusId: 'call', kind: 'ambush', channel: 'auditory', amount: 20 }], { ...NO_MODIFIERS, auditory: 0.5 });
+    expect(jolt).toBeCloseTo(5); // 20 × 0.5 × hitEnergy 0.5
+    expect(e.mood('panic')).toBeCloseTo(20); // 20 × 0.5 × gain 2
+    e.applyHits([{ stimulusId: 'talk', kind: 'encounter', channel: 'social', amount: 10 }]);
+    expect(e.mood('tension')).toBeCloseTo(20);
+    e.applyHits([{ stimulusId: 'noise', kind: 'continuous', channel: 'auditory', amount: 5 }]);
+    expect(e.mood('stress')).toBeCloseTo(10);
+  });
+
+  it('에너지는 심리 상태에 비례해 닳는다 (상태 100이면 초당 drain)', () => {
+    const e = new EnergyModel(energy);
+    e.debugSet({ tension: 50 });
+    expect(e.drainPerSec).toBeCloseTo(0.5);
+    const before = e.battery;
+    e.tick(0.1, { outdoor: false, inSafe: false });
+    expect(before - e.battery).toBeCloseTo(0.05, 2);
+  });
+
+  it('멘붕: 둘 이상이 문턱을 넘으면 차오르고 가장 크게 깎는다', () => {
+    const e = new EnergyModel(energy);
+    e.debugSet({ tension: 90, stress: 90 });
+    e.addMood('tension', 0, true);
+    e.addMood('stress', 0, true);
+    e.tick(1, { outdoor: false, inSafe: false });
+    expect(e.mood('meltdown')).toBeGreaterThan(4);
+    const one = new EnergyModel(energy);
+    one.debugSet({ tension: 90 });
+    one.tick(1, { outdoor: false, inSafe: false });
+    expect(one.mood('meltdown')).toBe(0);
+  });
+
+  it('주저앉은 뒤 다시 일어나면 에너지 일부, 심리 상태 0', () => {
+    const e = new EnergyModel(energy);
+    e.debugSet({ battery: 0, panic: 80 });
+    expect(e.burnedOut).toBe(true);
+    e.revive(35);
+    expect(e.battery).toBe(35);
+    expect(e.load).toBe(0);
   });
 
   it('실외 자연 감소 0.05/초, 세이프 존·추가 회복은 상한까지', () => {
@@ -119,24 +162,25 @@ describe('EnergyModel', () => {
 describe('Simulation', () => {
   it('구간 변화·번아웃 이벤트를 한 번씩 낸다', () => {
     const sim = new Simulation(simCfg, table);
-    sim.bus.emit('call');
-    run(sim, 0.1);
-    sim.bus.emit('call');
-    run(sim, 0.1);
+    for (let i = 0; i < 3; i++) {
+      sim.bus.emit('call');
+      run(sim, 0.1);
+    }
     const types = sim.drainEvents().map((e) => (e.type === 'tierChanged' ? `${e.from}->${e.to}` : e.type));
-    expect(types).toContain('stable->danger');
+    expect(types).toContain('stable->tired');
     expect(types).toContain('ambush');
     sim.bus.setContinuous('npc', 'crowd', 100);
-    run(sim, 5);
+    run(sim, 90);
     expect(sim.drainEvents().filter((e) => e.type === 'burnout')).toHaveLength(1);
   });
 
-  it('어색한 침묵: 좁은 공간 + 지인이면 1초에 1씩 어색함과 배터리 감소', () => {
+  it('어색한 침묵: 좁은 공간 + 지인이면 1초에 1씩 어색함, 긴장이 오르고 그만큼 에너지가 닳는다', () => {
     const sim = new Simulation(simCfg, table);
     run(sim, 10, { ...quiet, awkwardPair: true });
     expect(sim.snapshot().awkwardness).toBeCloseTo(10, 0);
     expect(sim.report.silenceSec).toBeCloseTo(10, 0);
-    expect(sim.snapshot().battery).toBeLessThan(91);
+    expect(sim.snapshot().tension).toBeGreaterThan(15);
+    expect(sim.snapshot().battery).toBeLessThan(99.5);
   });
 
   it('실제 데이터로 구성 가능하고, 이어폰(청각 감쇠)이 군중 소음 피해를 줄인다', () => {
@@ -152,9 +196,9 @@ describe('Simulation', () => {
 describe('SomaticController', () => {
   const cfg = simConfigOf(game).somatic;
 
-  it('다수 시선 + 높은 스트레스 → 홍조, 볼 감싸기로 가라앉음', () => {
+  it('다수 시선 + 높은 긴장 → 홍조, 볼 감싸기로 가라앉음', () => {
     const s = new SomaticController(cfg);
-    const base = { stress: 80, gazeCount: 4, continuousExposure: false, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    const base = { tension: 80, stress: 0, panic: 0, gazeCount: 4, continuousExposure: false, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
     for (let i = 0; i < 60 * 8; i++) s.step(1 / 60, base);
     expect(s.intensity('flush')).toBeGreaterThan(0.5);
     const high = s.intensity('flush');
@@ -162,14 +206,14 @@ describe('SomaticController', () => {
     expect(s.intensity('flush')).toBeLessThan(high - 0.3);
   });
 
-  it('지속형 자극 60초 이상 + 신체화 문턱 이상 스트레스 → 편두통, 눈 감기·찬 음료로 완화', () => {
+  it('지속형 자극 60초 이상 + 문턱 이상 스트레스 → 편두통, 눈 감기·찬 음료로 완화', () => {
     const calm = new SomaticController(cfg);
-    const calmBase = { stress: 20, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    const calmBase = { tension: 0, stress: 20, panic: 0, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
     for (let i = 0; i < 120; i++) calm.step(1, calmBase);
     expect(calm.active('migraine')).toBe(false);
 
     const s = new SomaticController(cfg);
-    const base = { stress: 65, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    const base = { tension: 0, stress: 65, panic: 0, gazeCount: 0, continuousExposure: true, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
     for (let i = 0; i < 59; i++) s.step(1, base);
     expect(s.active('migraine')).toBe(false);
     for (let i = 0; i < 20; i++) s.step(1, base);
@@ -178,9 +222,9 @@ describe('SomaticController', () => {
     expect(s.intensity('migraine')).toBeLessThan(0.1);
   });
 
-  it('stress ≥ 80 말더듬, ≥ 70이 30초 지속되면 진땀, 찬물 세수는 전 증상 초기화', () => {
+  it('당황 ≥ 문턱이면 말더듬, 스트레스 ≥ 70이 30초 지속되면 진땀, 찬물 세수는 전 증상 초기화', () => {
     const s = new SomaticController(cfg);
-    const base = { stress: 85, gazeCount: 0, continuousExposure: false, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
+    const base = { tension: 0, stress: 85, panic: 85, gazeCount: 0, continuousExposure: false, coveringCheeks: false, eyesClosed: false, flushRiseScale: 1, sanctuary: false };
     s.step(0.1, base);
     expect(s.active('stutter')).toBe(true);
     for (let i = 0; i < 40 * 10; i++) s.step(0.1, base);
