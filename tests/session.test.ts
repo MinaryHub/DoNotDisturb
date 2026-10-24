@@ -223,3 +223,23 @@ describe('보행 충돌', () => {
     expect(b0 - s.snapshot.battery).toBeGreaterThan(5);
   });
 });
+
+describe('비 오는 날', () => {
+  it('집을 나서면 현관 우산을 챙기고, 산 우산은 다음 날에도 남는다', () => {
+    const rainy = cfg.days.findIndex((d) => d.weather === 'rain');
+    const s = new GameSession(cfg);
+    s.startDay(rainy);
+    press(s, { confirm: true });
+    expect(s.player.inventory.gear).not.toContain('umbrella');
+    // 집 밖 복도로 한 걸음
+    const hall = cfg.world.areas.find((a) => a.id === 'apt3f')!;
+    s.player.pos.x = hall.rect[0] + 2;
+    s.player.pos.y = hall.rect[1] + 2;
+    step(s, 0.2);
+    expect(s.player.inventory.gear).toContain('umbrella');
+    // 저장된 장비는 다음 세션에도
+    const saved = { ...s.saveState(), gear: ['umbrella'] };
+    const s2 = new GameSession(cfg, saved);
+    expect(s2.player.inventory.gear).toContain('umbrella');
+  });
+});

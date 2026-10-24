@@ -907,7 +907,7 @@ export class Renderer {
       ctx.fillRect(fx * r * 0.95 - 0.07, fy * r * 0.95 - 0.1, 0.14, 0.2);
     }
     // 우산 (내 표정이 보이도록 반투명)
-    if (s.raining && p.inventory.gear.includes('umbrella') && this.outdoorAt(p.pos)) drawUmbrella(ctx, 0, 0, r, p.facing, '#3b6fb6', 0.55);
+    if (s.raining && p.inventory.gear.includes('umbrella') && this.outdoorAt(p.pos)) drawUmbrella(ctx, 0, 0, r, p.facing, '#3b6fb6', 0.78);
     // 진땀
     if (ps.sweat > 0.3) {
       ctx.fillStyle = 'rgba(170, 215, 255, 0.85)';

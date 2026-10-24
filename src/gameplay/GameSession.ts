@@ -156,6 +156,8 @@ export interface SaveState {
   life: LifeSnapshot;
   nextMax: number;
   reports: DayReport[];
+  /** 산 장비 (우산 등). 날이 바뀌어도 남는다 */
+  gear?: string[];
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -202,6 +204,8 @@ export class GameSession {
   private dayStart!: { life: LifeSnapshot; max: number };
   private rngState = 12345;
   private hurryNoted = false;
+  /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
+  private ownedGear = new Set<string>();
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
   private readonly seed: number | null;
   /** 같은 날을 다시 할 때마다 다른 하루가 되도록 */
@@ -234,6 +238,7 @@ export class GameSession {
       this.sim.life.restore(save.life);
       this.nextMax = save.nextMax;
       this.reports = save.reports;
+      for (const g of save.gear ?? []) this.ownedGear.add(g);
     }
     this.startDay(this.dayIndex);
   }
@@ -261,7 +266,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear] };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -319,7 +324,7 @@ export class GameSession {
       lockedSafe: null,
       safeTime: 0,
       knockTimer: 0,
-      inventory: { consumables: {}, gear: [], clothes: false, items: [] },
+      inventory: { consumables: {}, gear: [...this.ownedGear], clothes: false, items: [] },
       walkPhase: 0,
     };
     this.spawnNpcs();
@@ -909,6 +914,7 @@ export class GameSession {
       }
       if (!this.pay(entry.price)) return;
       this.player.inventory.gear.push(gear.id);
+      this.ownedGear.add(gear.id);
       this.toast('shop.bought', { item: this.cfg.text[gear.nameKey] ?? gear.id });
       return;
     }
@@ -1555,6 +1561,11 @@ export class GameSession {
       if (this.area.kind === 'home' && this.pendingEscalations.length) this.escalate(this.pendingEscalations.shift()!);
     }
     if (this.area?.kind !== 'home' && this.homeLocked && prevArea?.kind === 'home') this.homeLocked = false;
+    // 비 오는 날 현관을 나서면 집 우산을 챙긴다
+    if (this.raining && prevArea?.kind === 'home' && this.area?.kind !== 'home' && !p.inventory.gear.includes('umbrella')) {
+      p.inventory.gear.push('umbrella');
+      this.toast('umbrella.fromHome');
+    }
     p.hidden = inHide(this.world, p.pos);
 
     // 회식 자리 고르기 카운트다운
