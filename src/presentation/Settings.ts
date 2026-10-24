@@ -13,6 +13,10 @@ export interface Settings {
   visualCues: boolean;
   /** 숫자 없는 스트레스 게이지 */
   stressGauge: boolean;
+  /** 증상별(홍조·편두통·말더듬·진땀) 게이지 */
+  symptomGauge: boolean;
+  /** 화면 아래 단축키 안내 */
+  controlsHint: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tinnitus: 1,
   visualCues: true,
   stressGauge: true,
+  symptomGauge: true,
+  controlsHint: true,
 };
 
 const KEY = 'dnd.settings.v1';

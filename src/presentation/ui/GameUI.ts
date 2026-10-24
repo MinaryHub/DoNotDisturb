@@ -4,6 +4,7 @@ import { replies } from '../../sim/DialogueBattle';
 import { formatTime } from '../../sim/DayCycle';
 import { mergeReports } from '../../sim/DayReport';
 import { lifeStatIds } from '../../sim/LifeStats';
+import { symptoms, type Symptom } from '../../sim/SomaticController';
 import { stutterText } from '../../sim/SpeechChallenge';
 import type { Camera2D } from '../Camera2D';
 import type { PresentationState } from '../PresentationState';
@@ -39,6 +40,9 @@ export class GameUI {
   private readonly qte = el('div', 'qte', this.root);
   private readonly status = el('div', 'status', this.root);
   private readonly stressGauge = el('div', 'stress', this.root);
+  private readonly symptomGauge = el('div', 'symptoms', this.root);
+  private readonly symptomRows: { key: Symptom; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
+  private readonly optionInputs = new Map<string, HTMLInputElement>();
   private readonly stressFill: HTMLDivElement;
   private stressShown = 0;
   private readonly screen = el('div', 'screen', document.body);
@@ -46,7 +50,6 @@ export class GameUI {
   private readonly mapCanvas = el('canvas', 'map__canvas', this.mapEl);
   private readonly optionsEl = el('div', 'options', document.body);
   private toastTimer = 0;
-  private hintTimer = 25;
   private mapOpen = false;
   private minimap: HTMLCanvasElement | null = null;
 
@@ -58,6 +61,12 @@ export class GameUI {
     setText(this.hint, this.tx('hud.controls'));
     el('span', 'stress__label', this.stressGauge, this.tx('hud.stress'));
     this.stressFill = el('div', 'stress__fill', el('div', 'stress__bar', this.stressGauge));
+    for (const key of symptoms) {
+      const row = el('div', `symptoms__row symptoms__row--${key}`, this.symptomGauge);
+      el('span', 'symptoms__label', row, this.tx(`hud.symptom.${key}`));
+      const fill = el('div', 'symptoms__fill', el('div', 'symptoms__bar', row));
+      this.symptomRows.push({ key, row, fill, shown: 0 });
+    }
     this.buildOptions();
     el('div', 'map__title', this.mapEl, this.tx('map.title'));
     el('div', 'map__hint', this.mapEl, this.tx('map.hint'));
@@ -113,8 +122,6 @@ export class GameUI {
     show(this.root, true);
     this.toastTimer -= dt;
     if (this.toastTimer <= 0) this.toastEl.style.opacity = '0';
-    this.hintTimer -= dt;
-    this.hint.style.opacity = this.hintTimer > 0 ? '0.75' : '0';
 
     const mode = s.mode;
     const playing = !['dayIntro', 'night', 'final', 'burnout', 'collapse'].includes(mode.kind);
@@ -132,6 +139,8 @@ export class GameUI {
     this.updateQte(s);
     this.updateStatus(s);
     this.updateStress(dt, s, playing);
+    this.updateSymptoms(dt, s, playing);
+    show(this.hint, playing && this.settings.controlsHint);
     this.updateMap(s);
   }
 
@@ -149,6 +158,28 @@ export class GameUI {
     this.stressFill.style.width = `${(v * 100).toFixed(1)}%`;
     this.stressFill.style.background = `hsl(${hue.toFixed(0)}, ${(35 + v * 45).toFixed(0)}%, ${(52 - v * 8).toFixed(0)}%)`;
     this.stressGauge.classList.toggle('stress--high', v >= 0.6);
+  }
+
+  /** 증상별 게이지: 숫자 없이 길이로. 0이면 흐리게 */
+  private updateSymptoms(dt: number, s: GameSession, playing: boolean): void {
+    const visible = playing && this.settings.symptomGauge;
+    show(this.symptomGauge, visible);
+    if (!visible) return;
+    const snap = s.snapshot;
+    for (const r of this.symptomRows) {
+      r.shown += (snap[r.key] - r.shown) * Math.min(1, dt * 6);
+      r.fill.style.width = `${(r.shown * 100).toFixed(1)}%`;
+      r.row.classList.toggle('symptoms__row--on', r.shown > 0.05);
+    }
+  }
+
+  /** [H] 단축키 안내 켜기·끄기 (설정에 저장) */
+  toggleHints(): void {
+    this.settings.controlsHint = !this.settings.controlsHint;
+    const box = this.optionInputs.get('controlsHint');
+    if (box) box.checked = this.settings.controlsHint;
+    this.onSettings(this.settings);
+    this.toast(this.settings.controlsHint ? 'hud.hintsShown' : 'hud.hintsHidden');
   }
 
   private updateMemo(s: GameSession): void {
@@ -692,12 +723,13 @@ export class GameUI {
         this.onSettings(s);
       });
     };
-    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge', label: string) => {
+    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge' | 'symptomGauge' | 'controlsHint', label: string) => {
       const row = el('label', 'options__row', box);
       el('span', '', row, this.tx(label));
       const input = el('input', '', row);
       input.type = 'checkbox';
       input.checked = s[key];
+      this.optionInputs.set(key, input);
       input.addEventListener('change', () => {
         s[key] = input.checked;
         this.onSettings(s);
@@ -712,6 +744,8 @@ export class GameUI {
     slider('tinnitus', 'options.tinnitus');
     toggle('visualCues', 'options.visualCues');
     toggle('stressGauge', 'options.stressGauge');
+    toggle('symptomGauge', 'options.symptomGauge');
+    toggle('controlsHint', 'options.controlsHint');
     el('p', 'options__warn', box, this.tx('screen.photosensitive'));
     el('p', 'options__close', box, this.tx('options.close'));
   }

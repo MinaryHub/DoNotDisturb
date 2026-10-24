@@ -34,5 +34,6 @@
   "dodgeRight": ["KeyD", "ArrowRight"],
   "pause": ["Escape"],
   "options": ["KeyO"],
+  "toggleHints": ["KeyH"],
   "toggleDebug": ["F1"]
 }

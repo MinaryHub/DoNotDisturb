@@ -198,6 +198,7 @@ function boot(): void {
       debug?.beginFrame();
       if (input.wasPressed('toggleDebug')) debug?.toggle();
       if (input.wasPressed('options')) ui.toggleOptions();
+      if (input.wasPressed('toggleHints')) ui.toggleHints();
       if (input.wasPressed('map') && !s.isModal()) ui.toggleMap();
       if (input.wasPressed('pause') && s.mode.kind === 'free') {
         paused = !paused;

@@ -51,6 +51,7 @@ export const inputActions = [
   'dodgeRight',
   'pause',
   'options',
+  'toggleHints',
   'toggleDebug',
 ] as const;
 export type InputAction = (typeof inputActions)[number];
