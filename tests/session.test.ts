@@ -243,3 +243,24 @@ describe('비 오는 날', () => {
     expect(s2.player.inventory.gear).toContain('umbrella');
   });
 });
+
+describe('회복 조이기', () => {
+  it('마스크를 쓰고 있으면 긴장이 가라앉지 않고 오른다', () => {
+    const s = newDay();
+    s.sim.energy.debugSet({ stress: 30 });
+    s.player.mask = true;
+    step(s, 10);
+    expect(s.snapshot.stress).toBeGreaterThan(30);
+  });
+
+  it('가방은 bagMax개까지만', () => {
+    const s = newDay();
+    s.sim.life.addMoney(100000);
+    s.mode = { kind: 'shop', shopId: 'convStore', cursor: 0 };
+    for (let i = 0; i < cfg.items.bagMax + 2; i++) {
+      press(s, { interactPressed: true });
+      step(s, 0.05);
+    }
+    expect(s.bagCount()).toBe(cfg.items.bagMax);
+  });
+});

@@ -120,9 +120,10 @@ export class EnergyModel {
     return this._battery - before;
   }
 
-  /** 스트레스 직접 상승 (마스크 답답함 등, 배터리는 깎지 않음) */
-  addStress(amount: number): void {
+  /** 스트레스 직접 상승 (마스크 답답함 등, 배터리는 깎지 않음). sustain이면 그동안 자연 감소도 멈춘다 */
+  addStress(amount: number, sustain = false): void {
     this._stress = Math.min(this.cfg.stress.max, this._stress + Math.max(0, amount));
+    if (sustain) this.sinceStimulus = 0;
   }
 
   /** 스트레스 직접 완화 (찬물 세수, 반려동물 등) */

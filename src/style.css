@@ -1388,3 +1388,12 @@ body.is-touch .hint {
   color: #b0402b;
   font-weight: 700;
 }
+
+.memo__bag {
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.memo__bag--full {
+  color: #b0402b;
+}

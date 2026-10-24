@@ -1,4 +1,5 @@
 {
+  "bagMax": 4,
   "consumables": [
     { "id": "coldDrink", "nameKey": "item.coldDrink", "useKey": "use.coldDrink", "icon": "cup", "effects": { "flush": 0.5, "migraine": 0.5 } },
     { "id": "snack", "nameKey": "item.snack", "useKey": "use.snack", "icon": "snack", "effects": { "battery": 20 }, "cornerOnly": true },

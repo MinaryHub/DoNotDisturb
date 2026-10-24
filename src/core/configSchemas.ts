@@ -141,6 +141,8 @@ export type ChoresConfig = z.infer<typeof choresConfigSchema>;
 
 /** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~8 */
 export const itemsConfigSchema = z.object({
+  /** 가방: 소모품을 합쳐서 이만큼만 들고 다닌다 */
+  bagMax: z.number().int().min(1),
   consumables: z
     .array(
       z.object({

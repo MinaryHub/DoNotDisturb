@@ -404,6 +404,7 @@
   "life.bond": "관계 유지",
   "settle.decay.essentials": "하루 생활비·식재료 소모",
   "settle.decay.bond": "연락 못 한 하루",
+  "bag.full": "가방이 꽉 찼다. 더는 못 들고 다닌다.",
   "settle.daily.cost": "식비·교통비",
   "settle.daily.unpaid": "생활비가 모자랐다",
   "settle.weekly.good": "금요일 업무 평가: 좋음 (보너스)",

@@ -864,9 +864,19 @@ export class GameSession {
     return this.cfg.items.consumables.find((d) => d.id === id);
   }
 
-  private addItem(id: string): void {
+  /** 가방에 넣는다. 가득 차면 false (소모품은 합쳐서 items.bagMax개까지) */
+  private addItem(id: string): boolean {
     const inv = this.player.inventory.consumables;
+    if (this.bagCount() >= this.cfg.items.bagMax) {
+      this.toast('bag.full');
+      return false;
+    }
     inv[id] = (inv[id] ?? 0) + 1;
+    return true;
+  }
+
+  bagCount(): number {
+    return Object.values(this.player.inventory.consumables).reduce((a, b) => a + b, 0);
   }
 
   private useItem(def: ConsumableDef): void {
@@ -916,6 +926,10 @@ export class GameSession {
       this.player.inventory.gear.push(gear.id);
       this.ownedGear.add(gear.id);
       this.toast('shop.bought', { item: this.cfg.text[gear.nameKey] ?? gear.id });
+      return;
+    }
+    if (this.bagCount() >= this.cfg.items.bagMax) {
+      this.toast('bag.full');
       return;
     }
     if (!this.pay(entry.price)) return;
@@ -1721,7 +1735,8 @@ export class GameSession {
       awkwardPair,
     });
     // 모자·마스크: 홍조는 가려지지만 답답하다
-    if (p.mask) this.sim.energy.addStress(this.cfg.skills.mask.stuffyStressPerSec * dt);
+    // 마스크: 답답해서 긴장이 가라앉지 않고 조금씩 오른다
+    if (p.mask) this.sim.energy.addStress(this.cfg.skills.mask.stuffyStressPerSec * dt, true);
 
     for (const e of this.sim.drainEvents()) {
       switch (e.type) {

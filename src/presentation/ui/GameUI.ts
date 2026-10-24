@@ -213,6 +213,8 @@ export class GameUI {
       const n = inv.consumables[d.id] ?? 0;
       if (n > 0) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
+    const bag = s.bagCount();
+    if (bag > 0) parts.push(`<span class="memo__bag${bag >= this.cfg.items.bagMax ? ' memo__bag--full' : ''}">🎒${bag}/${this.cfg.items.bagMax}</span>`);
     for (const g of this.cfg.items.gear) if (inv.gear.includes(g.id)) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(g.nameKey))}">${itemIcon(g.icon, 16)}</span>`);
     setHtml(this.memoFoot, parts.join(' ') + this.pendingHtml(s));
   }
