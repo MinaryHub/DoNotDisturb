@@ -1,6 +1,6 @@
 import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
-import type { DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import type { ConsumableDef, DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
 import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
@@ -33,9 +33,8 @@ export interface Controls {
   cover: boolean;
   eyesClosed: boolean;
   maskPressed: boolean;
-  useDrink: boolean;
-  useSnack: boolean;
-  useCoffee: boolean;
+  /** 소모품 단축키 (0부터, items.json consumables 순서) */
+  useItem: number | null;
   reply: Reply | null;
   smile: boolean;
   spacePressed: boolean;
@@ -46,7 +45,8 @@ export interface Controls {
   textInstead: boolean;
   dodge: -1 | 0 | 1;
   phoneToggle: boolean;
-  phoneNav: -1 | 0 | 1;
+  /** 폰·상점 목록 위아래 */
+  menuNav: -1 | 0 | 1;
   phoneReply: boolean;
   phoneIgnore: boolean;
   note: number | null;
@@ -67,9 +67,7 @@ export const NO_CONTROLS: Controls = {
   cover: false,
   eyesClosed: false,
   maskPressed: false,
-  useDrink: false,
-  useSnack: false,
-  useCoffee: false,
+  useItem: null,
   reply: null,
   smile: false,
   spacePressed: false,
@@ -80,7 +78,7 @@ export const NO_CONTROLS: Controls = {
   textInstead: false,
   dodge: 0,
   phoneToggle: false,
-  phoneNav: 0,
+  menuNav: 0,
   phoneReply: false,
   phoneIgnore: false,
   note: null,
@@ -107,7 +105,8 @@ export interface PlayerState {
   lockedSafe: SafeDef | null;
   safeTime: number;
   knockTimer: number;
-  inventory: { drink: number; snack: number; coffee: number; clothes: boolean; items: string[] };
+  /** consumables: 소모품 id → 개수, items: 장바구니 */
+  inventory: { consumables: Record<string, number>; clothes: boolean; items: string[] };
   walkPhase: number;
 }
 
@@ -124,6 +123,7 @@ export type Mode =
   | { kind: 'rest'; what: 'bench' | 'window'; time: number }
   | { kind: 'peephole' }
   | { kind: 'priceTag'; progress: number }
+  | { kind: 'shop'; shopId: string; cursor: number }
   | { kind: 'seated'; seat: string; grill: GrillGame; time: number; toastDone: boolean; distractedFor: number; laughIn: number; bossCheckIn: number }
   | { kind: 'burnout'; time: number }
   | { kind: 'collapse'; stat: LifeStatId; time: number }
@@ -287,7 +287,7 @@ export class GameSession {
       lockedSafe: null,
       safeTime: 0,
       knockTimer: 0,
-      inventory: { drink: 0, snack: 0, coffee: 0, clothes: false, items: [] },
+      inventory: { consumables: {}, clothes: false, items: [] },
       walkPhase: 0,
     };
     this.spawnNpcs();
@@ -405,9 +405,8 @@ export class GameSession {
     }
     if (p.cover) this.phoneOpen = false;
     if (!modal) {
-      if (c.useDrink) this.useItem('drink');
-      if (c.useSnack) this.useItem('snack');
-      if (c.useCoffee) this.useItem('coffee');
+      const def = c.useItem !== null ? this.cfg.items.consumables[c.useItem] : undefined;
+      if (def) this.useItem(def);
     }
   }
 
@@ -526,6 +525,9 @@ export class GameSession {
       }
       case 'seated':
         this.updateSeated(dt, c, m);
+        break;
+      case 'shop':
+        this.updateShop(c, m);
         break;
     }
   }
@@ -652,7 +654,7 @@ export class GameSession {
         this.toast('bench.done');
         break;
       case 'drip':
-        this.player.inventory.coffee++;
+        this.addItem('coffee');
         this.clock.advance(10, 1);
         this.toast('drip.done');
         break;
@@ -706,20 +708,14 @@ export class GameSession {
       }
       case 'coldDrink':
         if (this.pay(it.price ?? 0)) {
-          if ((it.price ?? 0) === 0) {
-            this.sim.somatic.coldDrink();
-            this.toast('coldDrink.done');
-          } else {
-            this.player.inventory.drink++;
-            this.toast('coldDrink.done');
-          }
+          // 무료(탕비실 정수기)는 그 자리에서 마시고, 사 온 것은 들고 다닌다
+          if ((it.price ?? 0) === 0) this.applyEffects(this.consumable('coldDrink')!);
+          else this.addItem('coldDrink');
+          this.toast('coldDrink.done');
         }
         break;
-      case 'snack':
-        if (this.pay(it.price ?? 0)) {
-          this.player.inventory.snack++;
-          this.toast('snack.done');
-        }
+      case 'shop':
+        this.mode = { kind: 'shop', shopId: it.shop!, cursor: 0 };
         break;
       case 'soloMeal':
         if (this.pay(it.price ?? 0)) {
@@ -774,24 +770,51 @@ export class GameSession {
     return false;
   }
 
-  private useItem(kind: 'drink' | 'snack' | 'coffee'): void {
-    const inv = this.player.inventory;
-    if (inv[kind] <= 0) {
+  private consumable(id: string): ConsumableDef | undefined {
+    return this.cfg.items.consumables.find((d) => d.id === id);
+  }
+
+  private addItem(id: string): void {
+    const inv = this.player.inventory.consumables;
+    inv[id] = (inv[id] ?? 0) + 1;
+  }
+
+  private useItem(def: ConsumableDef): void {
+    const inv = this.player.inventory.consumables;
+    if ((inv[def.id] ?? 0) <= 0) {
       this.toast('use.none');
       return;
     }
-    const r = this.cfg.balance.recovery;
-    if (kind === 'snack') {
-      // 구석에서만: 나를 보는 사람이 없고 군중 속이 아닐 때
-      if (this.gazeCount() > 0 || this.crowd.countNear(this.player.pos, 3) > 0) {
-        this.toast('snack.notHere');
-        return;
-      }
-      this.sim.energy.recover(r.snack);
-    } else if (kind === 'coffee') this.sim.energy.recover(r.dripCoffee);
-    else this.sim.somatic.coldDrink();
-    inv[kind]--;
-    this.toast(`use.${kind}`);
+    // 구석에서만: 나를 보는 사람이 없고 군중 속이 아닐 때
+    if (def.cornerOnly && (this.gazeCount() > 0 || this.crowd.countNear(this.player.pos, 3) > 0)) {
+      this.toast('snack.notHere');
+      return;
+    }
+    this.applyEffects(def);
+    inv[def.id]!--;
+    this.toast(def.useKey);
+  }
+
+  private applyEffects(def: ConsumableDef): void {
+    const e = def.effects;
+    if (e.battery) this.sim.energy.recover(e.battery);
+    if (e.stress) this.sim.energy.relieveStress(e.stress);
+    if (e.flush) this.sim.somatic.relieve('flush', e.flush);
+    if (e.migraine) this.sim.somatic.relieve('migraine', e.migraine);
+  }
+
+  private updateShop(c: Controls, m: Extract<Mode, { kind: 'shop' }>): void {
+    const stock = this.cfg.items.shops[m.shopId]!.stock;
+    if (c.menuNav !== 0) m.cursor = (m.cursor + c.menuNav + stock.length) % stock.length;
+    if (c.cancel || c.phoneIgnore) {
+      this.mode = { kind: 'free' };
+      return;
+    }
+    if (!(c.interactPressed || c.phoneReply)) return;
+    const entry = stock[m.cursor]!;
+    if (!this.pay(entry.price)) return;
+    this.addItem(entry.item);
+    this.toast('shop.bought', { item: this.cfg.text[this.consumable(entry.item)!.nameKey] ?? entry.item });
   }
 
   private petCat(): void {
@@ -1290,7 +1313,7 @@ export class GameSession {
     // 폰 화면 조작
     if (this.phoneOpen && canUse) {
       const msgs = phone.messages.filter((m) => !m.resolved);
-      if (c.phoneNav !== 0 && msgs.length) this.phoneCursor = (this.phoneCursor + c.phoneNav + msgs.length) % msgs.length;
+      if (c.menuNav !== 0 && msgs.length) this.phoneCursor = (this.phoneCursor + c.menuNav + msgs.length) % msgs.length;
       const sel = msgs[Math.min(this.phoneCursor, msgs.length - 1)];
       if (sel) sel.read = true;
       if (sel && c.phoneReply) {

@@ -1,6 +1,6 @@
 {
   "camera": {
-    "tilePx": 30,
+    "tilePx": 40,
     "followLerp": 6,
     "dangerZoomOut": 0.16,
     "dangerStretch": 0.12,

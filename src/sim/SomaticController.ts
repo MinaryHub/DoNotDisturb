@@ -29,7 +29,7 @@ export interface SomaticConfig {
   };
   stutter: { stress: number };
   sweat: { stress: number; sustainSec: number; slipChance: number };
-  remedies: { coldDrink: number; washFaceStressRelief: number };
+  remedies: { washFaceStressRelief: number };
 }
 
 export interface SomaticInput {
@@ -78,10 +78,9 @@ export class SomaticController {
     return this.level.flush >= this.cfg.flush.remarkThreshold;
   }
 
-  /** 찬 음료: 홍조·두통 완화 */
-  coldDrink(): void {
-    this.set('flush', this.level.flush - this.cfg.remedies.coldDrink);
-    this.set('migraine', this.level.migraine - this.cfg.remedies.coldDrink);
+  /** 찬 음료·두통약 등: 증상 강도를 amount만큼 낮춘다 */
+  relieve(s: Symptom, amount: number): void {
+    this.set(s, this.level[s] - amount);
   }
 
   /** 찬물 세수·반려동물: 전 증상 초기화 */

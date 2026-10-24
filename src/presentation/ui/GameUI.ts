@@ -12,7 +12,7 @@ import { layerOf } from '../../world/World';
 import { el, escapeHtml, setHtml, setText, show } from './dom';
 
 // 플레이 화면 HTML 오버레이. 배터리·스트레스 수치는 보여주지 않는다 (디버그 패널 전용).
-// 상태는 말투·떨림·가려짐 같은 '감각'으로 드러낸다.
+// 상태는 말투·떨림·가려짐 같은 '감각'으로 드러낸다. 예외: 스트레스는 숫자 없는 게이지로 보여준다 (설정에서 끌 수 있음).
 
 export type Screen = 'title' | 'game';
 
@@ -36,6 +36,9 @@ export class GameUI {
   private readonly panel = el('div', 'panel', this.root);
   private readonly qte = el('div', 'qte', this.root);
   private readonly status = el('div', 'status', this.root);
+  private readonly stressGauge = el('div', 'stress', this.root);
+  private readonly stressFill: HTMLDivElement;
+  private stressShown = 0;
   private readonly screen = el('div', 'screen', document.body);
   private readonly mapEl = el('div', 'map', document.body);
   private readonly mapCanvas = el('canvas', 'map__canvas', this.mapEl);
@@ -51,6 +54,8 @@ export class GameUI {
     private readonly onSettings: (s: Settings) => void,
   ) {
     setText(this.hint, this.tx('hud.controls'));
+    el('span', 'stress__label', this.stressGauge, this.tx('hud.stress'));
+    this.stressFill = el('div', 'stress__fill', el('div', 'stress__bar', this.stressGauge));
     this.buildOptions();
     el('div', 'map__title', this.mapEl, this.tx('map.title'));
     el('div', 'map__hint', this.mapEl, this.tx('map.hint'));
@@ -124,7 +129,24 @@ export class GameUI {
     this.updatePanel(s, ps);
     this.updateQte(s);
     this.updateStatus(s);
+    this.updateStress(dt, s, playing);
     this.updateMap(s);
+  }
+
+  /** 스트레스 게이지: 숫자 없이 길이·색·떨림으로만 */
+  private updateStress(dt: number, s: GameSession, playing: boolean): void {
+    const visible = playing && this.settings.stressGauge;
+    show(this.stressGauge, visible, 'flex');
+    if (!visible) return;
+    const snap = s.snapshot;
+    const target = Math.min(1, snap.stress / snap.stressMax);
+    this.stressShown += (target - this.stressShown) * Math.min(1, dt * 6);
+    const v = this.stressShown;
+    // 초록빛 회색(차분) → 노랑 → 빨강
+    const hue = 140 - v * 140;
+    this.stressFill.style.width = `${(v * 100).toFixed(1)}%`;
+    this.stressFill.style.background = `hsl(${hue.toFixed(0)}, ${(35 + v * 45).toFixed(0)}%, ${(52 - v * 8).toFixed(0)}%)`;
+    this.stressGauge.classList.toggle('stress--high', v >= 0.6);
   }
 
   private updateMemo(s: GameSession): void {
@@ -141,9 +163,10 @@ export class GameUI {
     setHtml(this.memoList, [...done, ...items].join(''));
     const inv = s.player.inventory;
     const parts = [this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') })];
-    if (inv.drink) parts.push(`1 ${this.tx('item.drink')}×${inv.drink}`);
-    if (inv.snack) parts.push(`2 ${this.tx('item.snack')}×${inv.snack}`);
-    if (inv.coffee) parts.push(`3 ${this.tx('item.coffee')}×${inv.coffee}`);
+    this.cfg.items.consumables.forEach((d, i) => {
+      const n = inv.consumables[d.id] ?? 0;
+      if (n > 0) parts.push(`${i + 1} ${this.tx(d.nameKey)}×${n}`);
+    });
     setText(this.memoFoot, parts.join('  ·  '));
   }
 
@@ -354,6 +377,9 @@ export class GameUI {
       case 'seated':
         html = this.seatedHtml(m);
         break;
+      case 'shop':
+        html = this.shopHtml(s, m);
+        break;
       default:
         break;
     }
@@ -398,6 +424,23 @@ export class GameUI {
              <ul class="dlg__choices">${choices}</ul>
              <div class="dlg__foot">${smile}${sos}${sosPending}${boss}</div>`
       }
+    </div>`;
+  }
+
+  private shopHtml(s: GameSession, m: Extract<Mode, { kind: 'shop' }>): string {
+    const shop = this.cfg.items.shops[m.shopId]!;
+    const inv = s.player.inventory.consumables;
+    const rows = shop.stock
+      .map((e, i) => {
+        const def = this.cfg.items.consumables.find((d) => d.id === e.item)!;
+        const have = inv[e.item] ?? 0;
+        return `<li class="${i === m.cursor ? 'sel' : ''}"><span>${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have ? `×${have}` : ''}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
+      })
+      .join('');
+    return `<div class="shop">
+      <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span></div>
+      <ul class="shop__list">${rows}</ul>
+      <div class="shop__hint">${escapeHtml(this.tx('shop.hint'))}</div>
     </div>`;
   }
 
@@ -636,7 +679,7 @@ export class GameUI {
         this.onSettings(s);
       });
     };
-    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues', label: string) => {
+    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge', label: string) => {
       const row = el('label', 'options__row', box);
       el('span', '', row, this.tx(label));
       const input = el('input', '', row);
@@ -655,6 +698,7 @@ export class GameUI {
     slider('heartbeat', 'options.heartbeat');
     slider('tinnitus', 'options.tinnitus');
     toggle('visualCues', 'options.visualCues');
+    toggle('stressGauge', 'options.stressGauge');
     el('p', 'options__warn', box, this.tx('screen.photosensitive'));
     el('p', 'options__close', box, this.tx('options.close'));
   }

@@ -11,6 +11,8 @@ export interface Settings {
   tinnitus: number;
   /** 소리 큐의 시각 대체 표시 (파동·자막) */
   visualCues: boolean;
+  /** 숫자 없는 스트레스 게이지 */
+  stressGauge: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   heartbeat: 1,
   tinnitus: 1,
   visualCues: true,
+  stressGauge: true,
 };
 
 const KEY = 'dnd.settings.v1';

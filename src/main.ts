@@ -47,7 +47,8 @@ function mergePressed(prev: Controls, next: Controls): Controls {
   out.note = next.note ?? prev.note;
   out.slot = next.slot ?? prev.slot;
   out.dodge = next.dodge || prev.dodge;
-  out.phoneNav = next.phoneNav || prev.phoneNav;
+  out.useItem = next.useItem ?? prev.useItem;
+  out.menuNav = next.menuNav || prev.menuNav;
   return out;
 }
 
@@ -133,7 +134,10 @@ function boot(): void {
     if (mode === 'piano') ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ'].forEach((code, i) => input.codePressed(code) && (note = i));
     let slot: number | null = null;
     if (mode === 'seated') ['Digit1', 'Digit2', 'Digit3'].forEach((code, i) => input.codePressed(code) && (slot = i));
+    let useItem: number | null = null;
+    if (!keyed) (['useItem1', 'useItem2', 'useItem3', 'useItem4', 'useItem5', 'useItem6'] as const).forEach((a, i) => input.wasPressed(a) && (useItem = i));
     const phoneOpen = s.phoneOpen;
+    const menuOpen = phoneOpen || mode === 'shop';
     const qte = s.qte;
     return {
       move: phoneOpen || qte?.kind === 'dodge' ? { x: 0, y: 0 } : move,
@@ -146,9 +150,7 @@ function boot(): void {
       cover: input.isDown('coverCheeks'),
       eyesClosed: input.isDown('closeEyes'),
       maskPressed: input.wasPressed('mask'),
-      useDrink: !keyed && input.wasPressed('useDrink'),
-      useSnack: !keyed && input.wasPressed('useSnack'),
-      useCoffee: !keyed && input.wasPressed('useCoffee'),
+      useItem,
       reply,
       smile: input.isDown('smile'),
       spacePressed: input.codePressed('Space'),
@@ -159,9 +161,9 @@ function boot(): void {
       textInstead: input.wasPressed('textInstead'),
       dodge: qte?.kind === 'dodge' ? (input.wasPressed('dodgeLeft') ? -1 : input.wasPressed('dodgeRight') ? 1 : 0) : 0,
       phoneToggle: input.wasPressed('phone'),
-      phoneNav: phoneOpen ? (input.codePressed('ArrowUp') || input.codePressed('KeyW') ? -1 : input.codePressed('ArrowDown') || input.codePressed('KeyS') ? 1 : 0) : 0,
-      phoneReply: phoneOpen && input.codePressed('Enter'),
-      phoneIgnore: phoneOpen && input.codePressed('Backspace'),
+      menuNav: menuOpen ? (input.codePressed('ArrowUp') || input.codePressed('KeyW') ? -1 : input.codePressed('ArrowDown') || input.codePressed('KeyS') ? 1 : 0) : 0,
+      phoneReply: menuOpen && input.codePressed('Enter'),
+      phoneIgnore: menuOpen && input.codePressed('Backspace'),
       note,
       slot,
       retry: input.codePressed('KeyR'),

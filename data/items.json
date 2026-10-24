@@ -1,0 +1,22 @@
+{
+  "consumables": [
+    { "id": "coldDrink", "nameKey": "item.coldDrink", "useKey": "use.coldDrink", "effects": { "flush": 0.5, "migraine": 0.5 } },
+    { "id": "snack", "nameKey": "item.snack", "useKey": "use.snack", "effects": { "battery": 20 }, "cornerOnly": true },
+    { "id": "coffee", "nameKey": "item.coffee", "useKey": "use.coffee", "effects": { "battery": 20 } },
+    { "id": "energyDrink", "nameKey": "item.energyDrink", "useKey": "use.energyDrink", "effects": { "stress": 35, "battery": 5 } },
+    { "id": "water", "nameKey": "item.water", "useKey": "use.water", "effects": { "stress": 12, "flush": 0.25 } },
+    { "id": "painkiller", "nameKey": "item.painkiller", "useKey": "use.painkiller", "effects": { "migraine": 1, "stress": 5 } }
+  ],
+  "shops": {
+    "convStore": {
+      "titleKey": "shop.convStore",
+      "stock": [
+        { "item": "water", "price": 1000 },
+        { "item": "coldDrink", "price": 1500 },
+        { "item": "snack", "price": 2000 },
+        { "item": "energyDrink", "price": 2500 },
+        { "item": "painkiller", "price": 4000 }
+      ]
+    }
+  }
+}

@@ -29,7 +29,7 @@ describe('월드 타일맵', () => {
     const at = (set: Uint8Array, x: number, y: number) => set[Math.floor(y) * map.width + Math.floor(x)] === 1;
     expect(at(home, 184, 150.5), '집 → 3층 계단').toBe(true);
     expect(at(home, 177, 149.6), '집 → 3층 엘리베이터 앞').toBe(true);
-    for (const id of ['officeDesk', 'meetingSeat', 'item_tofu', 'item_egg', 'item_onion', 'item_ramen', 'checkoutNormal', 'checkoutSelf', 'seatCorner', 'returnCounter', 'clothesPick', 'soloSeat', 'convDrink', 'parkBench']) {
+    for (const id of ['officeDesk', 'meetingSeat', 'item_tofu', 'item_egg', 'item_onion', 'item_ramen', 'checkoutNormal', 'checkoutSelf', 'seatCorner', 'returnCounter', 'clothesPick', 'soloSeat', 'convShop', 'parkBench']) {
       const it = world.interactables.find((i) => i.id === id)!;
       expect(at(ground, it.at[0], it.at[1]), id).toBe(true);
     }

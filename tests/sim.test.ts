@@ -168,7 +168,7 @@ describe('SomaticController', () => {
     expect(s.active('migraine')).toBe(false);
     for (let i = 0; i < 20; i++) s.step(1, base);
     expect(s.active('migraine')).toBe(true);
-    s.coldDrink();
+    s.relieve('migraine', 0.5);
     expect(s.intensity('migraine')).toBeLessThan(0.1);
   });
 

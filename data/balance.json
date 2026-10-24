@@ -25,8 +25,6 @@
     "homeLockedPerSec": 0.6,
     "allyNearPerSec": 1,
     "allyRange": 4,
-    "snack": 20,
-    "dripCoffee": 20,
     "soloMeal": 40,
     "homeMeal": 15,
     "plansCancelled": 50,

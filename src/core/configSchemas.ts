@@ -28,9 +28,12 @@ export const inputActions = [
   'closeEyes',
   'phone',
   'map',
-  'useDrink',
-  'useSnack',
-  'useCoffee',
+  'useItem1',
+  'useItem2',
+  'useItem3',
+  'useItem4',
+  'useItem5',
+  'useItem6',
   'mask',
   'reply1',
   'reply2',
@@ -78,8 +81,6 @@ export const balanceConfigSchema = z.object({
     homeLockedPerSec: nonNegative,
     allyNearPerSec: nonNegative,
     allyRange: positive,
-    snack: nonNegative,
-    dripCoffee: nonNegative,
     soloMeal: nonNegative,
     homeMeal: nonNegative,
     plansCancelled: nonNegative,
@@ -108,6 +109,33 @@ export const balanceConfigSchema = z.object({
   boss: z.object({ visitAfterIgnoredMessages: positive }),
 });
 export type BalanceConfig = z.infer<typeof balanceConfigSchema>;
+
+/** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~6 */
+export const itemsConfigSchema = z.object({
+  consumables: z
+    .array(
+      z.object({
+        id: z.string(),
+        nameKey: z.string(),
+        useKey: z.string(),
+        effects: z.object({
+          /** 배터리 회복량 */
+          battery: nonNegative.optional(),
+          /** 스트레스 감소량 */
+          stress: nonNegative.optional(),
+          /** 증상 강도 감소 (0~1) */
+          flush: unit.optional(),
+          migraine: unit.optional(),
+        }),
+        /** 나를 보는 사람이 없고 군중 속이 아닐 때만 */
+        cornerOnly: z.boolean().optional(),
+      }),
+    )
+    .max(6),
+  shops: z.record(z.string(), z.object({ titleKey: z.string(), stock: z.array(z.object({ item: z.string(), price: nonNegative })).min(1) })),
+});
+export type ItemsConfig = z.infer<typeof itemsConfigSchema>;
+export type ConsumableDef = ItemsConfig['consumables'][number];
 
 export const stimulusTableSchema = z.record(
   z.string(),
@@ -142,7 +170,7 @@ export const somaticConfigSchema = z.object({
   migraine: z.object({ onsetSec: nonNegative, risePerSec: nonNegative, decayPerSec: nonNegative, eyesClosedDecayPerSec: nonNegative }),
   stutter: z.object({ stress: nonNegative }),
   sweat: z.object({ stress: nonNegative, sustainSec: nonNegative, slipChance: unit }),
-  remedies: z.object({ coldDrink: unit, washFaceStressRelief: nonNegative }),
+  remedies: z.object({ washFaceStressRelief: nonNegative }),
 });
 export type SomaticFileConfig = z.infer<typeof somaticConfigSchema>;
 
@@ -376,7 +404,7 @@ export const interactableKinds = [
   'desk',
   'speech',
   'coldDrink',
-  'snack',
+  'shop',
   'soloMeal',
   'bench',
   'martItem',
@@ -418,6 +446,7 @@ export const worldDefSchema = z.object({
       seat: z.string().optional(),
       target: z.string().optional(),
       monologue: z.string().optional(),
+      shop: z.string().optional(),
     }),
   ),
   portals: z.array(
