@@ -238,6 +238,21 @@ export class Renderer {
       if (Math.abs(x - this.camera.x) > 40 || Math.abs(y - this.camera.y) > 30 || !this.visible({ x, y })) continue;
       const text = t(this.cfg.text, l.textKey);
       const w = ctx.measureText(text).width + 0.5;
+      if (l.color) {
+        // 가게 간판: 색 바탕 + 아랫단 그림자 + 테두리
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        roundRect(ctx, x - w / 2 - 0.15, y - 0.36, w + 0.3, 0.86, 0.12);
+        ctx.fill();
+        ctx.fillStyle = l.color;
+        roundRect(ctx, x - w / 2 - 0.15, y - 0.44, w + 0.3, 0.86, 0.12);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 0.04;
+        ctx.stroke();
+        ctx.fillStyle = '#fffaf0';
+        ctx.fillText(text, x, y - 0.01);
+        continue;
+      }
       ctx.fillStyle = 'rgba(40,38,44,0.75)';
       roundRect(ctx, x - w / 2, y - 0.38, w, 0.76, 0.2);
       ctx.fill();

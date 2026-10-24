@@ -482,7 +482,8 @@ export const worldDefSchema = z.object({
   crowdLanes: z.array(
     z.object({ id: z.string(), from: vec2, to: vec2, width: positive, count: z.number().int().min(0), speed: positive, zone: z.string() }),
   ),
-  labels: z.array(z.object({ at: vec2, textKey: z.string() })),
+  /** color가 있으면 가게 간판처럼 그 색 바탕으로 그린다 */
+  labels: z.array(z.object({ at: vec2, textKey: z.string(), color: z.string().optional() })),
 });
 export type WorldDef = z.infer<typeof worldDefSchema>;
 export type InteractableDef = WorldDef['interactables'][number];

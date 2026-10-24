@@ -56,5 +56,10 @@
   { "key": "mono.doorbell", "when": { "event": "escalation:doorbell" }, "cooldownSec": 30 },
   { "key": "mono.bossVisit", "when": { "event": "escalation:bossVisit" }, "cooldownSec": 30 },
   { "key": "mono.late", "when": { "event": "late:commute" }, "once": true },
-  { "key": "mono.cancel", "when": { "event": "plansCancelled" }, "cooldownSec": 30 }
+  { "key": "mono.cancel", "when": { "event": "plansCancelled" }, "cooldownSec": 30 },
+  {"key": "mono.cafe.enter", "when": {"area": "cafe"}, "cooldownSec": 600},
+  {"key": "mono.conv.enter", "when": {"area": "convStore"}, "cooldownSec": 600},
+  {"key": "mono.park.enter", "when": {"area": "park"}, "cooldownSec": 400},
+  {"key": "mono.home.enter", "when": {"area": "home", "returning": true}, "cooldownSec": 600},
+  {"key": "mono.lobby.morning", "when": {"area": "aptLobby"}, "once": true}
 ]
