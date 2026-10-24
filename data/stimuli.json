@@ -6,7 +6,7 @@
   "phoneRinging": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.5 },
   "replyAnxiety": { "kind": "continuous", "channel": "social", "ratePerSec": 0.3 },
   "shoulderTap": { "kind": "ambush", "channel": "social", "damage": 15 },
-  "personalSpace": { "kind": "ambush", "channel": "social", "damage": 1.5 },
+  "personalSpace": { "kind": "ambush", "channel": "social", "damage": 1 },
   "knock": { "kind": "ambush", "channel": "auditory", "damage": 8 },
   "doorbell": { "kind": "ambush", "channel": "auditory", "damage": 20 },
   "bossVisit": { "kind": "ambush", "channel": "social", "damage": 12 },

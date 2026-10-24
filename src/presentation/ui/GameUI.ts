@@ -684,6 +684,7 @@ export class GameUI {
           <h1 class="screen__title">${escapeHtml(this.tx(s.day.titleKey))}</h1>
           <p class="screen__body">${escapeHtml(this.tx(s.day.introKey))}</p>
           ${this.happeningsHtml(s)}
+          ${s.dayIndex === 0 ? `<p class="screen__gauges">${escapeHtml(this.tx('intro.gauges'))}</p>` : ''}
           <p class="screen__cta">${escapeHtml(this.tx('screen.dayIntro.hint'))}</p>
           <p class="screen__hint">${escapeHtml(this.tx('hud.controls'))}</p>
         </div>`;

@@ -74,7 +74,7 @@
   "personalSpace": {
     "radius": 0.9,
     "freezeSec": 0.25,
-    "cooldownSec": 1.2
+    "cooldownSec": 3
   },
   "slipstream": {
     "behindDist": 1.5,

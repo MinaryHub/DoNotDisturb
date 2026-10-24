@@ -1418,3 +1418,9 @@ body.is-touch .hint {
   font-size: 13px;
   line-height: 1.5;
 }
+
+.screen__gauges {
+  margin: -8px 0 14px;
+  font-size: 14px;
+  color: #ffd98a;
+}

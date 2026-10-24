@@ -1706,7 +1706,11 @@ export class GameSession {
           this.fx.push({ type: 'ambush', stimulusId: e.stimulusId });
           break;
         case 'tierChanged':
-          if (['tired', 'danger', 'critical'].includes(e.to) && e.to !== this.lastTier) this.gameEvent(`tier:${e.to}`);
+          if (['tired', 'danger', 'critical'].includes(e.to) && e.to !== this.lastTier) {
+            this.gameEvent(`tier:${e.to}`);
+            // 게임이 끝나는 기준은 긴장이 아니라 기운: 위험해지면 분명히 알린다
+            if (e.to === 'danger' || e.to === 'critical') this.toast(`energy.${e.to}`);
+          }
           this.lastTier = e.to;
           break;
         case 'burnout':

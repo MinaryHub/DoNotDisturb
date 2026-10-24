@@ -73,13 +73,13 @@ export class Crowd {
       if (!a.active) continue;
       a.phase += dt * a.speed * 5;
       const lane = this.lanes.get(a.lane)!;
-      // 플레이어를 살짝 피해 간다 (비켜설 쪽이 정해졌으면 그쪽으로)
+      // 플레이어를 비켜 간다 (멀리서부터 옆으로 한 걸음)
       const rx = player.x - a.pos.x;
       const ry = player.y - a.pos.y;
       const along = rx * a.dir.x + ry * a.dir.y;
       const side = -rx * a.dir.y + ry * a.dir.x;
       let target = a.offset;
-      if (along > 0 && along < 2.5 && Math.abs(side) < playerRadius + 0.6) target = a.offset + (side > 0 ? -0.5 : 0.5);
+      if (along > -0.5 && along < 3.5 && Math.abs(side) < playerRadius + 0.9) target = a.offset + (side > 0 ? -1 : 1);
       const curSide = -(a.pos.x - lane.from[0]) * a.dir.y + (a.pos.y - lane.from[1]) * a.dir.x;
       const lateral = (target - curSide) * Math.min(1, dt * 3);
       a.pos.x += a.dir.x * a.speed * dt - a.dir.y * lateral;
