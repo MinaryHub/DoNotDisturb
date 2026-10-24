@@ -1,0 +1,66 @@
+{
+  "greeting": {
+    "text": "어, 잠깐 나 좀 볼까?",
+    "kind": "opening",
+    "durationSec": 2.0
+  },
+  "lines": [
+    {
+      "text": "요즘 일은 할 만해? 어려운 거 있으면 얘기하고.",
+      "kind": "question",
+      "durationSec": 3.0
+    },
+    {
+      "text": "내가 신입 때는 말이야, 밤을 새우는 게 일상이었어.",
+      "kind": "story",
+      "durationSec": 3.4
+    },
+    {
+      "text": "그 보고서, 방향은 괜찮은데 조금만 더 다듬어 보자고.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "이번 분기 목표는 들었지? 우리 팀이 좀 분발해야 해.",
+      "kind": "question",
+      "durationSec": 3.0
+    },
+    {
+      "text": "다음 주 발표는 자네가 한번 맡아볼래?",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "요즘 젊은 친구들은 말이 없어. 회의 때 의견도 좀 내고.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "주말엔 뭐 했어? 등산이라도 다니지 그래.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "아무튼, 내 말은 그렇다는 거야.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "그래서 내가 그때 사장님한테 뭐라고 했냐면…",
+      "kind": "story",
+      "durationSec": 3.6
+    }
+  ],
+  "flushRemark": {
+    "text": "얼굴이 왜 그래? 어디 안 좋아?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "그래, 수고하고. 기대할게.",
+    "parried": "그래 그래, 일 봐.",
+    "endured": "…아무튼 그렇다는 거야. 가 봐.",
+    "sos": "전화 왔으면 받아. 급한가 보네.",
+    "awkward": "…흠. 그래, 가 봐."
+  }
+}

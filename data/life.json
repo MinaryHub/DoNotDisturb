@@ -1,0 +1,82 @@
+{
+  "stats": {
+    "max": 100,
+    "start": { "income": 60, "housing": 60, "essentials": 55, "bond": 60 },
+    "startMoney": 150000,
+    "escalateAfter": 3
+  },
+  "contacts": {
+    "mgmtOffice": {
+      "nameKey": "contact.mgmtOffice", "answerStimulus": "voiceCall",
+      "answer": { "housing": 6 }, "avoid": { "housing": -9 }, "texted": { "housing": 2 },
+      "reply": { "housing": 3 }, "readIgnored": { "housing": -4 }, "unread": { "housing": -6 },
+      "escalation": "doorbell"
+    },
+    "landlord": {
+      "nameKey": "contact.landlord", "answerStimulus": "voiceCall",
+      "answer": { "housing": 8 }, "avoid": { "housing": -12 }, "texted": { "housing": 3 },
+      "reply": { "housing": 4 }, "readIgnored": { "housing": -6 }, "unread": { "housing": -8 },
+      "escalation": "doorbell"
+    },
+    "boss": {
+      "nameKey": "contact.boss", "answerStimulus": "voiceCall",
+      "answer": { "income": 6 }, "avoid": { "income": -10 }, "texted": { "income": 2 },
+      "reply": { "income": 4 }, "readIgnored": { "income": -7 }, "unread": { "income": -9 },
+      "escalation": "bossVisit"
+    },
+    "teamChat": {
+      "nameKey": "contact.teamChat", "answerStimulus": "voiceCall",
+      "answer": { "income": 3 }, "avoid": { "income": -4 }, "texted": { "income": 1 },
+      "reply": { "income": 2 }, "readIgnored": { "income": -2 }, "unread": { "income": -4 }
+    },
+    "delivery": {
+      "nameKey": "contact.delivery", "answerStimulus": "voiceCall",
+      "answer": { "essentials": 10 }, "avoid": { "essentials": -10 }, "texted": { "essentials": 6 },
+      "reply": { "essentials": 6 }, "readIgnored": { "essentials": -4 }, "unread": { "essentials": -6 }
+    },
+    "bank": {
+      "nameKey": "contact.bank", "answerStimulus": "voiceCall",
+      "answer": { "essentials": 5 }, "avoid": { "essentials": -6 }, "texted": { "essentials": 2 },
+      "reply": { "essentials": 3 }, "readIgnored": { "essentials": -3 }, "unread": { "essentials": -5 }
+    },
+    "mom": {
+      "nameKey": "contact.mom", "answerStimulus": "voiceCall",
+      "answer": { "bond": 10 }, "avoid": { "bond": -8 }, "texted": { "bond": 4 },
+      "reply": { "bond": 6 }, "readIgnored": { "bond": -6 }, "unread": { "bond": -8 }
+    },
+    "friend": {
+      "nameKey": "contact.friend", "answerStimulus": "voiceCall", "ally": true,
+      "answer": { "bond": 12 }, "avoid": { "bond": -8 }, "texted": { "bond": 6 },
+      "reply": { "bond": 8 }, "readIgnored": { "bond": -6 }, "unread": { "bond": -10 }
+    }
+  },
+  "settlement": {
+    "dailyDecay": { "essentials": -8, "bond": -4 },
+    "weekly": { "goodIncome": 55, "goodBonusMoney": 50000, "badIncomeDelta": -15 },
+    "monthEnd": { "rent": 450000, "salaryBase": 300000, "salaryPerIncome": 4000, "unpaidHousingDelta": -30 }
+  },
+  "night": {
+    "baseMax": 100,
+    "minMax": 55,
+    "stressPenaltyPerPoint": 0.15,
+    "ruminationPenalty": 6,
+    "hobbyBonus": 6,
+    "lateFrom": "23:00",
+    "latePenaltyPerHour": 6,
+    "housingLow": 30,
+    "housingLowPenalty": 10,
+    "essentialsLow": 25,
+    "essentialsLowPenalty": 8
+  },
+  "rewards": {
+    "workDone": { "income": 8 },
+    "workPerTask": 6000,
+    "workPingIgnored": { "income": -3 },
+    "workPingReplied": { "income": 1 },
+    "late": { "income": -8 },
+    "groceries": { "essentials": 20 },
+    "homeMealEssentials": -3,
+    "allyMeet": { "bond": 15 },
+    "mandatorySkipped": { "income": -20 }
+  }
+}

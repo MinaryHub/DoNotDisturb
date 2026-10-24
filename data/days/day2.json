@@ -1,0 +1,197 @@
+{
+  "id": "day2",
+  "weekdayKey": "weekday.tue",
+  "titleKey": "day2.title",
+  "introKey": "day2.intro",
+  "start": "07:45",
+  "spawn": "player",
+  "flags": {
+    "weeklyEval": false,
+    "monthEnd": false
+  },
+  "objectives": [
+    {
+      "id": "commute",
+      "textKey": "obj.commute",
+      "on": "enter:officeFloor",
+      "deadline": "09:00",
+      "late": {
+        "income": -8
+      },
+      "marker": "officeFloor"
+    },
+    {
+      "id": "work",
+      "textKey": "obj.work",
+      "on": "done:work",
+      "requires": [
+        "commute"
+      ],
+      "marker": "officeDesk"
+    },
+    {
+      "id": "groceries",
+      "textKey": "obj.groceries",
+      "on": "pick:martItem",
+      "count": 3,
+      "requires": [
+        "work"
+      ],
+      "marker": "mart"
+    },
+    {
+      "id": "checkout",
+      "textKey": "obj.checkout",
+      "on": "done:checkout",
+      "mandatory": true,
+      "requires": [
+        "groceries"
+      ],
+      "marker": "checkoutNormal"
+    },
+    {
+      "id": "home",
+      "textKey": "obj.home",
+      "on": "interact:bed",
+      "requires": [
+        "checkout"
+      ],
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "08:10",
+      "kind": "call",
+      "contact": "landlord",
+      "textKey": "phone.landlord.boiler"
+    },
+    {
+      "at": "08:40",
+      "kind": "message",
+      "contact": "teamChat",
+      "textKey": "phone.team.morning"
+    },
+    {
+      "on": "done:work",
+      "kind": "message",
+      "contact": "delivery",
+      "textKey": "phone.delivery.absent"
+    },
+    {
+      "on": "enter:mart",
+      "kind": "call",
+      "contact": "landlord",
+      "textKey": "phone.landlord.again"
+    },
+    {
+      "at": "20:30",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.howsday"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "to": "09:30"
+    },
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "guard",
+      "profile": "staff",
+      "at": "guard"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer"
+    },
+    {
+      "id": "flyer2",
+      "profile": "flyer",
+      "at": "flyer2",
+      "from": "17:30"
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "boss",
+      "profile": "boss",
+      "at": "boss",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "coworkerA",
+      "profile": "coworker",
+      "at": "coworkerA",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "coworkerB",
+      "profile": "coworker",
+      "at": "pantryA",
+      "path": "pantryIdle",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "coworkerC",
+      "profile": "coworker",
+      "at": "coworkerC",
+      "path": "officeLoop",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "sampler",
+      "profile": "sampler",
+      "at": "sampler"
+    },
+    {
+      "id": "acquaintance",
+      "profile": "acquaintance",
+      "at": "acquaintance",
+      "path": "martLoop",
+      "from": "17:00"
+    },
+    {
+      "id": "cashier",
+      "profile": "cashier",
+      "at": "cashier"
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    }
+  ],
+  "work": {
+    "endTime": "18:10",
+    "tasks": 5,
+    "focusPerSec": 22,
+    "pingEverySec": [
+      4,
+      7
+    ],
+    "pingTimeoutSec": 4
+  }
+}

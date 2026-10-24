@@ -1,60 +1,61 @@
 import { z } from 'zod';
+import { lifeStatIds } from '../sim/LifeStats';
 
-// /data JSON 설정의 스키마. 브라우저(게임)와 Node(도구) 양쪽에서 쓰므로 순수 TS로 유지한다.
+// /data JSON 설정의 스키마. 브라우저(게임)와 Node(도구·테스트) 양쪽에서 쓰므로 순수 TS로 유지한다.
 
 const positive = z.number().positive();
 const nonNegative = z.number().min(0);
+const unit = z.number().min(0).max(1);
+const vec2 = z.tuple([z.number(), z.number()]);
+const rect = z.tuple([z.number(), z.number(), positive, positive]);
+const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/, 'HH:MM 형식이어야 합니다');
+const lifeDelta = z.object(Object.fromEntries(lifeStatIds.map((id) => [id, z.number().optional()])) as Record<
+  (typeof lifeStatIds)[number],
+  z.ZodOptional<z.ZodNumber>
+>);
 
-export const worldConfigSchema = z.object({
-  simulationHz: positive,
-  defaultLevel: z.string().min(1),
-  camera: z.object({ fov: positive, near: positive, far: positive, eyeHeight: positive }),
-  noclip: z.object({ speed: positive, fastMultiplier: positive, mouseSensitivity: positive }),
-  physics: z.object({ gravity: z.number(), probeRadius: positive }),
-  navmesh: z.object({
-    cellSize: positive,
-    cellHeight: positive,
-    agentHeight: positive,
-    agentRadius: nonNegative,
-    agentMaxClimb: nonNegative,
-    agentMaxSlopeDeg: z.number().min(0).max(90),
-  }),
-  hotReloadDebounceMs: nonNegative,
-  lighting: z.object({
-    ambient: z.object({ color: z.string(), intensity: nonNegative }),
-    hemisphere: z.object({ sky: z.string(), ground: z.string(), intensity: nonNegative }),
-    key: z.object({ color: z.string(), intensity: nonNegative, position: z.tuple([z.number(), z.number(), z.number()]) }),
-    background: z.string(),
-  }),
-});
-export type WorldConfig = z.infer<typeof worldConfigSchema>;
-
+// ───── 입력 ─────
 export const inputActions = [
-  'moveForward',
-  'moveBackward',
-  'moveLeft',
-  'moveRight',
   'moveUp',
   'moveDown',
+  'moveLeft',
+  'moveRight',
   'sprint',
   'interact',
   'earphones',
   'phonePretend',
-  'restart',
+  'coverCheeks',
+  'closeEyes',
+  'phone',
+  'map',
+  'useDrink',
+  'useSnack',
+  'useCoffee',
+  'mask',
+  'reply1',
+  'reply2',
+  'reply3',
+  'reply4',
+  'smile',
+  'sos',
+  'confirm',
+  'accept',
+  'decline',
+  'textInstead',
+  'dodgeLeft',
+  'dodgeRight',
+  'pause',
+  'options',
   'toggleDebug',
-  'toggleNoclip',
-  'reloadLevel',
 ] as const;
 export type InputAction = (typeof inputActions)[number];
 
 export const inputConfigSchema = z.object(
-  Object.fromEntries(inputActions.map((a) => [a, z.array(z.string()).min(1)])) as Record<
-    InputAction,
-    z.ZodArray<z.ZodString>
-  >,
+  Object.fromEntries(inputActions.map((a) => [a, z.array(z.string()).min(1)])) as Record<InputAction, z.ZodArray<z.ZodString>>,
 );
 export type InputConfig = z.infer<typeof inputConfigSchema>;
 
+// ───── 밸런스 ─────
 export const balanceConfigSchema = z.object({
   battery: z.object({
     max: positive,
@@ -73,6 +74,38 @@ export const balanceConfigSchema = z.object({
     decayDelaySec: nonNegative,
   }),
   ambush: z.object({ freezeSec: nonNegative, shakeSec: nonNegative }),
+  recovery: z.object({
+    homeLockedPerSec: nonNegative,
+    allyNearPerSec: nonNegative,
+    allyRange: positive,
+    snack: nonNegative,
+    dripCoffee: nonNegative,
+    soloMeal: nonNegative,
+    homeMeal: nonNegative,
+    plansCancelled: nonNegative,
+    benchPerSec: nonNegative,
+    windowPerSec: nonNegative,
+    petStressRelief: nonNegative,
+    washStressRelief: nonNegative,
+    hobbyStressRelief: nonNegative,
+    /** 업무를 마치고 건너뛴 오후 (자리에서 혼자 보낸 시간) */
+    workAfternoon: nonNegative,
+  }),
+  clock: z.object({
+    minutesPerSecond: positive,
+    rushHours: z.array(z.tuple([hhmm, hhmm])),
+    rushCrowdMultiplier: positive,
+  }),
+  safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive }),
+  rehearsal: z.object({ damageScale: unit, flushScale: unit }),
+  personalSpace: z.object({ radius: positive, freezeSec: nonNegative, cooldownSec: nonNegative }),
+  bumpQte: z.object({ lookAheadSec: positive, windowSec: positive, sideStep: positive }),
+  slipstream: z.object({ behindDist: positive, lateral: positive, crowdScale: unit }),
+  crowdDensity: z.object({ radius: positive, perAgent: nonNegative, max: positive }),
+  gaze: z.object({ range: positive }),
+  sweat: z.object({ rumbleMs: nonNegative }),
+  sos: z.object({ bondMin: nonNegative }),
+  boss: z.object({ visitAfterIgnoredMessages: positive }),
 });
 export type BalanceConfig = z.infer<typeof balanceConfigSchema>;
 
@@ -96,57 +129,124 @@ export const stimulusTableSchema = z.record(
 );
 export type StimulusTableConfig = z.infer<typeof stimulusTableSchema>;
 
-export const skillsConfigSchema = z.object({
-  earphones: z.object({ auditoryMultiplier: z.number().min(0).max(1), lowpassHz: positive, npcFootstepGain: nonNegative }),
-  phonePretend: z.object({
-    blocksEyeContact: z.boolean(),
-    pitchDeg: z.number().min(-89).max(0),
-    moveMultiplier: z.number().min(0).max(1),
-    pitchLerpPerSec: positive,
+export const somaticConfigSchema = z.object({
+  flush: z.object({
+    gazeCount: positive,
+    gazeRisePerSec: nonNegative,
+    decayPerSec: nonNegative,
+    coverDecayPerSec: nonNegative,
+    refusal: unit,
+    slip: unit,
+    remarkThreshold: unit,
   }),
+  migraine: z.object({ onsetSec: nonNegative, risePerSec: nonNegative, decayPerSec: nonNegative, eyesClosedDecayPerSec: nonNegative }),
+  stutter: z.object({ stress: nonNegative }),
+  sweat: z.object({ stress: nonNegative, sustainSec: nonNegative, slipChance: unit }),
+  remedies: z.object({ coldDrink: unit, washFaceStressRelief: nonNegative }),
+});
+export type SomaticFileConfig = z.infer<typeof somaticConfigSchema>;
+
+const contactSchema = z.object({
+  nameKey: z.string(),
+  answerStimulus: z.string(),
+  answer: lifeDelta,
+  avoid: lifeDelta,
+  texted: lifeDelta,
+  reply: lifeDelta,
+  readIgnored: lifeDelta,
+  unread: lifeDelta,
+  escalation: z.string().optional(),
+  ally: z.boolean().optional(),
+});
+
+export const lifeConfigSchema = z.object({
+  stats: z.object({
+    max: positive,
+    start: z.object(Object.fromEntries(lifeStatIds.map((id) => [id, nonNegative])) as Record<(typeof lifeStatIds)[number], typeof nonNegative>),
+    startMoney: nonNegative,
+    escalateAfter: positive,
+  }),
+  contacts: z.record(z.string(), contactSchema),
+  settlement: z.object({
+    dailyDecay: lifeDelta,
+    weekly: z.object({ goodIncome: nonNegative, goodBonusMoney: nonNegative, badIncomeDelta: z.number() }),
+    monthEnd: z.object({ rent: nonNegative, salaryBase: nonNegative, salaryPerIncome: nonNegative, unpaidHousingDelta: z.number() }),
+  }),
+  night: z.object({
+    baseMax: positive,
+    minMax: positive,
+    stressPenaltyPerPoint: nonNegative,
+    ruminationPenalty: nonNegative,
+    hobbyBonus: nonNegative,
+    lateFrom: hhmm,
+    latePenaltyPerHour: nonNegative,
+    housingLow: nonNegative,
+    housingLowPenalty: nonNegative,
+    essentialsLow: nonNegative,
+    essentialsLowPenalty: nonNegative,
+  }),
+  rewards: z.object({
+    workDone: lifeDelta,
+    workPerTask: nonNegative,
+    workPingIgnored: lifeDelta,
+    workPingReplied: lifeDelta,
+    late: lifeDelta,
+    groceries: lifeDelta,
+    homeMealEssentials: z.number(),
+    allyMeet: lifeDelta,
+    mandatorySkipped: lifeDelta,
+  }),
+});
+export type LifeConfig = z.infer<typeof lifeConfigSchema>;
+
+export const skillsConfigSchema = z.object({
+  earphones: z.object({ auditoryMultiplier: unit, lowpassHz: positive, ambushChanceMultiplier: positive, backApproachTapChance: unit }),
+  phonePretend: z.object({ blocksEyeContact: z.boolean(), moveMultiplier: unit, viewNarrow: unit, bumpMultiplier: positive }),
+  coverCheeks: z.object({ moveMultiplier: unit }),
+  closeEyes: z.object({ moveMultiplier: unit }),
+  hide: z.object({ noticeMultiplier: unit }),
+  mask: z.object({ hidesFlush: z.boolean(), stuffyStressPerSec: nonNegative }),
 });
 export type SkillsConfig = z.infer<typeof skillsConfigSchema>;
 
 export const playerConfigSchema = z.object({
   walkSpeed: positive,
   runSpeed: positive,
-  height: positive,
   radius: positive,
-  eyeHeight: positive,
-  stepHeight: nonNegative,
-  maxSlopeDeg: z.number().min(0).max(89),
-  gravity: z.number().negative(),
   interactRange: positive,
-  mouseSensitivity: positive,
+  runNoiseMultiplier: positive,
+  stairsFatigue: nonNegative,
 });
 export type PlayerConfig = z.infer<typeof playerConfigSchema>;
 
-const unit = z.number().min(0).max(1);
 export const presentationConfigSchema = z.object({
-  postfx: z.object({
-    stressVignette: unit,
-    redTint: z.tuple([unit, unit, unit]),
-    tiredDesaturation: unit,
-    dangerDistortion: nonNegative,
-    criticalTunnel: unit,
-    burnoutFadeSec: positive,
-    /** 접근성: 왜곡 강도 배율 (0이면 끔) */
-    distortionScale: nonNegative,
-  }),
   camera: z.object({
-    dangerFovExtraDeg: nonNegative,
-    shakeAmplitude: nonNegative,
-    shakeRollDeg: nonNegative,
-    shakeFrequency: positive,
-    burnoutSinkSec: positive,
-    burnoutSinkHeight: nonNegative,
-    burnoutRollDeg: nonNegative,
-    headBobAmplitude: nonNegative,
-    headBobFrequency: positive,
+    tilePx: positive,
+    followLerp: positive,
+    dangerZoomOut: unit,
+    dangerStretch: unit,
+    shakePx: nonNegative,
+    heartbeatPulse: nonNegative,
+  }),
+  fx: z.object({
+    stressVignette: unit,
+    redTint: z.string(),
+    tiredDesaturation: unit,
+    criticalTunnel: unit,
+    lightRadiusTiles: positive,
+    lightRadiusCritical: positive,
+    wallCloseIn: unit,
+    burnoutFadeSec: positive,
+    chromaticPx: nonNegative,
+    migraineBlurPx: nonNegative,
+    flushHeight: unit,
+    homeAmber: unit,
+    gazeLineAlpha: unit,
+    soundRings: z.boolean(),
   }),
   audio: z.object({
     masterVolume: unit,
-    murmurZoneGain: nonNegative,
+    murmurGain: nonNegative,
     murmurTiredBonus: nonNegative,
     heartbeatMinBpm: positive,
     heartbeatMaxBpm: positive,
@@ -155,13 +255,22 @@ export const presentationConfigSchema = z.object({
     tinnitusGain: nonNegative,
     ringGain: nonNegative,
     footstepGain: nonNegative,
+    bloodGain: nonNegative,
+    migraineWhineGain: nonNegative,
+    sanctuaryMusicGain: nonNegative,
+    crossfadeSec: positive,
   }),
 });
 export type PresentationConfig = z.infer<typeof presentationConfigSchema>;
 
+// ───── NPC ─────
+export const npcTypes = ['passerby', 'acquaintance', 'hunter', 'stalker', 'boss', 'ally', 'pet'] as const;
+export type NpcType = (typeof npcTypes)[number];
+
 export const npcProfileSchema = z.object({
-  type: z.enum(['passerby', 'hunter', 'stalker', 'boss', 'ally']),
+  type: z.enum(npcTypes),
   displayTagKey: z.string(),
+  color: z.string(),
   walkSpeed: positive,
   approachSpeed: positive,
   viewDistance: positive,
@@ -171,88 +280,268 @@ export const npcProfileSchema = z.object({
   noticeDecayPerSec: nonNegative,
   eyeContactMultiplier: z.number().min(1),
   eyeContactAngleDeg: positive,
-  noticePauseSec: nonNegative,
   talkRange: positive,
   stareSec: nonNegative,
-  lingerRange: positive,
-  talkDurationSec: positive,
-  loseSightGiveUpSec: positive,
+  giveUpSec: positive,
   cooldownSec: nonNegative,
   waypointWaitSec: nonNegative,
+  approaches: z.boolean(),
+  dialogue: z.string(),
   encounterStimulus: z.string(),
-  lingerStimulus: z.string(),
-  gazeStimulus: z.string(),
+  baseDurationSec: positive,
+  minDurationSec: nonNegative,
+  /** 스폰 지점에서 이 거리 이상 따라오지 않는다 */
+  leash: positive.optional(),
+  stalkDistance: positive.optional(),
+  stareTriggerSec: positive.optional(),
+  graceAfterParrySec: nonNegative.optional(),
+  radius: positive.optional(),
 });
 export const npcProfilesSchema = z.record(z.string(), npcProfileSchema);
 export type NpcProfile = z.infer<typeof npcProfileSchema>;
 
-export const stageConfigSchema = z.object({
+const dialogueLineSchema = z.object({
+  text: z.string(),
+  kind: z.enum(['question', 'story', 'opening', 'remark']),
+  durationSec: positive,
+});
+export const dialoguePoolSchema = z.object({
+  greeting: dialogueLineSchema,
+  lines: z.array(dialogueLineSchema).min(1),
+  flushRemark: dialogueLineSchema,
+  closers: z.object({ satisfied: z.string(), parried: z.string(), endured: z.string(), sos: z.string(), awkward: z.string() }),
+});
+
+export const dialogueConfigSchema = z.object({
+  parryWindowSec: positive,
+  gapSec: positive,
+  satisfactionPerReply: positive,
+  perfectMultiplier: positive,
+  wrongExtraSec: nonNegative,
+  wrongSatisfactionLoss: nonNegative,
+  smileDropPerSec: nonNegative,
+  ignoredLoss: nonNegative,
+  sosDelaySec: positive,
+  flushRemarkChance: unit,
+  speech: z.object({ beatSec: positive, zoneCenter: unit, zoneWidth: unit }),
+});
+export type DialogueFileConfig = z.infer<typeof dialogueConfigSchema>;
+
+export const speechesSchema = z.record(
+  z.string(),
+  z.object({
+    chunks: z.array(z.string()).min(1),
+    stimulus: z.string(),
+    audience: nonNegative,
+    objectiveEvent: z.string(),
+    introKey: z.string(),
+  }),
+);
+export type SpeechDefs = z.infer<typeof speechesSchema>;
+
+// ───── 월드 ─────
+export const tileDefsSchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      color: z.string(),
+      walk: z.boolean(),
+      sight: z.boolean(),
+      tall: z.boolean().optional(),
+      push: vec2.optional(),
+      pattern: z.enum(['none', 'stripe', 'dots', 'grid', 'plank']).optional(),
+      accent: z.string().optional(),
+    }),
+  )
+  .min(1);
+
+const worldOpSchema = z.discriminatedUnion('op', [
+  z.object({ op: z.literal('fill'), rect, tile: z.string() }),
+  z.object({ op: z.literal('room'), rect, floor: z.string(), wall: z.string() }),
+  z.object({ op: z.literal('tiles'), tile: z.string(), at: z.array(vec2) }),
+]);
+
+export const interactableKinds = [
+  'bed',
+  'piano',
+  'window',
+  'drip',
+  'fridge',
+  'sink',
+  'mirror',
+  'doorLock',
+  'peephole',
+  'elevator',
+  'flavor',
+  'desk',
+  'speech',
+  'coldDrink',
+  'snack',
+  'soloMeal',
+  'bench',
+  'martItem',
+  'checkout',
+  'priceTag',
+  'clothesPick',
+  'seat',
+] as const;
+export type InteractableKind = (typeof interactableKinds)[number];
+
+export const worldDefSchema = z.object({
+  size: z.tuple([positive, positive]),
+  base: z.string(),
+  /** 서로 보이지 않는 층 (지상 / 지하 통로 / 아파트 3층). 렌더러는 플레이어가 있는 층만 그린다 */
+  layers: z.array(z.object({ id: z.string(), rect })).min(1),
+  ops: z.array(worldOpSchema),
+  areas: z.array(
+    z.object({
+      id: z.string(),
+      rect,
+      kind: z.enum(['outdoor', 'indoor', 'home']),
+      labelKey: z.string(),
+      stimulus: z.object({ id: z.string(), intensity: positive }).optional(),
+      small: z.boolean().optional(),
+    }),
+  ),
+  hides: z.array(z.object({ id: z.string(), rect })),
+  safes: z.array(z.object({ id: z.string(), rect, kind: z.enum(['stall', 'fitting']), noiseAfterSec: positive })),
+  interactables: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(interactableKinds),
+      at: vec2,
+      labelKey: z.string(),
+      price: nonNegative.optional(),
+      item: z.string().optional(),
+      mode: z.enum(['normal', 'self']).optional(),
+      speech: z.string().optional(),
+      seat: z.string().optional(),
+      target: z.string().optional(),
+      monologue: z.string().optional(),
+    }),
+  ),
+  portals: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(['stairs', 'subway', 'door']),
+      at: vec2,
+      to: z.string(),
+      arrive: vec2,
+      travelSec: nonNegative,
+      labelKey: z.string(),
+    }),
+  ),
+  elevator: z.object({ car: vec2, carArea: z.string(), fronts: z.record(z.string(), vec2) }),
+  spawns: z.record(z.string(), vec2),
+  paths: z.record(z.string(), z.object({ points: z.array(vec2).min(1), loop: z.boolean() })),
+  crowdLanes: z.array(
+    z.object({ id: z.string(), from: vec2, to: vec2, width: positive, count: z.number().int().min(0), speed: positive, zone: z.string() }),
+  ),
+  labels: z.array(z.object({ at: vec2, textKey: z.string() })),
+});
+export type WorldDef = z.infer<typeof worldDefSchema>;
+export type InteractableDef = WorldDef['interactables'][number];
+export type PortalDef = WorldDef['portals'][number];
+export type SafeDef = WorldDef['safes'][number];
+
+// ───── 하루 ─────
+export const daySchema = z.object({
   id: z.string(),
-  level: z.string(),
+  weekdayKey: z.string(),
   titleKey: z.string(),
-  homeVolume: z.string(),
+  introKey: z.string(),
+  start: hhmm,
+  spawn: z.string(),
+  flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean() }),
   objectives: z.array(
     z.object({
       id: z.string(),
       textKey: z.string(),
-      completeOnEvent: z.string().optional(),
+      on: z.string(),
+      count: positive.optional(),
       requires: z.array(z.string()).optional(),
+      mandatory: z.boolean().optional(),
+      optional: z.boolean().optional(),
+      skip: lifeDelta.optional(),
+      deadline: hhmm.optional(),
+      late: lifeDelta.optional(),
+      lateStimulus: z.string().optional(),
+      endsDay: z.boolean().optional(),
+      /** 지도·화면 가장자리 화살표가 가리킬 곳: 상호작용 id 또는 영역 id */
+      marker: z.string().optional(),
     }),
   ),
-  winEvent: z.string(),
-  winRequires: z.array(z.string()),
-  events: z.record(z.string(), z.object({ stimulus: z.string() })),
-  interactions: z.record(z.string(), z.string()),
-  npcs: z.array(z.object({ id: z.string(), profile: z.string() })),
-  elevator: z
+  phone: z.array(
+    z
+      .object({
+        at: hhmm.optional(),
+        on: z.string().optional(),
+        kind: z.enum(['call', 'message']),
+        contact: z.string(),
+        textKey: z.string(),
+        mandatory: z.boolean().optional(),
+        /** 특별 효과: 상대가 먼저 약속을 취소 (배터리 +50) */
+        effect: z.enum(['plansCancelled']).optional(),
+        /** 발생 확률 (기본 1) */
+        chance: unit.optional(),
+      })
+      .refine((p) => (p.at === undefined) !== (p.on === undefined), 'at(시각) 또는 on(이벤트) 중 하나만 지정'),
+  ),
+  npcs: z.array(
+    z.object({
+      id: z.string(),
+      profile: z.string(),
+      at: z.string(),
+      path: z.string().optional(),
+      from: hhmm.optional(),
+      to: hhmm.optional(),
+      seated: z.boolean().optional(),
+    }),
+  ),
+  work: z
+    .object({ endTime: hhmm, tasks: positive, focusPerSec: positive, pingEverySec: z.tuple([positive, positive]), pingTimeoutSec: positive })
+    .optional(),
+  dinner: z
     .object({
-      car: z.string(),
-      stops: z
-        .array(z.object({ floor: z.string(), offsetY: z.number(), door: z.string(), callEvent: z.string() }))
-        .min(2),
-      startStop: z.string(),
-      panelEvent: z.string(),
-      speed: positive,
-      doorOpenSec: positive,
-      doorMoveSec: positive,
-      doorSlide: positive,
-      closePressCutSec: nonNegative,
+      area: z.string(),
+      seatChoiceSec: positive,
+      toastAfterSec: positive,
+      laughEverySec: z.tuple([positive, positive]),
+      laughWindowSec: positive,
+      grillCookSec: positive,
+      grillBurnSec: positive,
+      seatEffects: z.record(z.string(), z.object({ gazeExtra: nonNegative, bossAttention: nonNegative })),
+      minutesPerSecond: positive,
     })
     .optional(),
 });
-export type StageConfig = z.infer<typeof stageConfigSchema>;
+export type DayDef = z.infer<typeof daySchema>;
+export type ObjectiveDef = DayDef['objectives'][number];
+
+export const campaignSchema = z.object({ days: z.array(z.string()).min(1) });
+
+export const monologueTriggersSchema = z.array(
+  z.object({
+    key: z.string(),
+    when: z.object({
+      event: z.string().optional(),
+      area: z.string().optional(),
+      npcProfile: z.string().optional(),
+      npcType: z.enum(npcTypes).optional(),
+      distMin: nonNegative.optional(),
+      distMax: positive.optional(),
+      visible: z.boolean().optional(),
+      noticed: z.boolean().optional(),
+      returning: z.boolean().optional(),
+    }),
+    once: z.boolean().optional(),
+    cooldownSec: nonNegative.optional(),
+  }),
+);
+export type MonologueTrigger = z.infer<typeof monologueTriggersSchema>[number];
 
 export const textTableSchema = z.record(z.string(), z.string());
 export type TextTable = z.infer<typeof textTableSchema>;
-
-export const assetCategories = ['level', 'prop', 'npc', 'crowdNpc', 'fpHands'] as const;
-export type AssetCategory = (typeof assetCategories)[number];
-
-export const assetBudgetSchema = z.object({
-  triangles: z.object({
-    prop: positive,
-    npc: positive,
-    crowdNpc: positive,
-    fpHands: positive,
-    environmentModule: positive,
-  }),
-  textures: z.object({ maxSize: positive, propMaxSize: positive }),
-  units: z.object({
-    minObjectSize: positive,
-    maxObjectSize: positive,
-    maxLevelExtent: positive,
-    maxCharacterHeight: positive,
-    minCharacterHeight: positive,
-  }),
-  categories: z.array(
-    z.object({
-      category: z.enum(assetCategories),
-      pathPrefix: z.string(),
-      nameSuffix: z.string().optional(),
-    }),
-  ),
-});
-export type AssetBudget = z.infer<typeof assetBudgetSchema>;
 
 /** zod 오류를 "경로: 메시지" 목록 문자열로 변환 */
 export function formatZodError(error: z.ZodError): string {

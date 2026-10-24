@@ -14,11 +14,81 @@
     "max": 100,
     "decayPerSec": 2,
     "somaticThreshold": 60,
-    "gainPerDamage": 1.5,
+    "gainPerDamage": 1.0,
     "decayDelaySec": 1.5
   },
   "ambush": {
     "freezeSec": 0.5,
     "shakeSec": 0.6
+  },
+  "recovery": {
+    "homeLockedPerSec": 0.6,
+    "allyNearPerSec": 1,
+    "allyRange": 4,
+    "snack": 20,
+    "dripCoffee": 20,
+    "soloMeal": 40,
+    "homeMeal": 15,
+    "plansCancelled": 50,
+    "benchPerSec": 0.3,
+    "windowPerSec": 0.5,
+    "petStressRelief": 40,
+    "washStressRelief": 25,
+    "hobbyStressRelief": 30,
+    "workAfternoon": 15
+  },
+  "clock": {
+    "minutesPerSecond": 1,
+    "rushHours": [
+      [
+        "08:00",
+        "09:30"
+      ],
+      [
+        "18:00",
+        "19:30"
+      ]
+    ],
+    "rushCrowdMultiplier": 1.6
+  },
+  "safe": {
+    "knockRepeatSec": 15,
+    "fittingAnswerSec": 3
+  },
+  "rehearsal": {
+    "damageScale": 0.7,
+    "flushScale": 0.5
+  },
+  "personalSpace": {
+    "radius": 0.9,
+    "freezeSec": 0.25,
+    "cooldownSec": 1.2
+  },
+  "bumpQte": {
+    "lookAheadSec": 1.1,
+    "windowSec": 0.5,
+    "sideStep": 0.9
+  },
+  "slipstream": {
+    "behindDist": 1.5,
+    "lateral": 0.6,
+    "crowdScale": 0.5
+  },
+  "crowdDensity": {
+    "radius": 3,
+    "perAgent": 0.25,
+    "max": 2.5
+  },
+  "gaze": {
+    "range": 9
+  },
+  "sweat": {
+    "rumbleMs": 120
+  },
+  "sos": {
+    "bondMin": 50
+  },
+  "boss": {
+    "visitAfterIgnoredMessages": 2
   }
 }

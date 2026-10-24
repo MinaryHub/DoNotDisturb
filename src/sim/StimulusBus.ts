@@ -35,6 +35,7 @@ interface ContinuousEntry {
 interface RuminationEntry {
   stimulusId: string;
   remainingSec: number;
+  scale: number;
 }
 
 export interface BusTickResult {
@@ -64,17 +65,20 @@ export class StimulusBus {
     return stimulusId in this.table;
   }
 
-  /** 1회성 자극 발생. 지속형을 emit하면 오류 (setContinuous 사용) */
-  emit(stimulusId: string, source?: string): void {
+  /**
+   * 1회성 자극 발생. 지속형을 emit하면 오류 (setContinuous 사용)
+   * @param scale 데미지 배율 (예: 리허설 후 필수 상호작용 0.7)
+   */
+  emit(stimulusId: string, source?: string, scale = 1): void {
     const def = this.def(stimulusId);
     switch (def.kind) {
       case 'ambush':
       case 'encounter':
-        this.instant.push({ stimulusId, kind: def.kind, channel: def.channel, amount: def.damage ?? 0, source });
+        this.instant.push({ stimulusId, kind: def.kind, channel: def.channel, amount: (def.damage ?? 0) * scale, source });
         (def.kind === 'ambush' ? this.ambushes : this.encounters).push(stimulusId);
         break;
       case 'rumination':
-        this.ruminations.push({ stimulusId, remainingSec: def.durationSec ?? 0 });
+        this.ruminations.push({ stimulusId, remainingSec: def.durationSec ?? 0, scale });
         break;
       case 'continuous':
         throw new Error(`지속형 자극 "${stimulusId}"은 setContinuous로 켜고 꺼야 합니다`);
@@ -103,6 +107,30 @@ export class StimulusBus {
     return this.ruminations.length;
   }
 
+  /** 현재 켜진 지속형 자극 key 목록 */
+  activeContinuousKeys(): string[] {
+    return [...this.continuous.keys()];
+  }
+
+  /** 조건에 맞는 지속형 자극의 초당 기본 데미지 합 (편두통 노출 판정 등) */
+  continuousRate(match: (key: string) => boolean): number {
+    let sum = 0;
+    for (const [key, e] of this.continuous) if (match(key)) sum += (this.def(e.stimulusId).ratePerSec ?? 0) * e.intensity;
+    return sum;
+  }
+
+  /** key가 prefix로 시작하는 지속형 자극을 모두 끈다 (예: 구역을 벗어날 때 "zone:") */
+  clearContinuous(prefix = ''): void {
+    for (const key of [...this.continuous.keys()]) if (key.startsWith(prefix)) this.continuous.delete(key);
+  }
+
+  /** 이불킥 DoT 정화 (건반 연주 등) */
+  clearRuminations(): number {
+    const n = this.ruminations.length;
+    this.ruminations.length = 0;
+    return n;
+  }
+
   tick(dt: number): BusTickResult {
     const hits = this.instant.splice(0);
     for (const [key, entry] of this.continuous) {
@@ -119,7 +147,7 @@ export class StimulusBus {
       const r = this.ruminations[i]!;
       const def = this.def(r.stimulusId);
       const step = Math.min(dt, r.remainingSec);
-      hits.push({ stimulusId: r.stimulusId, kind: 'rumination', channel: def.channel, amount: (def.ratePerSec ?? 0) * step });
+      hits.push({ stimulusId: r.stimulusId, kind: 'rumination', channel: def.channel, amount: (def.ratePerSec ?? 0) * step * r.scale });
       r.remainingSec -= dt;
       if (r.remainingSec <= 0) this.ruminations.splice(i, 1);
     }

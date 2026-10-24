@@ -1,72 +1,202 @@
-import worldJson from '../../data/world.json';
-import inputJson from '../../data/input.json';
-import balanceJson from '../../data/balance.json';
-import stimuliJson from '../../data/stimuli.json';
-import skillsJson from '../../data/skills.json';
-import playerJson from '../../data/player.json';
-import npcProfilesJson from '../../data/npcProfiles.json';
-import textKoJson from '../../data/text/ko.json';
-import presentationJson from '../../data/presentation.json';
+import { parseKeyTextCsv } from './csv';
 import {
   balanceConfigSchema,
+  campaignSchema,
+  daySchema,
+  dialogueConfigSchema,
+  dialoguePoolSchema,
   inputConfigSchema,
+  lifeConfigSchema,
+  monologueTriggersSchema,
   npcProfilesSchema,
   parseConfig,
   playerConfigSchema,
   presentationConfigSchema,
   skillsConfigSchema,
-  stageConfigSchema,
+  somaticConfigSchema,
+  speechesSchema,
   stimulusTableSchema,
   textTableSchema,
-  worldConfigSchema,
+  tileDefsSchema,
+  worldDefSchema,
   type BalanceConfig,
+  type DayDef,
+  type DialogueFileConfig,
   type InputConfig,
+  type LifeConfig,
+  type MonologueTrigger,
   type NpcProfile,
   type PlayerConfig,
   type PresentationConfig,
   type SkillsConfig,
-  type StageConfig,
+  type SomaticFileConfig,
+  type SpeechDefs,
   type StimulusTableConfig,
   type TextTable,
-  type WorldConfig,
+  type WorldDef,
 } from './configSchemas';
+import type { TileDef } from '../world/TileMap';
+import type { DialoguePool } from '../sim/DialogueBattle';
+import type { SimConfig } from '../sim/Simulation';
 
 export interface GameConfig {
-  world: WorldConfig;
   input: InputConfig;
   balance: BalanceConfig;
   stimuli: StimulusTableConfig;
+  somatic: SomaticFileConfig;
+  life: LifeConfig;
   skills: SkillsConfig;
   player: PlayerConfig;
-  npcProfiles: Record<string, NpcProfile>;
-  text: TextTable;
   presentation: PresentationConfig;
+  npcProfiles: Record<string, NpcProfile>;
+  dialogueRules: DialogueFileConfig;
+  dialoguePools: Record<string, DialoguePool>;
+  speeches: SpeechDefs;
+  tiles: TileDef[];
+  world: WorldDef;
+  days: DayDef[];
+  monologueTriggers: MonologueTrigger[];
+  monologue: Record<string, string>;
+  text: TextTable;
 }
 
-/** /data의 JSON을 zod로 검증해 불러온다. 값이 틀리면 시작 시점에 바로 실패한다. */
-export function loadConfig(): GameConfig {
+/** 파일 경로(data/ 기준) → 파싱 전 원본. 브라우저는 Vite import, 도구는 fs로 채운다 */
+export interface RawConfig {
+  json: Record<string, unknown>;
+  /** data/dialogue/<id>.json */
+  dialogue: Record<string, unknown>;
+  /** data/days/<id>.json */
+  days: Record<string, unknown>;
+  monologueCsv: string;
+}
+
+/** 원본을 zod로 검증해 GameConfig로 만든다. 값이 틀리면 어떤 파일의 어디가 틀렸는지 바로 실패한다. */
+export function parseGameConfig(raw: RawConfig): GameConfig {
+  const j = (name: string) => {
+    if (!(name in raw.json)) throw new Error(`설정 파일이 없습니다: data/${name}`);
+    return raw.json[name];
+  };
+  const campaign = parseConfig(campaignSchema, j('campaign.json'), 'data/campaign.json');
+  const days = campaign.days.map((id) => {
+    if (!(id in raw.days)) throw new Error(`하루 설정이 없습니다: data/days/${id}.json`);
+    return parseConfig(daySchema, raw.days[id], `data/days/${id}.json`);
+  });
+  const dialoguePools = Object.fromEntries(
+    Object.entries(raw.dialogue).map(([id, data]) => [id, parseConfig(dialoguePoolSchema, data, `data/dialogue/${id}.json`)]),
+  );
   return {
-    world: parseConfig(worldConfigSchema, worldJson, 'data/world.json'),
-    input: parseConfig(inputConfigSchema, inputJson, 'data/input.json'),
-    balance: parseConfig(balanceConfigSchema, balanceJson, 'data/balance.json'),
-    stimuli: parseConfig(stimulusTableSchema, stimuliJson, 'data/stimuli.json'),
-    skills: parseConfig(skillsConfigSchema, skillsJson, 'data/skills.json'),
-    player: parseConfig(playerConfigSchema, playerJson, 'data/player.json'),
-    npcProfiles: parseConfig(npcProfilesSchema, npcProfilesJson, 'data/npcProfiles.json'),
-    text: parseConfig(textTableSchema, textKoJson, 'data/text/ko.json'),
-    presentation: parseConfig(presentationConfigSchema, presentationJson, 'data/presentation.json'),
+    input: parseConfig(inputConfigSchema, j('input.json'), 'data/input.json'),
+    balance: parseConfig(balanceConfigSchema, j('balance.json'), 'data/balance.json'),
+    stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
+    somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
+    life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
+    skills: parseConfig(skillsConfigSchema, j('skills.json'), 'data/skills.json'),
+    player: parseConfig(playerConfigSchema, j('player.json'), 'data/player.json'),
+    presentation: parseConfig(presentationConfigSchema, j('presentation.json'), 'data/presentation.json'),
+    npcProfiles: parseConfig(npcProfilesSchema, j('npcProfiles.json'), 'data/npcProfiles.json'),
+    dialogueRules: parseConfig(dialogueConfigSchema, j('dialogueRules.json'), 'data/dialogueRules.json'),
+    dialoguePools,
+    speeches: parseConfig(speechesSchema, j('speeches.json'), 'data/speeches.json'),
+    tiles: parseConfig(tileDefsSchema, j('world/tiles.json'), 'data/world/tiles.json'),
+    world: parseConfig(worldDefSchema, j('world/city.json'), 'data/world/city.json'),
+    days,
+    monologueTriggers: parseConfig(monologueTriggersSchema, j('monologue/triggers.json'), 'data/monologue/triggers.json'),
+    monologue: parseKeyTextCsv(raw.monologueCsv),
+    text: parseConfig(textTableSchema, j('text/ko.json'), 'data/text/ko.json'),
   };
 }
 
-const stageFiles = import.meta.glob('../../data/stages/*.json', { eager: true, import: 'default' });
-
-export function loadStage(id: string): StageConfig {
-  const entry = Object.entries(stageFiles).find(([path]) => path.endsWith(`/${id}.json`));
-  if (!entry) throw new Error(`스테이지 설정이 없습니다: data/stages/${id}.json`);
-  return parseConfig(stageConfigSchema, entry[1], `data/stages/${id}.json`);
+/** sim 계층 설정 묶음 */
+export function simConfigOf(cfg: GameConfig): SimConfig {
+  return {
+    energy: cfg.balance,
+    somatic: { stressThreshold: cfg.balance.stress.somaticThreshold, ...cfg.somatic },
+    life: cfg.life.stats,
+  };
 }
 
-/** 로컬라이제이션 키 조회. 없으면 키를 그대로 보여 누락을 드러낸다 */
-export function t(text: TextTable, key: string): string {
-  return text[key] ?? key;
+/** 로컬라이제이션 키 조회. 없으면 키를 그대로 보여 누락을 드러낸다. {name} 치환 지원 */
+export function t(text: TextTable, key: string, vars?: Record<string, string | number>): string {
+  let s = text[key] ?? key;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}
+
+/** 데이터 사이의 참조(자극 id, 텍스트 키, 프로필, 스폰 등)가 모두 존재하는지 검사. 문제 목록을 돌려준다 */
+export function crossCheck(cfg: GameConfig): string[] {
+  const errors: string[] = [];
+  const has = (table: object, key: string) => Object.prototype.hasOwnProperty.call(table, key);
+  const needText = (key: string, where: string) => {
+    if (!has(cfg.text, key)) errors.push(`${where}: 텍스트 키 없음 "${key}" (data/text/ko.json)`);
+  };
+  const needStim = (id: string, where: string) => {
+    if (!has(cfg.stimuli, id)) errors.push(`${where}: 자극 없음 "${id}" (data/stimuli.json)`);
+  };
+  const tileIds = new Set(cfg.tiles.map((d) => d.id));
+  const w = cfg.world;
+  if (!tileIds.has(w.base)) errors.push(`world.base: 타일 없음 "${w.base}"`);
+  w.ops.forEach((op, i) => {
+    for (const id of op.op === 'room' ? [op.floor, op.wall] : [op.tile]) {
+      if (!tileIds.has(id)) errors.push(`world.ops[${i}]: 타일 없음 "${id}"`);
+    }
+  });
+  for (const a of w.areas) {
+    needText(a.labelKey, `area ${a.id}`);
+    if (a.stimulus) needStim(a.stimulus.id, `area ${a.id}`);
+  }
+  for (const it of w.interactables) {
+    needText(it.labelKey, `interactable ${it.id}`);
+    if (it.speech && !has(cfg.speeches, it.speech)) errors.push(`interactable ${it.id}: 발화 없음 "${it.speech}"`);
+    if (it.monologue && !has(cfg.monologue, it.monologue)) errors.push(`interactable ${it.id}: 독백 없음 "${it.monologue}"`);
+  }
+  const portalIds = new Set(w.portals.map((p) => p.id));
+  for (const p of w.portals) {
+    needText(p.labelKey, `portal ${p.id}`);
+    if (!portalIds.has(p.to)) errors.push(`portal ${p.id}: 연결 대상 없음 "${p.to}"`);
+  }
+  for (const l of w.labels) needText(l.textKey, 'label');
+  for (const [id, p] of Object.entries(cfg.npcProfiles)) {
+    needText(p.displayTagKey, `npcProfile ${id}`);
+    needStim(p.encounterStimulus, `npcProfile ${id}`);
+    if (!has(cfg.dialoguePools, p.dialogue)) errors.push(`npcProfile ${id}: 대사 풀 없음 "${p.dialogue}" (data/dialogue/)`);
+  }
+  for (const [id, s] of Object.entries(cfg.speeches)) {
+    needStim(s.stimulus, `speech ${id}`);
+    needText(s.introKey, `speech ${id}`);
+  }
+  for (const [id, c] of Object.entries(cfg.life.contacts)) {
+    needText(c.nameKey, `contact ${id}`);
+    needStim(c.answerStimulus, `contact ${id}`);
+    if (c.escalation) needStim(c.escalation, `contact ${id} escalation`);
+  }
+  for (const d of cfg.days) {
+    const where = `day ${d.id}`;
+    for (const k of [d.weekdayKey, d.titleKey, d.introKey]) needText(k, where);
+    if (!has(w.spawns, d.spawn)) errors.push(`${where}: 스폰 없음 "${d.spawn}"`);
+    const objIds = new Set(d.objectives.map((o) => o.id));
+    for (const o of d.objectives) {
+      needText(o.textKey, `${where} objective ${o.id}`);
+      for (const r of o.requires ?? []) if (!objIds.has(r)) errors.push(`${where} objective ${o.id}: requires 대상 없음 "${r}"`);
+      if (o.lateStimulus) needStim(o.lateStimulus, `${where} objective ${o.id}`);
+      if (o.marker && !w.interactables.some((i) => i.id === o.marker) && !w.areas.some((a) => a.id === o.marker)) {
+        errors.push(`${where} objective ${o.id}: marker 대상 없음 "${o.marker}"`);
+      }
+    }
+    if (!d.objectives.some((o) => o.endsDay)) errors.push(`${where}: endsDay 목표가 없습니다`);
+    for (const p of d.phone) {
+      if (!has(cfg.life.contacts, p.contact)) errors.push(`${where} phone: 연락처 없음 "${p.contact}"`);
+      needText(p.textKey, `${where} phone`);
+    }
+    for (const n of d.npcs) {
+      if (!has(cfg.npcProfiles, n.profile)) errors.push(`${where} npc ${n.id}: 프로필 없음 "${n.profile}"`);
+      if (!has(w.spawns, n.at)) errors.push(`${where} npc ${n.id}: 스폰 없음 "${n.at}"`);
+      if (n.path && !has(w.paths, n.path)) errors.push(`${where} npc ${n.id}: 경로 없음 "${n.path}"`);
+    }
+  }
+  for (const tr of cfg.monologueTriggers) {
+    if (!has(cfg.monologue, tr.key)) errors.push(`monologue trigger: 문구 없음 "${tr.key}" (data/monologue/ko.csv)`);
+    if (tr.when.npcProfile && !has(cfg.npcProfiles, tr.when.npcProfile)) errors.push(`monologue trigger ${tr.key}: 프로필 없음 "${tr.when.npcProfile}"`);
+    if (tr.when.area && !w.areas.some((a) => a.id === tr.when.area)) errors.push(`monologue trigger ${tr.key}: 영역 없음 "${tr.when.area}"`);
+  }
+  return errors;
 }

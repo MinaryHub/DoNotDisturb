@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "어…? 혹시… 맞죠? 고등학교 때!",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "와 진짜 오랜만이다. 몇 년 만이지?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "나 요즘 이 근처 살아. 너도 이 동네야?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "그때 우리 반 걔 있잖아, 걔 결혼했대.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "우리 언제 밥 한번 먹자, 진짜로.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "연락처 바뀌었어? 단톡방에서 안 보이던데.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "근데 너 하나도 안 변했다, 진짜.",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "아 나 장 보던 중이었는데, 하하.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "너 얼굴 빨개졌다, 하하. 여전하네.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "진짜 반가웠어! 연락해~",
+    "parried": "그래 그래, 다음에 꼭 보자!",
+    "endured": "아무튼 반가웠어. 들어가~",
+    "sos": "어 전화 왔네, 받아! 연락해~",
+    "awkward": "…어, 그래. 잘 지내."
+  }
+}

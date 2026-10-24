@@ -1,0 +1,51 @@
+{
+  "greeting": {
+    "text": "찾으시는 거 있으세요~?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "이거 이번 시즌 신상이에요. 입어보셔도 돼요!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "사이즈 어떻게 입으세요?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "이거 지금 고객님 체형에 딱일 것 같은데요?",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "세트로 하시면 10% 할인돼요~",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "편하게 보세요~ 필요하시면 불러주시고요.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "이 색은 어떠세요? 피부 톤이랑 잘 맞을 것 같아요.",
+      "kind": "question",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 고객님 얼굴 빨개지셨다~ 덥죠?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "네~ 천천히 둘러보세요!",
+    "parried": "네네, 편하게 보세요~",
+    "endured": "필요하시면 불러주세요~",
+    "sos": "아 통화하세요~",
+    "awkward": "…네, 편하게 보세요."
+  }
+}
