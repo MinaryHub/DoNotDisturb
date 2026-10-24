@@ -21,7 +21,11 @@
     "flushHeight": 0.32,
     "homeAmber": 0.55,
     "gazeLineAlpha": 0.55,
-    "soundRings": true
+    "soundRings": true,
+    "viewConeAlpha": 0.42,
+    "viewConeEdgeAlpha": 0.75,
+    "markerRange": 9,
+    "zoneRange": 14
   },
   "audio": {
     "masterVolume": 0.8,

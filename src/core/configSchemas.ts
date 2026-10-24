@@ -279,6 +279,13 @@ export const presentationConfigSchema = z.object({
     homeAmber: unit,
     gazeLineAlpha: unit,
     soundRings: z.boolean(),
+    /** NPC 시야 콘: 안쪽 채움, 테두리 불투명도 */
+    viewConeAlpha: unit,
+    viewConeEdgeAlpha: unit,
+    /** 상호작용 지점·목표 표식이 보이는 거리 (칸) */
+    markerRange: positive,
+    /** 은신·세이프 지점이 보이는 거리 (칸) */
+    zoneRange: positive,
   }),
   audio: z.object({
     masterVolume: unit,
@@ -314,7 +321,7 @@ export const npcProfileSchema = z.object({
       skin: z.string().optional(),
       hair: z.string().optional(),
       hairStyle: z.enum(['short', 'long', 'bun', 'bald', 'cap']).optional(),
-      accessory: z.enum(['none', 'bag', 'backpack', 'phone', 'apron', 'lanyard', 'glasses', 'tray']).optional(),
+      accessory: z.enum(['none', 'bag', 'backpack', 'phone', 'apron', 'lanyard', 'glasses', 'tray', 'umbrella']).optional(),
       accent: z.string().optional(),
     })
     .optional(),

@@ -2,7 +2,8 @@
 // 외형은 id 해시로 정해져서 같은 사람은 매번 같은 모습이다. 프로필의 look으로 덮어쓸 수 있다.
 
 export type HairStyle = 'short' | 'long' | 'bun' | 'bald' | 'cap';
-export type Accessory = 'none' | 'bag' | 'backpack' | 'phone' | 'apron' | 'lanyard' | 'glasses' | 'tray';
+export type Accessory = 'none' | 'bag' | 'backpack' | 'phone' | 'apron' | 'lanyard' | 'glasses' | 'tray' | 'umbrella';
+export type Pattern = 'plain' | 'stripe' | 'collar';
 
 export interface Look {
   skin: string;
@@ -12,6 +13,9 @@ export interface Look {
   accessory: Accessory;
   /** 소지품·앞치마 색 */
   accent: string;
+  /** 윗옷 무늬 */
+  pattern: Pattern;
+  shoes: string;
 }
 
 export interface LookOverride {
@@ -27,6 +31,8 @@ const HAIRS = ['#2b2523', '#3a2c25', '#4d3a2e', '#6b4f3a', '#24242a', '#8a7f78',
 const STYLES: HairStyle[] = ['short', 'short', 'long', 'long', 'bun', 'cap', 'bald'];
 const CROWD_ACCESSORIES: Accessory[] = ['none', 'none', 'bag', 'backpack', 'phone', 'phone', 'glasses'];
 const ACCENTS = ['#4b5563', '#7c5c3e', '#2f4858', '#8b3a3a', '#355e3b', '#d9cbb4'];
+const PATTERNS: Pattern[] = ['plain', 'plain', 'plain', 'stripe', 'collar'];
+const SHOES = ['#2b2523', '#f4f1ea', '#5b4636', '#3d5a80', '#2b2523'];
 
 /** 문자열 → 0 이상 정수 (FNV-1a) */
 export function hashOf(seed: string): number {
@@ -51,6 +57,8 @@ export function lookFor(seed: string, top: string, override?: LookOverride, acce
     top,
     accessory: override?.accessory ?? pick(accessories, h, 4),
     accent: override?.accent ?? pick(ACCENTS, h, 5),
+    pattern: pick(PATTERNS, h, 6),
+    shoes: pick(SHOES, h, 7),
   };
 }
 
@@ -84,6 +92,15 @@ export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.save();
   ctx.translate(x, y + bob);
 
+  // 발: 걸을 때 앞뒤로 번갈아 나온다
+  ctx.fillStyle = look.shoes;
+  for (const side of [-1, 1]) {
+    const k = o.walking ? swing * side * r * 0.55 : 0;
+    ctx.beginPath();
+    ctx.ellipse(sx * side * r * 0.32 + fx * k, sy * side * r * 0.32 + fy * k, r * 0.26, r * 0.16, facing, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // 백팩: 등 뒤
   if (look.accessory === 'backpack') {
     ctx.fillStyle = look.accent;
@@ -113,6 +130,30 @@ export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.beginPath();
   ctx.ellipse(0, 0, r * 0.72, r * 1.0, facing, 0, Math.PI * 2);
   ctx.fill();
+  // 윗옷 무늬
+  if (look.pattern === 'stripe') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.72, r * 1.0, facing, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = shade(look.top, 0.35);
+    ctx.lineWidth = r * 0.1;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(fx * i * r * 0.3 - sx * r, fy * i * r * 0.3 - sy * r);
+      ctx.lineTo(fx * i * r * 0.3 + sx * r, fy * i * r * 0.3 + sy * r);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (look.pattern === 'collar') {
+    ctx.fillStyle = '#f7f4ec';
+    ctx.beginPath();
+    ctx.moveTo(fx * r * 0.62 + sx * r * 0.3, fy * r * 0.62 + sy * r * 0.3);
+    ctx.lineTo(fx * r * 0.85, fy * r * 0.85);
+    ctx.lineTo(fx * r * 0.62 - sx * r * 0.3, fy * r * 0.62 - sy * r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+  }
   // 어깨 윗면 하이라이트
   ctx.fillStyle = 'rgba(255,255,255,0.10)';
   ctx.beginPath();
@@ -213,6 +254,15 @@ export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, 
     }
   }
 
+  // 머리카락 결 (하이라이트 한 줄)
+  if (look.hairStyle !== 'bald' && look.hairStyle !== 'cap') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = hr * 0.12;
+    ctx.beginPath();
+    ctx.arc(hx - fx * hr * 0.25, hy - fy * hr * 0.25, hr * 0.55, facing + Math.PI * 0.75, facing + Math.PI * 1.25);
+    ctx.stroke();
+  }
+
   // 손에 든 것
   const hand = (k: number) => ({ x: sx * r * 0.98 + fx * (k + r * 0.28), y: sy * r * 0.98 + fy * (k + r * 0.28) });
   if (look.accessory === 'phone' && !o.reach) {
@@ -237,6 +287,33 @@ export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.arc(p.x + Math.cos(i * 2.1) * r * 0.18, p.y + Math.sin(i * 2.1) * r * 0.18, r * 0.07, 0, Math.PI * 2);
       ctx.fill();
     }
+  } else if (look.accessory === 'umbrella') {
+    // 우산: 위에서 보면 머리 위를 덮는 팔각 천
+    ctx.fillStyle = look.accent;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + facing;
+      const rr = r * 1.55;
+      if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.globalAlpha = 0.92;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = r * 0.05;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI + facing;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5);
+      ctx.lineTo(-Math.cos(a) * r * 1.5, -Math.sin(a) * r * 1.5);
+      ctx.stroke();
+    }
+    ctx.fillStyle = shade(look.accent, -0.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.1, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
 }

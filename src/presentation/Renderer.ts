@@ -12,7 +12,7 @@ import type { Settings } from './Settings';
 // 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
 //   월드 → 오프스크린 캔버스 → (채도·블러·앰버·색수차·늘림) 합성 → 심리 오버레이(비네팅·터널·홍조·암전)
 
-const PLAYER_LOOK_BASE = (top: string): Look => ({ skin: '#f0dac4', hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563' });
+const PLAYER_LOOK_BASE = (top: string): Look => ({ skin: '#f0dac4', hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563', pattern: 'plain', shoes: '#f4f1ea' });
 
 const CHUNK = 16;
 const CHUNK_PX = 48;
@@ -135,7 +135,8 @@ export class Renderer {
     this.drawStalls(s);
     this.drawLabels(s);
     this.drawInteractHints(s, ps);
-    this.drawViewCones(s);
+    this.drawZones(s, ps);
+    this.drawViewCones(s, ps);
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
@@ -293,49 +294,173 @@ export class Renderer {
   private drawInteractHints(s: GameSession, ps: PresentationState): void {
     const ctx = this.wctx;
     const p = s.player.pos;
+    const range = this.cfg.presentation.fx.markerRange;
     const markers = new Set(s.objectives.visible().map((o) => o.def.marker).filter((m): m is string => !!m));
     for (const it of this.cfg.world.interactables) {
       const [x, y] = it.at;
+      if (!this.visible({ x, y })) continue;
       const d = Math.hypot(x - p.x, y - p.y);
-      const objective = markers.has(it.id);
-      if (d > 7 && !objective) continue;
-      const a = objective ? 0.8 : Math.max(0, 1 - d / 7) * 0.5;
-      ctx.fillStyle = objective ? `rgba(255, 214, 102, ${a})` : `rgba(255, 250, 230, ${a})`;
+      if (markers.has(it.id)) {
+        this.drawBeacon(x, y, ps.time);
+        continue;
+      }
+      if (d > range) continue;
+      // 일반 상호작용: 어두운 테두리 + 밝은 고리. 가까울수록 진하다
+      const a = 0.35 + Math.max(0, 1 - d / range) * 0.6;
+      ctx.lineWidth = 0.1;
+      ctx.strokeStyle = `rgba(25, 22, 30, ${a * 0.6})`;
       ctx.beginPath();
-      ctx.arc(x, y, objective ? 0.16 + 0.05 * Math.sin(ps.time * 4) : 0.1, 0, Math.PI * 2);
+      ctx.arc(x, y, 0.24, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 0.05;
+      ctx.strokeStyle = `rgba(255, 250, 230, ${a})`;
+      ctx.stroke();
+      ctx.fillStyle = `rgba(255, 250, 230, ${a})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.08, 0, Math.PI * 2);
       ctx.fill();
     }
     for (const portal of this.cfg.world.portals) {
       const [x, y] = portal.at;
-      if (Math.hypot(x - p.x, y - p.y) > 9) continue;
-      ctx.strokeStyle = 'rgba(255,250,230,0.5)';
-      ctx.lineWidth = 0.06;
+      if (Math.hypot(x - p.x, y - p.y) > range + 2 || !this.visible({ x, y })) continue;
+      const k = 0.4 + 0.06 * Math.sin(ps.time * 3);
+      ctx.lineWidth = 0.12;
+      ctx.strokeStyle = 'rgba(25, 22, 30, 0.45)';
       ctx.beginPath();
-      ctx.arc(x, y, 0.35 + 0.05 * Math.sin(ps.time * 3), 0, Math.PI * 2);
+      ctx.arc(x, y, k, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 0.06;
+      ctx.strokeStyle = 'rgba(160, 210, 255, 0.9)';
       ctx.stroke();
     }
   }
 
-  private drawViewCones(s: GameSession): void {
+  /** 목표 지점: 퍼지는 고리 + 위에서 통통 튀는 화살표 (어두운 테두리로 밝은 바닥에서도 보이게) */
+  private drawBeacon(x: number, y: number, time: number): void {
     const ctx = this.wctx;
+    for (let i = 0; i < 2; i++) {
+      const k = (time * 0.8 + i * 0.5) % 1;
+      ctx.strokeStyle = `rgba(255, 200, 60, ${(1 - k) * 0.85})`;
+      ctx.lineWidth = 0.08;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.3 + k * 0.9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(25, 22, 30, 0.55)';
+    ctx.beginPath();
+    ctx.arc(x, y, 0.26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffcf4a';
+    ctx.beginPath();
+    ctx.arc(x, y, 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    const by = y - 1.05 - Math.abs(Math.sin(time * 3)) * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(x - 0.32, by - 0.32);
+    ctx.lineTo(x + 0.32, by - 0.32);
+    ctx.lineTo(x, by + 0.12);
+    ctx.closePath();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 0.12;
+    ctx.strokeStyle = 'rgba(25, 22, 30, 0.7)';
+    ctx.stroke();
+    ctx.fillStyle = '#ffcf4a';
+    ctx.fill();
+  }
+
+  /** NPC 시야: 벽에 가려지는 만큼 잘라 그린다. 평소 노랑 → 알아챔 주황 → 추적 빨강 */
+  private drawViewCones(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const fx = this.cfg.presentation.fx;
     const p = s.player.pos;
     for (const n of s.activeNpcs()) {
       const prof = n.profile;
       if (!prof.approaches || n.state === 'dialogue' || n.state === 'seated') continue;
-      if (Math.hypot(n.pos.x - p.x, n.pos.y - p.y) > prof.viewDistance + 6) continue;
+      if (Math.hypot(n.pos.x - p.x, n.pos.y - p.y) > prof.viewDistance + 8 || !this.visible(n.pos)) continue;
       const half = (prof.viewHalfAngleDeg * Math.PI) / 180;
       const r = prof.viewDistance;
+      const poly = this.sightPolygon(n.pos, n.facing, half, r);
+      const heat = n.pursuing ? 1 : Math.min(1, n.notice);
+      const rgb = heat >= 1 ? '235, 70, 60' : heat > 0.15 ? '245, 140, 50' : '250, 200, 70';
+      const seen = n.percept.inView;
+      const a = fx.viewConeAlpha * (0.7 + heat * 0.6) * (seen ? 1 + 0.25 * Math.sin(ps.time * 8) : 1);
       const g = ctx.createRadialGradient(n.pos.x, n.pos.y, 0.3, n.pos.x, n.pos.y, r);
-      const hot = n.pursuing ? 0.16 : 0.06 + n.notice * 0.1;
-      g.addColorStop(0, `rgba(255, 200, 150, ${hot})`);
-      g.addColorStop(1, 'rgba(255, 200, 150, 0)');
+      g.addColorStop(0, `rgba(${rgb}, ${Math.min(0.6, a)})`);
+      g.addColorStop(0.7, `rgba(${rgb}, ${Math.min(0.6, a * 0.75)})`);
+      g.addColorStop(1, `rgba(${rgb}, ${Math.min(0.6, a * 0.45)})`);
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.moveTo(n.pos.x, n.pos.y);
-      ctx.arc(n.pos.x, n.pos.y, r, n.facing - half, n.facing + half);
+      for (const q of poly) ctx.lineTo(q.x, q.y);
       ctx.closePath();
       ctx.fill();
+      // 테두리: 어두운 바탕선 + 색 점선 → 밝은 바닥에서도 보인다
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = `rgba(30, 20, 20, ${fx.viewConeEdgeAlpha * 0.45})`;
+      ctx.lineWidth = 0.09;
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(${rgb}, ${fx.viewConeEdgeAlpha})`;
+      ctx.lineWidth = 0.05;
+      ctx.setLineDash([0.25, 0.15]);
+      ctx.lineDashOffset = -ps.time * (0.4 + heat);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
+  }
+
+  /** 시선 레이를 부채꼴로 쏘아 벽(sight 타일)에서 멈춘 끝점들 */
+  private sightPolygon(o: Vec2, facing: number, half: number, range: number): Vec2[] {
+    const rays = Math.max(12, Math.round((half * 2 * range) / 0.6));
+    const pts: Vec2[] = [];
+    for (let i = 0; i <= rays; i++) {
+      const ang = facing - half + (i / rays) * half * 2;
+      const dx = Math.cos(ang);
+      const dy = Math.sin(ang);
+      let d = 0;
+      while (d < range) {
+        const nd = Math.min(range, d + 0.2);
+        if (this.map.blocksSight(Math.floor(o.x + dx * nd), Math.floor(o.y + dy * nd))) break;
+        d = nd;
+      }
+      pts.push({ x: o.x + dx * d, y: o.y + dy * d });
+    }
+    return pts;
+  }
+
+  /** 은신 지점(파랑)·세이프 존(초록): 가까이 가면 테두리와 이름표 */
+  private drawZones(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const range = this.cfg.presentation.fx.zoneRange;
+    const p = s.player.pos;
+    const draw = (rect: Rect, rgb: string, label: string, active: boolean) => {
+      const [x, y, w, h] = rect;
+      const d = Math.hypot(x + w / 2 - p.x, y + h / 2 - p.y);
+      if (d > range || !this.visible({ x: x + w / 2, y: y + h / 2 })) return;
+      const near = Math.max(0, 1 - d / range);
+      ctx.fillStyle = `rgba(${rgb}, ${active ? 0.28 : 0.1 + near * 0.12})`;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = `rgba(${rgb}, ${0.45 + near * 0.45})`;
+      ctx.lineWidth = 0.07;
+      ctx.setLineDash([0.3, 0.2]);
+      ctx.lineDashOffset = -ps.time * 0.3;
+      ctx.strokeRect(x + 0.05, y + 0.05, w - 0.1, h - 0.1);
+      ctx.setLineDash([]);
+      if (near > 0.3) {
+        ctx.font = '700 0.42px system-ui, "Malgun Gothic", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(label).width + 0.3;
+        ctx.fillStyle = `rgba(20, 24, 32, ${0.7 * near})`;
+        roundRect(ctx, x + w / 2 - tw / 2, y - 0.5, tw, 0.5, 0.15);
+        ctx.fill();
+        ctx.fillStyle = `rgba(${rgb}, ${Math.min(1, near * 1.4)})`;
+        ctx.fillText(label, x + w / 2, y - 0.24);
+      }
+    };
+    const hideLabel = t(this.cfg.text, 'hud.hideSpot');
+    const safeLabel = t(this.cfg.text, 'hud.safe');
+    for (const h of this.cfg.world.hides) draw(h.rect, '110, 170, 255', hideLabel, s.player.hidden && inRect(h.rect, p.x, p.y));
+    for (const sf of this.cfg.world.safes) draw(sf.rect, '120, 210, 140', safeLabel, s.player.lockedSafe !== null && inRect(sf.rect, p.x, p.y));
   }
 
   private drawCrowd(s: GameSession, ps: PresentationState): void {
