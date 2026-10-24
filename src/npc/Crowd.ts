@@ -17,9 +17,7 @@ export interface CrowdAgent {
   /** 덩치 큰 행인 (뒤에 붙으면 슬립스트림) */
   large: boolean;
   /** 보행 충돌 QTE에서 비켜설 쪽 (-1 왼쪽, 1 오른쪽, 0 아직) */
-  dodge: number;
   /** 다시 QTE 대상이 되기까지 */
-  qteCooldown: number;
   hue: number;
   phase: number;
   /** 화면 표시 여부 (밀도 조절로 숨김) */
@@ -52,8 +50,6 @@ export class Crowd {
           speed: lane.speed * (0.8 + rng() * 0.4),
           offset,
           large: rng() < 0.15,
-          dodge: 0,
-          qteCooldown: 0,
           hue: Math.floor(rng() * 360),
           phase: rng() * Math.PI * 2,
           active: i < lane.count,
@@ -75,7 +71,6 @@ export class Crowd {
   update(dt: number, player: Vec2, playerRadius: number): void {
     for (const a of this.agents) {
       if (!a.active) continue;
-      a.qteCooldown = Math.max(0, a.qteCooldown - dt);
       a.phase += dt * a.speed * 5;
       const lane = this.lanes.get(a.lane)!;
       // 플레이어를 살짝 피해 간다 (비켜설 쪽이 정해졌으면 그쪽으로)
@@ -84,8 +79,7 @@ export class Crowd {
       const along = rx * a.dir.x + ry * a.dir.y;
       const side = -rx * a.dir.y + ry * a.dir.x;
       let target = a.offset;
-      if (a.dodge !== 0) target = a.offset + a.dodge * 0.9;
-      else if (along > 0 && along < 2.5 && Math.abs(side) < playerRadius + 0.6) target = a.offset + (side > 0 ? -0.5 : 0.5);
+      if (along > 0 && along < 2.5 && Math.abs(side) < playerRadius + 0.6) target = a.offset + (side > 0 ? -0.5 : 0.5);
       const curSide = -(a.pos.x - lane.from[0]) * a.dir.y + (a.pos.y - lane.from[1]) * a.dir.x;
       const lateral = (target - curSide) * Math.min(1, dt * 3);
       a.pos.x += a.dir.x * a.speed * dt - a.dir.y * lateral;
@@ -97,9 +91,7 @@ export class Crowd {
       if (fx * a.dir.x + fy * a.dir.y > len) {
         a.pos.x -= a.dir.x * len;
         a.pos.y -= a.dir.y * len;
-        a.dodge = 0;
       }
-      if (a.dodge !== 0 && along < -1) a.dodge = 0;
     }
   }
 
@@ -108,29 +100,6 @@ export class Crowd {
     let n = 0;
     for (const a of this.agents) if (a.active && (a.pos.x - p.x) ** 2 + (a.pos.y - p.y) ** 2 < radius * radius) n++;
     return n;
-  }
-
-  /** 정면에서 부딪힐 듯 다가오는 행인 (보행 충돌 QTE 대상) */
-  incoming(p: Vec2, moveDir: Vec2 | null, lookAheadSec: number, radius: number): CrowdAgent | null {
-    let best: CrowdAgent | null = null;
-    let bestT = Infinity;
-    for (const a of this.agents) {
-      if (!a.active || a.qteCooldown > 0 || a.dodge !== 0) continue;
-      const rx = p.x - a.pos.x;
-      const ry = p.y - a.pos.y;
-      const along = rx * a.dir.x + ry * a.dir.y;
-      if (along <= 0.3) continue;
-      const side = Math.abs(-rx * a.dir.y + ry * a.dir.x);
-      if (side > radius + 0.35) continue;
-      // 플레이어가 마주 걸어가면 더 빨리 만난다
-      const closing = a.speed + (moveDir ? Math.max(0, -(moveDir.x * a.dir.x + moveDir.y * a.dir.y)) * 3 : 0);
-      const t = (along - 0.7) / closing;
-      if (t < lookAheadSec && t < bestT) {
-        bestT = t;
-        best = a;
-      }
-    }
-    return best;
   }
 
   /** 개인 공간(반경) 안으로 들어온 행인 */

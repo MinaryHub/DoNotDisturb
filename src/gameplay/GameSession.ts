@@ -9,7 +9,7 @@ import type { LifeSnapshot, LifeStatId } from '../sim/LifeStats';
 import { Phone, applyContactOutcome, type CallHow, type MessageHow } from '../sim/Phone';
 import { Simulation, type SimSnapshot } from '../sim/Simulation';
 import { SpeechChallenge } from '../sim/SpeechChallenge';
-import { Crowd, type CrowdAgent } from '../npc/Crowd';
+import { Crowd } from '../npc/Crowd';
 import { Npc } from '../npc/Npc';
 import { angleDiff, angleTo, type PlayerPercept } from '../npc/perception';
 import { dist, inRect, type AreaDef, type Vec2 } from '../world/TileMap';
@@ -44,7 +44,6 @@ export interface Controls {
   accept: boolean;
   decline: boolean;
   textInstead: boolean;
-  dodge: -1 | 0 | 1;
   phoneToggle: boolean;
   /** 폰·상점 목록 위아래 */
   menuNav: -1 | 0 | 1;
@@ -77,7 +76,6 @@ export const NO_CONTROLS: Controls = {
   accept: false,
   decline: false,
   textInstead: false,
-  dodge: 0,
   phoneToggle: false,
   menuNav: 0,
   phoneReply: false,
@@ -133,16 +131,9 @@ export type Mode =
   | { kind: 'final'; reports: DayReport[] };
 
 export interface Qte {
-  kind: 'dodge' | 'laugh' | 'knock';
+  kind: 'laugh' | 'knock';
   timer: number;
   window: number;
-  agent?: CrowdAgent;
-  /** 보행 충돌: 비켜설 축 (행인이 가로로 걸어오면 위아래로, 세로로 오면 좌우로) */
-  axis?: 'x' | 'y';
-  /** 보행 충돌: 행인이 기우는 쪽 (축 방향 -1/+1). 플레이어는 반대쪽으로 비켜야 한다 */
-  lean?: number;
-  /** 보행 충돌: 같은 쪽으로 비켜 버린 횟수 (2번이면 부딪힌다) */
-  clashes?: number;
 }
 
 export type FxEvent =
@@ -177,6 +168,8 @@ export class GameSession {
   happenings: HappeningDef[] = [];
   /** 조급함 0~1: 달리면 차오르고 걸으면 가라앉는다 */
   hurry = 0;
+  /** 지금 주변 군중 밀도 (0~crowdDensity.max) */
+  crowdLevel = 0;
   dayIndex = 0;
   objectives!: Objectives;
   npcs: Npc[] = [];
@@ -1376,34 +1369,7 @@ export class GameSession {
     if (!q) return;
     q.timer += dt;
     let resolved = false;
-    if (q.kind === 'dodge') {
-      if (c.dodge !== 0 && q.agent) {
-        q.agent.qteCooldown = 3;
-        if (c.dodge === q.lean) {
-          // 서로 같은 쪽으로 비켰다 (인도 위의 어색한 춤). 두 번째면 부딪힌다
-          q.clashes = (q.clashes ?? 0) + 1;
-          if (q.clashes >= 2) {
-            this.bump();
-            resolved = true;
-          } else {
-            this.toast('qte.dance');
-            q.timer = 0;
-            this.leanAgent(q);
-          }
-        } else {
-          const step = this.cfg.balance.bumpQte.sideStep * c.dodge;
-          this.world.map.moveCircle(this.player.pos, q.axis === 'x' ? step : 0, q.axis === 'y' ? step : 0, this.cfg.player.radius);
-          resolved = true;
-        }
-      } else if (q.timer >= q.window) {
-        if (q.agent) {
-          q.agent.qteCooldown = 3;
-          q.agent.dodge = 1;
-        }
-        this.bump();
-        resolved = true;
-      }
-    } else if (q.kind === 'laugh') {
+    if (q.kind === 'laugh') {
       if (c.spacePressed) resolved = true;
       else if (q.timer >= q.window) {
         this.sim.bus.emit('groupLaughMiss');
@@ -1421,21 +1387,6 @@ export class GameSession {
       }
     }
     if (resolved) this.qte = null;
-  }
-
-  /** 보행 충돌: 행인이 한쪽으로 기운다 (화면에 화살표로 보인다) */
-  private leanAgent(q: Qte): void {
-    const a = q.agent!;
-    q.lean = this.rng() < 0.5 ? -1 : 1;
-    // 행인의 옆 방향(-dir.y, dir.x)에서 축 성분의 부호로 바꿔 행인 기준 비켜서기 값으로
-    const lateral = q.axis === 'x' ? -a.dir.y : a.dir.x;
-    a.dodge = q.lean * (lateral >= 0 ? 1 : -1);
-  }
-
-  private bump(): void {
-    this.sim.bus.emit('bump');
-    this.toast('qte.bumped');
-    this.player.frozen = this.cfg.balance.ambush.freezeSec;
   }
 
   // ───────────────────────── 폰 ─────────────────────────
@@ -1662,22 +1613,6 @@ export class GameSession {
   private crowdInteractions(): void {
     const p = this.player;
     const b = this.cfg.balance;
-    // 보행 충돌 QTE (눈을 감고 있으면 그냥 부딪힌다)
-    if (!this.qte) {
-      const mul = p.phonePretend ? this.cfg.skills.phonePretend.bumpMultiplier : 1;
-      const agent = this.crowd.incoming(p.pos, p.moveDir, b.bumpQte.lookAheadSec * mul, this.cfg.player.radius);
-      if (agent) {
-        if (p.eyesClosed) {
-          agent.qteCooldown = 3;
-          agent.dodge = 1;
-          this.bump();
-        } else {
-          const axis = Math.abs(agent.dir.x) >= Math.abs(agent.dir.y) ? 'y' : 'x';
-          this.qte = { kind: 'dodge', timer: 0, window: b.bumpQte.windowSec, agent, axis, lean: 0, clashes: 0 };
-          this.leanAgent(this.qte);
-        }
-      }
-    }
     // 개인 공간 침범
     if (this.personalSpaceCd <= 0 && this.crowd.touching(p.pos, b.personalSpace.radius * 0.7)) {
       this.personalSpaceCd = b.personalSpace.cooldownSec;
@@ -1726,6 +1661,9 @@ export class GameSession {
     let crowd = Math.min(b.crowdDensity.max, near * b.crowdDensity.perAgent);
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
+    // 사람이 많을수록 긴장이 오른다. 빽빽하면 그동안 가라앉지 않는다
+    if (crowd > 0 && !p.lockedSafe) this.sim.energy.addStress(crowd * b.crowdDensity.stressPerSec * dt, crowd >= b.crowdDensity.sustainFrom);
+    this.crowdLevel = p.lockedSafe ? 0 : crowd;
     // 비: 우산 없이 바깥에 있으면 축축하고 불편하다
     const soaked = this.raining && this.area?.kind === 'outdoor' && !this.player.inventory.gear.includes('umbrella');
     bus.setContinuous('weather', 'rainSoaked', soaked ? 1 : 0);

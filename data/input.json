@@ -30,8 +30,6 @@
   "accept": ["KeyY"],
   "decline": ["KeyN"],
   "textInstead": ["KeyU"],
-  "dodgeLeft": ["KeyA", "ArrowLeft"],
-  "dodgeRight": ["KeyD", "ArrowRight"],
   "pause": ["Escape"],
   "options": ["KeyO"],
   "toggleHints": ["KeyH"],

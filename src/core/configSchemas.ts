@@ -47,8 +47,6 @@ export const inputActions = [
   'accept',
   'decline',
   'textInstead',
-  'dodgeLeft',
-  'dodgeRight',
   'pause',
   'options',
   'toggleHints',
@@ -112,9 +110,9 @@ export const balanceConfigSchema = z.object({
   laundry: z.object({ waitSec: positive, minutes: nonNegative, essentials: nonNegative }),
   rehearsal: z.object({ damageScale: unit, flushScale: unit }),
   personalSpace: z.object({ radius: positive, freezeSec: nonNegative, cooldownSec: nonNegative }),
-  bumpQte: z.object({ lookAheadSec: positive, windowSec: positive, sideStep: positive }),
   slipstream: z.object({ behindDist: positive, lateral: positive, crowdScale: unit }),
-  crowdDensity: z.object({ radius: positive, perAgent: nonNegative, max: positive }),
+  /** 군중 밀도: 반경 안 행인 수 × perAgent (최대 max). 밀도만큼 긴장이 오르고, sustainFrom 이상이면 그동안 가라앉지 않는다 */
+  crowdDensity: z.object({ radius: positive, perAgent: nonNegative, max: positive, stressPerSec: nonNegative, sustainFrom: nonNegative }),
   gaze: z.object({ range: positive }),
   sweat: z.object({ rumbleMs: nonNegative }),
   sos: z.object({ bondMin: nonNegative }),
@@ -258,7 +256,7 @@ export type LifeConfig = z.infer<typeof lifeConfigSchema>;
 
 export const skillsConfigSchema = z.object({
   earphones: z.object({ auditoryMultiplier: unit, lowpassHz: positive, ambushChanceMultiplier: positive, backApproachTapChance: unit }),
-  phonePretend: z.object({ blocksEyeContact: z.boolean(), moveMultiplier: unit, viewNarrow: unit, bumpMultiplier: positive }),
+  phonePretend: z.object({ blocksEyeContact: z.boolean(), moveMultiplier: unit, viewNarrow: unit }),
   coverCheeks: z.object({ moveMultiplier: unit }),
   closeEyes: z.object({ moveMultiplier: unit }),
   hide: z.object({ noticeMultiplier: unit }),

@@ -622,12 +622,6 @@ export class GameUI {
     if (!q) return;
     const left = Math.max(0, 1 - q.timer / q.window);
     const bar = `<div class="qte__bar"><div style="width:${(left * 100).toFixed(1)}%"></div></div>`;
-    if (q.kind === 'dodge') {
-      // 무엇을 해야 하는지: 상대가 기우는 쪽(화살표)의 반대쪽 키
-      const keys = this.tx(q.axis === 'y' ? 'qte.dodge.keysY' : 'qte.dodge.keysX');
-      setHtml(this.qte, `<div class="qte__title">${escapeHtml(this.tx('qte.dodge.title'))}</div><div class="qte__text">${escapeHtml(this.tx('qte.dodge.how'))}</div><div class="qte__keys">${escapeHtml(keys)}</div>${bar}`);
-      return;
-    }
     const key = q.kind === 'laugh' ? 'qte.laugh' : 'knock.prompt';
     setHtml(this.qte, `<div class="qte__text">${escapeHtml(this.tx(key))}</div>${bar}`);
   }

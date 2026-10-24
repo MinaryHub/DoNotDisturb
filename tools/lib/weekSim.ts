@@ -15,6 +15,8 @@ export type Policy = 'avoid' | 'accept' | 'balanced';
 export interface WeekOptions {
   /** 하루 바깥 이동 시간 (초, 출퇴근 합) */
   commuteSec: number;
+  /** 출퇴근 중 평균 군중 밀도 (기본 0.5 = 주변에 두 명쯤) */
+  crowd?: number;
 }
 
 export interface DayRow {
@@ -41,6 +43,18 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     const ctx = { outdoor, inSafe: false, modifiers: NO_MODIFIERS };
     for (let i = 0; i < Math.round(sec * 60); i++) sim.step(1 / 60, ctx);
   };
+  /** 출퇴근: 거리 군중 속을 걷는다 (밀도만큼 군중 자극 + 긴장, 게임과 같은 규칙) */
+  const commute = (sec: number) => {
+    const cd = game.balance.crowdDensity;
+    const density = opts.crowd ?? 0.5;
+    sim.bus.setContinuous('crowd', 'crowd', density);
+    const ctx = { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS };
+    for (let i = 0; i < Math.round(sec * 60); i++) {
+      sim.energy.addStress(density * cd.stressPerSec / 60, density >= cd.sustainFrom);
+      sim.step(1 / 60, ctx);
+    }
+    sim.bus.setContinuous('crowd', 'crowd', 0);
+  };
   const rows: DayRow[] = [];
   let nextMax = game.balance.battery.start;
   for (const day of game.days) {
@@ -54,7 +68,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       sim.bus.setContinuous('dialogue', 'dialogue', 0);
       run(5, true);
     };
-    run(opts.commuteSec / 2, true);
+    commute(opts.commuteSec / 2);
     // 필수 상호작용
     const mandatoryCalls = day.objectives.filter((o) => o.mandatory && o.on.startsWith('answered:')).map((o) => o.on.split(':')[1]!);
     for (const o of day.objectives) {
@@ -96,7 +110,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       sim.energy.recover(game.balance.recovery.workAfternoon);
       sim.energy.addStress(w.afternoonStress);
     }
-    run(opts.commuteSec / 2, true);
+    commute(opts.commuteSec / 2);
     // 선택 목표·장보기·집밥
     for (const o of day.objectives) if (o.optional && policy === 'avoid' && o.skip) sim.life.apply(o.skip);
     if (day.objectives.some((o) => o.on === 'done:checkout') && policy !== 'avoid') sim.life.apply(game.life.rewards.groceries);

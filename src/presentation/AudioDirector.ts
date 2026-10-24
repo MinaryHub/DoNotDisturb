@@ -168,7 +168,7 @@ export class AudioDirector {
     }
     for (const id of ps.ambushes) {
       if (id === 'textMessage' || id === 'workPing') this.ping(now);
-      else if (id === 'shoulderTap' || id === 'bump' || id === 'personalSpace') this.thud(now);
+      else if (id === 'shoulderTap' || id === 'personalSpace') this.thud(now);
     }
     for (const e of ps.sounds) this.sfx(e.id, now, e.note);
 

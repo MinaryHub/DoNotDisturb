@@ -48,7 +48,6 @@ function mergePressed(prev: Controls, next: Controls): Controls {
   out.reply = next.reply ?? prev.reply;
   out.note = next.note ?? prev.note;
   out.slot = next.slot ?? prev.slot;
-  out.dodge = next.dodge || prev.dodge;
   out.useItem = next.useItem ?? prev.useItem;
   out.menuNav = next.menuNav || prev.menuNav;
   return out;
@@ -163,9 +162,8 @@ function boot(): void {
     if (!keyed) (['useItem1', 'useItem2', 'useItem3', 'useItem4', 'useItem5', 'useItem6', 'useItem7', 'useItem8'] as const).forEach((a, i) => input.wasPressed(a) && (useItem = i));
     const phoneOpen = s.phoneOpen;
     const menuOpen = phoneOpen || mode === 'shop';
-    const qte = s.qte;
     return {
-      move: phoneOpen || qte?.kind === 'dodge' ? { x: 0, y: 0 } : move,
+      move: phoneOpen ? { x: 0, y: 0 } : move,
       sprint: input.isDown('sprint') || stickRun,
       aim,
       interactPressed: input.wasPressed('interact'),
@@ -184,12 +182,6 @@ function boot(): void {
       accept: input.wasPressed('accept'),
       decline: input.wasPressed('decline'),
       textInstead: input.wasPressed('textInstead'),
-      dodge:
-        qte?.kind !== 'dodge'
-          ? 0
-          : qte.axis === 'y'
-            ? input.wasPressed('moveUp') ? -1 : input.wasPressed('moveDown') ? 1 : 0
-            : input.wasPressed('dodgeLeft') ? -1 : input.wasPressed('dodgeRight') ? 1 : 0,
       phoneToggle: input.wasPressed('phone'),
       menuNav: menuOpen ? (input.codePressed('ArrowUp') || input.codePressed('KeyW') ? -1 : input.codePressed('ArrowDown') || input.codePressed('KeyS') ? 1 : 0) : 0,
       phoneReply: menuOpen && input.codePressed('Enter'),

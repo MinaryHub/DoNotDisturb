@@ -76,11 +76,6 @@
     "freezeSec": 0.25,
     "cooldownSec": 1.2
   },
-  "bumpQte": {
-    "lookAheadSec": 1.4,
-    "windowSec": 1.0,
-    "sideStep": 0.9
-  },
   "slipstream": {
     "behindDist": 1.5,
     "lateral": 0.6,
@@ -89,7 +84,9 @@
   "crowdDensity": {
     "radius": 3,
     "perAgent": 0.25,
-    "max": 2.5
+    "max": 2.5,
+    "stressPerSec": 1.4,
+    "sustainFrom": 0.75
   },
   "gaze": {
     "range": 9

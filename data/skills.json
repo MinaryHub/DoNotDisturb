@@ -1,6 +1,6 @@
 {
   "earphones": { "auditoryMultiplier": 0.5, "lowpassHz": 700, "ambushChanceMultiplier": 2, "backApproachTapChance": 0.5 },
-  "phonePretend": { "blocksEyeContact": true, "moveMultiplier": 0.6, "viewNarrow": 0.55, "bumpMultiplier": 2 },
+  "phonePretend": { "blocksEyeContact": true, "moveMultiplier": 0.6, "viewNarrow": 0.55 },
   "coverCheeks": { "moveMultiplier": 0.8 },
   "closeEyes": { "moveMultiplier": 0.7 },
   "hide": { "noticeMultiplier": 0.25 },

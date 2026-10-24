@@ -194,37 +194,6 @@ describe('조급함', () => {
   });
 });
 
-describe('보행 충돌', () => {
-  function withDodge(lean: number) {
-    const s = newDay();
-    const agent = s.crowd.agents.find((a) => a.active)!;
-    agent.dir = { x: 0, y: 1 };
-    s.qte = { kind: 'dodge', timer: 0, window: 1, agent, axis: 'x', lean, clashes: 0 };
-    return s;
-  }
-
-  it('상대가 기우는 반대쪽으로 비키면 부딪히지 않는다', () => {
-    const s = withDodge(1);
-    const x0 = s.player.pos.x;
-    const b0 = s.snapshot.battery;
-    press(s, { dodge: -1 });
-    expect(s.qte).toBeNull();
-    expect(s.player.pos.x).toBeLessThan(x0);
-    expect(b0 - s.snapshot.battery).toBeLessThan(1);
-  });
-
-  it('같은 쪽으로 한 번이면 다시 기회, 두 번이면 부딪힌다', () => {
-    const s = withDodge(1);
-    const b0 = s.snapshot.battery;
-    press(s, { dodge: 1 });
-    expect(s.qte).not.toBeNull();
-    expect(s.qte!.clashes).toBe(1);
-    press(s, { dodge: s.qte!.lean as -1 | 1 });
-    expect(s.qte).toBeNull();
-    expect(b0 - s.snapshot.battery).toBeGreaterThan(5);
-  });
-});
-
 describe('비 오는 날', () => {
   it('집을 나서면 현관 우산을 챙기고, 산 우산은 다음 날에도 남는다', () => {
     const rainy = cfg.days.findIndex((d) => d.weather === 'rain');
@@ -280,5 +249,27 @@ describe('연습 대화', () => {
     const manager = s.npcs.find((x) => x.id === 'manager')!;
     s.startDialogue(manager, false);
     expect(s.mode.kind === 'dialogue' && s.mode.practice).toBe(false);
+  });
+});
+
+describe('군중 밀도', () => {
+  it('주변에 사람이 많을수록 긴장이 오르고, 충돌 이벤트는 없다', () => {
+    const s = newDay();
+    const lane = cfg.world.crowdLanes.find((l) => l.zone === 'boulevard')!;
+    s.player.pos.x = (lane.from[0] + lane.to[0]) / 2;
+    s.player.pos.y = lane.from[1];
+    const stressAt = (n: number) => {
+      s.sim.energy.debugSet({ stress: 0 });
+      const agents = s.crowd.agents.filter((a) => a.active).slice(0, n);
+      for (let k = 0; k < 60; k++) {
+        for (const a of agents) Object.assign(a.pos, { x: s.player.pos.x + 1.2, y: s.player.pos.y + 1.2 });
+        step(s, 1 / 30);
+        expect(s.qte).toBeNull();
+      }
+      return s.snapshot.stress;
+    };
+    const few = stressAt(1);
+    const many = stressAt(6);
+    expect(many).toBeGreaterThan(few + 2);
   });
 });

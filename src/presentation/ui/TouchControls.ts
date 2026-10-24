@@ -109,10 +109,6 @@ export class TouchControls {
       };
     }
     const qte = s.qte;
-    if (qte?.kind === 'dodge') {
-      const btns: Btn[] = qte.axis === 'y' ? [{ code: 'ArrowUp', label: 'touch.dodgeUp', big: true }, { code: 'ArrowDown', label: 'touch.dodgeDown', big: true }] : [{ code: 'ArrowLeft', label: 'touch.left', big: true }, { code: 'ArrowRight', label: 'touch.right', big: true }];
-      return { main: btns, top, stick: false };
-    }
     if (qte) return { main: [{ code: 'Space', label: qte.kind === 'laugh' ? 'touch.laugh' : 'touch.answer', big: true }], top, stick: false };
     switch (m) {
       case 'dialogue':
