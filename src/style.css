@@ -701,6 +701,32 @@ kbd {
   }
 }
 
+/* ───── 아이템 아이콘 ───── */
+.icon {
+  vertical-align: middle;
+  flex: none;
+}
+
+.memo__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.memo__item kbd {
+  font: inherit;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.shop__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ───── 상점 ───── */
 .shop__title {
   display: flex;
@@ -724,7 +750,7 @@ kbd {
 
 .shop__list li {
   display: grid;
-  grid-template-columns: 8em 1fr 3em 6em;
+  grid-template-columns: 9.5em 1fr 3em 6em;
   gap: 10px;
   align-items: baseline;
   padding: 7px 10px;

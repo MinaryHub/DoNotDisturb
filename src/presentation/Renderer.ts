@@ -4,15 +4,21 @@ import type { GameSession } from '../gameplay/GameSession';
 import type { Npc } from '../npc/Npc';
 import { inRect, type Rect, type TileMap, type Vec2 } from '../world/TileMap';
 import { Camera2D } from './Camera2D';
+import { paintDeco } from './draw/tiles';
+import { drawPerson, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
 import type { Settings } from './Settings';
 
 // 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
 //   월드 → 오프스크린 캔버스 → (채도·블러·앰버·색수차·늘림) 합성 → 심리 오버레이(비네팅·터널·홍조·암전)
 
+const PLAYER_LOOK_BASE = (top: string): Look => ({ skin: '#f0dac4', hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563' });
+
 const CHUNK = 16;
-const CHUNK_PX = 32;
+const CHUNK_PX = 48;
 const MAX_CHUNKS = 48;
+/** 청크 사이에 비치는 가는 선을 없애기 위한 겹침 (칸) */
+const SEAM = 0.04;
 
 interface SoundRing {
   x: number;
@@ -34,6 +40,7 @@ export class Renderer {
   private ringTimer = 0;
   private stretchAxis = 0;
   private firstFrame = true;
+  private readonly looks = new Map<string, Look>();
   /** 지금 그리는 층 (플레이어가 있는 층만 보인다) */
   private layer: { id: string; rect: Rect } | null = null;
 
@@ -107,7 +114,7 @@ export class Renderer {
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const chunk = this.chunk(cx, cy);
-        if (chunk) ctx.drawImage(chunk, cx * CHUNK, cy * CHUNK, CHUNK, CHUNK);
+        if (chunk) ctx.drawImage(chunk, cx * CHUNK, cy * CHUNK, CHUNK + SEAM, CHUNK + SEAM);
       }
     }
 
@@ -202,16 +209,6 @@ export class Renderer {
       g.fillRect(x, y, 1, 0.18);
       g.fillStyle = 'rgba(0,0,0,0.18)';
       g.fillRect(x, y + 0.82, 1, 0.18);
-      if (d.id === 'window') {
-        g.fillStyle = 'rgba(255,255,255,0.35)';
-        g.fillRect(x + 0.15, y + 0.2, 0.12, 0.6);
-      }
-      if (d.id === 'tree' || d.id === 'plant') {
-        g.fillStyle = d.accent ?? '#3f6a3c';
-        g.beginPath();
-        g.arc(x + 0.5, y + 0.45, 0.42, 0, Math.PI * 2);
-        g.fill();
-      }
     } else if (this.map.def(tx, ty - 1).tall) {
       // 벽 아래 바닥에 그림자
       const grad = g.createLinearGradient(0, y, 0, y + 0.45);
@@ -220,9 +217,9 @@ export class Renderer {
       g.fillStyle = grad;
       g.fillRect(x, y, 1, 0.45);
     }
-    if (d.id === 'bed') {
-      g.fillStyle = '#f7f2e8';
-      g.fillRect(x + 0.1, y + 0.1, 0.8, 0.8);
+    if (d.deco) {
+      const m = this.map;
+      paintDeco(g, d, { up: m.def(tx, ty - 1), down: m.def(tx, ty + 1), left: m.def(tx - 1, ty), right: m.def(tx + 1, ty) }, x, y, tx, ty);
     }
     if (d.id === 'road' && ty % 6 === 2 && tx % 4 < 2) {
       g.fillStyle = 'rgba(240,230,190,0.5)';
@@ -311,15 +308,14 @@ export class Renderer {
       ctx.ellipse(a.pos.x, a.pos.y + 0.18, r, r * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
       // 피곤할수록 군중은 얼굴 없는 회색 덩어리처럼 보인다
-      const sat = Math.round(22 * (1 - ps.tired * 0.6 - ps.danger * 0.4));
-      ctx.fillStyle = `hsl(${a.hue}, ${sat}%, ${52 - ps.danger * 12}%)`;
-      ctx.beginPath();
-      ctx.arc(a.pos.x, a.pos.y + bob, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = `hsl(${a.hue}, 10%, 74%)`;
-      ctx.beginPath();
-      ctx.arc(a.pos.x + a.dir.x * r * 0.35, a.pos.y + a.dir.y * r * 0.35 + bob, r * 0.48, 0, Math.PI * 2);
-      ctx.fill();
+      const grey = Math.min(1, ps.tired * 0.6 + ps.danger * 0.4);
+      const sat = Math.round(30 * (1 - grey));
+      const base = lookFor(`crowd${a.id}`, '#000000');
+      const look: Look =
+        grey > 0.5
+          ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: 'none' }
+          : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
+      drawPerson(ctx, a.pos.x, a.pos.y, look, { r, facing: Math.atan2(a.dir.y, a.dir.x), walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3 });
     }
   }
 
@@ -342,39 +338,22 @@ export class Renderer {
       ctx.fill();
     }
     const walking = n.speed > 0.1;
-    const bob = walking ? Math.sin(ps.time * 9 + x) * 0.04 : 0;
+    const phase = ps.time * 9 + (hashOf(n.id) % 100);
+    const bob = walking ? Math.sin(phase * 2) * 0.03 : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
     ctx.ellipse(x, y + 0.2, r * 1.05, r * 0.55, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = n.profile.color;
-    ctx.beginPath();
-    ctx.arc(x, y + bob, r, 0, Math.PI * 2);
-    ctx.fill();
-    // 손 (몸짓)
     const fx = Math.cos(n.facing);
     const fy = Math.sin(n.facing);
-    if (n.gesture === 'reach' || n.gesture === 'wave') {
-      const ext = n.gesture === 'reach' ? 0.55 : 0.35 + 0.1 * Math.sin(ps.time * 10);
-      ctx.fillStyle = '#f0d9c2';
-      ctx.beginPath();
-      ctx.arc(x + fx * (r + ext) - fy * 0.18, y + fy * (r + ext) + fx * 0.18 + bob, 0.1, 0, Math.PI * 2);
-      ctx.fill();
-      if (n.gesture === 'reach') {
-        ctx.fillStyle = '#fffbe8';
-        ctx.fillRect(x + fx * (r + ext) - 0.12, y + fy * (r + ext) - 0.16, 0.24, 0.32);
-      }
-    }
-    // 머리 + 바라보는 쪽
-    ctx.fillStyle = '#f0d9c2';
-    ctx.beginPath();
-    ctx.arc(x + fx * r * 0.3, y + fy * r * 0.3 + bob, r * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#3a3036';
-    for (const side of [-1, 1]) {
-      ctx.beginPath();
-      ctx.arc(x + fx * r * 0.62 - fy * side * 0.1, y + fy * r * 0.62 + fx * side * 0.1 + bob, 0.045, 0, Math.PI * 2);
-      ctx.fill();
+    // 손 내밀기(전단지·시식)·손 흔들기
+    const reach = n.gesture === 'reach' ? 0.45 : n.gesture === 'wave' ? 0.25 + 0.1 * Math.sin(ps.time * 10) : 0;
+    drawPerson(ctx, x, y, this.lookOf(n), { r, facing: n.facing, walkPhase: phase, walking, bob, reach });
+    if (n.gesture === 'reach') {
+      const hx = x - fy * r * 0.98 + fx * (reach + r * 0.28 + 0.12);
+      const hy = y + fx * r * 0.98 + fy * (reach + r * 0.28 + 0.12) + bob;
+      ctx.fillStyle = '#fffbe8';
+      ctx.fillRect(hx - 0.12, hy - 0.16, 0.24, 0.32);
     }
     // 알아챔 표시 (물음표 → 느낌표). 수치 대신 모양으로
     if (n.notice > 0.15 && n.type !== 'ally' && n.state !== 'dialogue' && n.state !== 'seated') {
@@ -387,6 +366,16 @@ export class Renderer {
       ctx.restore();
     }
     void s;
+  }
+
+  private lookOf(n: Npc): Look {
+    let look = this.looks.get(n.id);
+    if (!look) {
+      const named: Accessory[] = ['none', 'none', 'bag', 'glasses', 'phone', 'backpack'];
+      look = lookFor(n.id, n.profile.color, n.profile.look, named);
+      this.looks.set(n.id, look);
+    }
+    return look;
   }
 
   private drawCat(n: Npc, ps: PresentationState): void {
@@ -434,19 +423,27 @@ export class Renderer {
     ctx.save();
     ctx.translate(x, y + bob + sink * 0.12);
     ctx.scale(scale, scale);
-    // 후드티
-    ctx.fillStyle = s.player.hidden ? '#567a8f' : '#6c8fb2';
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
+    // 후드티 (모자 부분은 등 뒤 반원)
+    const hoodie = s.player.hidden ? '#567a8f' : '#6c8fb2';
     const fx = Math.cos(p.facing);
     const fy = Math.sin(p.facing);
+    ctx.fillStyle = '#58799b';
+    ctx.beginPath();
+    ctx.ellipse(-fx * r * 0.55, -fy * r * 0.55, r * 0.42, r * 0.62, p.facing, 0, Math.PI * 2);
+    ctx.fill();
+    drawPerson(ctx, 0, 0, PLAYER_LOOK_BASE(hoodie), { r, facing: p.facing, walkPhase: p.walkPhase, walking: p.moving && ps.cover < 0.3, noHead: true });
     // 얼굴: 홍조만큼 붉어진다
     const fl = ps.flush;
     ctx.fillStyle = `rgb(${240 + fl * 10}, ${218 - fl * 90}, ${196 - fl * 90})`;
     const look = ps.phone > 0.5 ? 0.12 : 0.3;
     ctx.beginPath();
     ctx.arc(fx * r * look, fy * r * look, r * 0.56, 0, Math.PI * 2);
+    ctx.fill();
+    // 머리카락 (뒤통수)
+    ctx.fillStyle = '#3a2c25';
+    ctx.beginPath();
+    ctx.arc(fx * r * (look - 0.08), fy * r * (look - 0.08), r * 0.58, p.facing + Math.PI * 0.45, p.facing + Math.PI * 1.55);
+    ctx.closePath();
     ctx.fill();
     if (!p.mask) {
       ctx.fillStyle = '#2e2a30';

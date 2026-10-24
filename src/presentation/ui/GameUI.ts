@@ -10,6 +10,7 @@ import type { PresentationState } from '../PresentationState';
 import type { Settings } from '../Settings';
 import { layerOf } from '../../world/World';
 import { el, escapeHtml, setHtml, setText, show } from './dom';
+import { itemIcon } from './icons';
 
 // 플레이 화면 HTML 오버레이. 배터리·스트레스 수치는 보여주지 않는다 (디버그 패널 전용).
 // 상태는 말투·떨림·가려짐 같은 '감각'으로 드러낸다. 예외: 스트레스는 숫자 없는 게이지로 보여준다 (설정에서 끌 수 있음).
@@ -162,12 +163,12 @@ export class GameUI {
     const done = s.objectives.list.filter((o) => o.done && !o.def.endsDay).map((o) => `<li class="memo__done">${escapeHtml(this.tx(o.def.textKey))}</li>`);
     setHtml(this.memoList, [...done, ...items].join(''));
     const inv = s.player.inventory;
-    const parts = [this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') })];
+    const parts = [escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))];
     this.cfg.items.consumables.forEach((d, i) => {
       const n = inv.consumables[d.id] ?? 0;
-      if (n > 0) parts.push(`${i + 1} ${this.tx(d.nameKey)}×${n}`);
+      if (n > 0) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
-    setText(this.memoFoot, parts.join('  ·  '));
+    setHtml(this.memoFoot, parts.join(' '));
   }
 
   /** 화면 가장자리 화살표: 지금 할 일 쪽 */
@@ -434,7 +435,7 @@ export class GameUI {
       .map((e, i) => {
         const def = this.cfg.items.consumables.find((d) => d.id === e.item)!;
         const have = inv[e.item] ?? 0;
-        return `<li class="${i === m.cursor ? 'sel' : ''}"><span>${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have ? `×${have}` : ''}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
+        return `<li class="${i === m.cursor ? 'sel' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}</span><span class="shop__have">${have ? `×${have}` : ''}</span><span class="shop__price">${e.price.toLocaleString('ko-KR')}원</span></li>`;
       })
       .join('');
     return `<div class="shop">

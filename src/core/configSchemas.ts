@@ -118,6 +118,7 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill']).optional(),
         effects: z.object({
           /** 배터리 회복량 */
           battery: nonNegative.optional(),
@@ -298,7 +299,18 @@ export type NpcType = (typeof npcTypes)[number];
 export const npcProfileSchema = z.object({
   type: z.enum(npcTypes),
   displayTagKey: z.string(),
+  /** 윗옷 색 (#rrggbb) */
   color: z.string(),
+  /** 외형 고정 (없으면 NPC id 해시로 정함) */
+  look: z
+    .object({
+      skin: z.string().optional(),
+      hair: z.string().optional(),
+      hairStyle: z.enum(['short', 'long', 'bun', 'bald', 'cap']).optional(),
+      accessory: z.enum(['none', 'bag', 'backpack', 'phone', 'apron', 'lanyard', 'glasses', 'tray']).optional(),
+      accent: z.string().optional(),
+    })
+    .optional(),
   walkSpeed: positive,
   approachSpeed: positive,
   viewDistance: positive,
@@ -379,6 +391,10 @@ export const tileDefsSchema = z
       push: vec2.optional(),
       pattern: z.enum(['none', 'stripe', 'dots', 'grid', 'plank']).optional(),
       accent: z.string().optional(),
+      /** 장식 (src/presentation/draw/tiles.ts) */
+      deco: z
+        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench'])
+        .optional(),
     }),
   )
   .min(1);
