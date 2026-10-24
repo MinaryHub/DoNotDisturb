@@ -11,6 +11,7 @@ import { PresentationState } from './presentation/PresentationState';
 import { Renderer } from './presentation/Renderer';
 import { loadSettings, saveSettings } from './presentation/Settings';
 import { GameUI } from './presentation/ui/GameUI';
+import { TouchControls, isTouchDevice } from './presentation/ui/TouchControls';
 
 // 진입점: 설정 로드 → 타이틀 → 고정 스텝(60Hz) 게임 루프 + 가변 프레임 렌더링
 
@@ -69,10 +70,23 @@ function boot(): void {
   const params = new URLSearchParams(location.search);
   const settings = loadSettings();
   const input = new Input(cfg.input);
+  const touch = isTouchDevice() ? new TouchControls(cfg, input) : null;
+  // 터치 기기는 키보드 단축키 안내를 처음부터 끈다 (설정에서 다시 켤 수 있음)
+  if (touch && !localStorage.getItem('dnd.touchInit')) {
+    settings.controlsHint = false;
+    saveSettings(settings);
+    try {
+      localStorage.setItem('dnd.touchInit', '1');
+    } catch {
+      // 무시
+    }
+  }
   const ui = new GameUI(cfg, settings, saveSettings);
   const audio = new AudioDirector(cfg.presentation.audio, cfg.skills.earphones);
   const ps = new PresentationState(cfg.balance);
   audio.onBeat = () => ps.pulse();
+  // 모바일 브라우저는 사용자 터치 안에서만 소리를 켤 수 있다
+  window.addEventListener('pointerdown', () => audio.resume());
 
   let session: GameSession | null = null;
   let renderer: Renderer | null = null;
@@ -121,6 +135,14 @@ function boot(): void {
     if (input.isDown('moveRight')) move.x += 1;
     if (input.isDown('moveUp')) move.y -= 1;
     if (input.isDown('moveDown')) move.y += 1;
+    // 터치 조이스틱: 기울인 만큼 걷고, 끝까지 밀면 달린다
+    const stick = input.stick;
+    let stickRun = false;
+    if (stick && (stick.x !== 0 || stick.y !== 0)) {
+      move.x = stick.x;
+      move.y = stick.y;
+      stickRun = Math.hypot(stick.x, stick.y) > 0.95;
+    }
     let aim: number | null = null;
     if (input.mouse && input.mouseActive && renderer) {
       const pp = renderer.camera.toScreen(s.player.pos);
@@ -144,7 +166,7 @@ function boot(): void {
     const qte = s.qte;
     return {
       move: phoneOpen || qte?.kind === 'dodge' ? { x: 0, y: 0 } : move,
-      sprint: input.isDown('sprint'),
+      sprint: input.isDown('sprint') || stickRun,
       aim,
       interactPressed: input.wasPressed('interact'),
       interactHeld: input.isDown('interact'),
@@ -186,6 +208,7 @@ function boot(): void {
       }
     },
     render(frameDt) {
+      touch?.update({ screen, session, optionsOpen: ui.optionsOpen, mapOpen: ui.isMapOpen });
       if (screen === 'title') {
         if (input.wasPressed('confirm')) start(false);
         else if (input.codePressed('KeyN')) {

@@ -84,6 +84,10 @@ export class GameUI {
     this.mapOpen = !this.mapOpen;
   }
 
+  get isMapOpen(): boolean {
+    return this.mapOpen;
+  }
+
   get optionsOpen(): boolean {
     return this.optionsEl.style.display === 'flex';
   }
@@ -205,7 +209,7 @@ export class GameUI {
     const parts = [escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))];
     this.cfg.items.consumables.forEach((d, i) => {
       const n = inv.consumables[d.id] ?? 0;
-      if (n > 0) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
+      if (n > 0) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
     });
     for (const g of this.cfg.items.gear) if (inv.gear.includes(g.id)) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(g.nameKey))}">${itemIcon(g.icon, 16)}</span>`);
     setHtml(this.memoFoot, parts.join(' '));

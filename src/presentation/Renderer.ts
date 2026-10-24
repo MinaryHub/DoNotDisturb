@@ -98,7 +98,9 @@ export class Renderer {
     this.firstFrame = false;
     const peep = s.mode.kind === 'peephole' ? -0.35 : 0;
     const zoom = 1 + peep - pc.camera.dangerZoomOut * (ps.danger * 0.7 + ps.critical * 0.3) * dist + ps.phone * 0.12 + ps.sanctuary * 0.05;
-    cam.scale = pc.camera.tilePx * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
+    // 휴대폰처럼 작은 화면은 칸을 줄여 주변이 충분히 보이게
+    const small = Math.min(1, Math.max(0.55, Math.min(cam.viewW / 1280, cam.viewH / 720)));
+    cam.scale = pc.camera.tilePx * small * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
     const shake = st.shake ? ps.trauma * ps.trauma * pc.camera.shakePx : 0;
     cam.shakeX = (Math.random() * 2 - 1) * shake + (st.shake ? Math.sin(ps.time * 40) * ps.sweat * 0.6 : 0);
     cam.shakeY = (Math.random() * 2 - 1) * shake;

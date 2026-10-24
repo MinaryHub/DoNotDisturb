@@ -6,6 +6,8 @@ export class Input {
   private readonly pressedThisFrame = new Set<string>();
   /** 화면 좌표 마우스 위치 (CSS px) */
   mouse: { x: number; y: number } | null = null;
+  /** 터치 가상 조이스틱 (-1~1, 없으면 null) */
+  stick: { x: number; y: number } | null = null;
   private mouseIdle = 0;
 
   constructor(private readonly bindings: InputConfig) {
@@ -31,6 +33,16 @@ export class Input {
   /** 마우스를 최근에 움직였는지 (가만히 두면 이동 방향을 바라본다) */
   get mouseActive(): boolean {
     return this.mouse !== null && this.mouseIdle < 2.5;
+  }
+
+  /** 터치 버튼: 키를 누른 것처럼 (TouchControls) */
+  touchDown(code: string): void {
+    if (!this.down.has(code)) this.pressedThisFrame.add(code);
+    this.down.add(code);
+  }
+
+  touchUp(code: string): void {
+    this.down.delete(code);
   }
 
   endFrame(dt: number): void {

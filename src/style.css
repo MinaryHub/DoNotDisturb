@@ -1105,3 +1105,199 @@ kbd {
 .lil-gui.root {
   z-index: 40;
 }
+
+/* ───── 터치 조작 (휴대폰·태블릿) ───── */
+body.is-touch {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+
+.touch {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.touch__zone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  pointer-events: auto;
+}
+
+.touch__stick {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(20, 20, 26, 0.25);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.touch__stick.is-on {
+  opacity: 1;
+}
+
+.touch__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 250, 240, 0.75);
+  transform: translate(-50%, -50%);
+}
+
+.touch__pad {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-items: stretch;
+  gap: 6px;
+  max-width: 40vw;
+  pointer-events: none;
+}
+
+.touch__top {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.touch__btn {
+  min-width: 56px;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  background: rgba(22, 21, 27, 0.5);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch__btn--hold {
+  border-style: dashed;
+}
+
+.touch__btn--big {
+  grid-column: 1 / -1;
+  min-height: 48px;
+  font-size: 15px;
+  background: rgba(242, 201, 76, 0.28);
+  border-color: rgba(242, 201, 76, 0.7);
+}
+
+.touch__btn.is-down {
+  background: rgba(255, 250, 240, 0.4);
+  transform: scale(0.96);
+}
+
+.touch__top .touch__btn {
+  min-height: 34px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.touch__rotate {
+  display: none;
+}
+
+/* 세로 화면이면 돌려 달라고 안내 (가로가 훨씬 넓게 보인다) */
+@media (orientation: portrait) {
+  body.is-touch .touch__rotate {
+    position: fixed;
+    inset: auto 0 40% 0;
+    z-index: 60;
+    display: block;
+    margin: 0 auto;
+    width: fit-content;
+    padding: 10px 18px;
+    border-radius: 14px;
+    background: rgba(20, 20, 26, 0.85);
+    color: var(--ink);
+    font-size: 15px;
+    pointer-events: none;
+  }
+}
+
+/* 터치 화면 배치: 패널은 왼쪽 아래, 알림은 위로, 아이템 아이콘은 누를 수 있게 */
+body.is-touch .memo__item {
+  pointer-events: auto;
+  padding: 4px 2px;
+}
+
+body.is-touch .panel {
+  left: max(12px, env(safe-area-inset-left));
+  transform: none;
+  width: min(560px, calc(100vw - 330px));
+  bottom: 12px;
+  padding: 10px 14px;
+}
+
+body.is-touch .notifs {
+  bottom: auto;
+  top: 150px;
+  width: 240px;
+}
+
+body.is-touch .call {
+  bottom: auto;
+  top: 30%;
+}
+
+body.is-touch .dlg__choices kbd,
+body.is-touch .hint {
+  display: none;
+}
+
+/* 낮은 화면(가로로 든 휴대폰): HUD를 줄인다 */
+@media (max-height: 520px) {
+  .memo {
+    transform: scale(0.72) rotate(-1deg);
+    transform-origin: top left;
+  }
+
+  .stress,
+  .symptoms {
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+
+  .symptoms {
+    top: 58px;
+  }
+
+  .panel {
+    font-size: 13px;
+  }
+
+  .monologue {
+    font-size: 13px;
+    max-width: 260px;
+  }
+
+  .screen__box {
+    transform: scale(0.82);
+  }
+}
