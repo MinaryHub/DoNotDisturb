@@ -39,11 +39,15 @@ export class GameUI {
   private panelH = -1;
   private readonly qte = el('div', 'qte', this.root);
   private readonly status = el('div', 'status', this.root);
+  /** 기운(배터리) 게이지: 화면이 좁아지고 어두워지는 이유를 보여 준다 (숫자 없음) */
+  private readonly energyGauge = el('div', 'stress stress--energy', this.root);
   private readonly stressGauge = el('div', 'stress', this.root);
   private readonly symptomGauge = el('div', 'symptoms', this.root);
   private readonly symptomRows: { key: Symptom | 'hurry'; row: HTMLElement; fill: HTMLElement; shown: number }[] = [];
   private readonly optionInputs = new Map<string, HTMLInputElement>();
   private readonly stressFill: HTMLDivElement;
+  private readonly energyFill: HTMLDivElement;
+  private energyShown = 1;
   private stressShown = 0;
   private readonly screen = el('div', 'screen', document.body);
   private readonly mapEl = el('div', 'map', document.body);
@@ -59,6 +63,8 @@ export class GameUI {
     private readonly onSettings: (s: Settings) => void,
   ) {
     setText(this.hint, this.tx('hud.controls'));
+    el('span', 'stress__label', this.energyGauge, this.tx('hud.energy'));
+    this.energyFill = el('div', 'stress__fill', el('div', 'stress__bar', this.energyGauge));
     el('span', 'stress__label', this.stressGauge, this.tx('hud.stress'));
     this.stressFill = el('div', 'stress__fill', el('div', 'stress__bar', this.stressGauge));
     for (const key of [...symptoms, 'hurry' as const]) {
@@ -162,6 +168,17 @@ export class GameUI {
     this.stressFill.style.width = `${(v * 100).toFixed(1)}%`;
     this.stressFill.style.background = `hsl(${hue.toFixed(0)}, ${(35 + v * 45).toFixed(0)}%, ${(52 - v * 8).toFixed(0)}%)`;
     this.stressGauge.classList.toggle('stress--high', v >= 0.6);
+
+    // 기운: 가득(초록) → 지침(노랑) → 위험(주황) → 바닥(빨강, 떨림). 구간 경계는 balance.battery.tiers
+    show(this.energyGauge, visible, 'flex');
+    const e = Math.min(1, snap.battery / 100);
+    this.energyShown += (e - this.energyShown) * Math.min(1, dt * 6);
+    const tiers = this.cfg.balance.battery.tiers;
+    const pct = this.energyShown * 100;
+    const color = pct > tiers.tired ? '#7fbf7a' : pct > tiers.danger ? '#e0c25a' : pct > tiers.critical ? '#e0904a' : '#e05a5a';
+    this.energyFill.style.width = `${(this.energyShown * 100).toFixed(1)}%`;
+    this.energyFill.style.background = color;
+    this.energyGauge.classList.toggle('stress--high', pct <= tiers.critical);
   }
 
   /** 하루 시작 화면: 오늘만의 작은 사건 */

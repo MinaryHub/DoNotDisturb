@@ -116,7 +116,8 @@ export class AudioDirector {
 
   update(s: GameSession, ps: PresentationState, st: Settings): void {
     const c = this.cfg;
-    this.bpm = c.heartbeatMinBpm + (c.heartbeatMaxBpm - c.heartbeatMinBpm) * Math.min(1, ps.stress * 0.7 + ps.critical * 0.5 + ps.danger * 0.2);
+    // 심박 속도는 긴장(게이지)을 따른다. 기운이 바닥(Critical)일 때만 조금 더 빨라진다
+    this.bpm = c.heartbeatMinBpm + (c.heartbeatMaxBpm - c.heartbeatMinBpm) * Math.min(1, ps.stress * 0.9 + ps.critical * 0.25);
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const now = ctx.currentTime;
@@ -147,7 +148,7 @@ export class AudioDirector {
     this.bloodGain.gain.setTargetAtTime(ps.flush * c.bloodGain * bloodPulse, now, 0.05);
 
     // 심박
-    const beatGain = c.heartbeatGain * st.heartbeat * Math.min(1, ps.stress * 0.8 + ps.critical * 0.7 + ps.danger * 0.25) * (1 - ps.sanctuary * 0.8);
+    const beatGain = c.heartbeatGain * st.heartbeat * Math.min(1, ps.stress * 0.8 + ps.critical * 0.6) * (1 - ps.sanctuary * 0.8);
     while (this.nextBeat < now + 0.15) {
       if (beatGain > 0.03 && !muted) {
         this.thump(this.nextBeat, beatGain);

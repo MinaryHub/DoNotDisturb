@@ -718,11 +718,20 @@ kbd {
   }
 }
 
+/* 기운 게이지는 긴장 위에, 긴장은 한 줄 아래로 */
+.stress--energy {
+  top: 46px;
+}
+
+.stress:not(.stress--energy) {
+  top: 64px;
+}
+
 /* ───── 증상 게이지 (숫자 없음, 긴장 게이지 아래) ───── */
 .symptoms {
   position: absolute;
   right: 22px;
-  top: 66px;
+  top: 84px;
   display: grid;
   gap: 4px;
   font-size: 11px;
@@ -1300,7 +1309,7 @@ body.is-touch .hint {
   }
 
   .symptoms {
-    top: 58px;
+    top: 72px;
   }
 
   .panel {
