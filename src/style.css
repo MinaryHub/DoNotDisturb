@@ -1251,6 +1251,52 @@ body.is-touch {
   border-color: rgba(242, 201, 76, 0.7);
 }
 
+.touch__btn.is-on {
+  background: rgba(242, 201, 76, 0.35);
+}
+
+/* 가방 펼침: 손가락으로 누르기 좋은 큰 아이템 버튼 */
+.touch__tray {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  width: max-content;
+  max-width: 60vw;
+  pointer-events: none;
+}
+
+.touch__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 76px;
+  height: 76px;
+  border: 1.5px solid rgba(242, 201, 76, 0.7);
+  border-radius: 16px;
+  background: rgba(22, 21, 27, 0.78);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch__item b {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.touch__item:active {
+  transform: scale(0.95);
+  background: rgba(255, 250, 240, 0.35);
+}
+
 .touch__btn.is-down {
   background: rgba(255, 250, 240, 0.4);
   transform: scale(0.96);

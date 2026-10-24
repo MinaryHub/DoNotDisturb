@@ -3,6 +3,7 @@ import type { Input } from '../../core/Input';
 import type { GameSession } from '../../gameplay/GameSession';
 import { t } from '../../core/config';
 import { el, show } from './dom';
+import { itemIcon } from './icons';
 
 // 휴대폰·태블릿 터치 조작. 키보드 입력을 흉내 낸다(Input.touchDown/touchUp, Input.stick).
 // 화면 왼쪽을 누르면 그 자리에 조이스틱이 생기고, 오른쪽에는 지금 상황에 맞는 버튼만 보인다.
@@ -36,6 +37,10 @@ export class TouchControls {
   private readonly pad = el('div', 'touch__pad', this.root);
   private readonly top = el('div', 'touch__top', this.root);
   private readonly rotate = el('div', 'touch__rotate', document.body);
+  /** 가방 버튼을 누르면 펼쳐지는 아이템 버튼 줄 */
+  private readonly tray = el('div', 'touch__tray', this.root);
+  private bagOpen = false;
+  private traySignature = '';
   private signature = '';
   private stickId: number | null = null;
   private stickOrigin = { x: 0, y: 0 };
@@ -67,6 +72,7 @@ export class TouchControls {
 
   update(ctx: TouchContext): void {
     const { main, top, stick } = this.layout(ctx);
+    this.updateTray(ctx, main.some((b) => b.code === '#bag'));
     show(this.stickZone, stick);
     if (!stick) this.releaseStick();
     const sig = JSON.stringify([main, top]);
@@ -157,6 +163,7 @@ export class TouchControls {
             { code: 'KeyC', label: 'touch.cover', hold: true },
             { code: 'KeyX', label: 'touch.eyes', hold: true },
             { code: 'KeyV', label: 'touch.mask' },
+            ...(s.bagCount() > 0 ? [{ code: '#bag', label: 'touch.bag' }] : []),
           ],
           top: [{ code: 'Tab', label: 'touch.phone' }, { code: 'KeyM', label: 'touch.map' }, ...top],
           stick: true,
@@ -178,6 +185,11 @@ export class TouchControls {
           toggleFullscreen();
           return;
         }
+        if (b.code === '#bag') {
+          this.bagOpen = !this.bagOpen;
+          e.classList.toggle('is-on', this.bagOpen);
+          return;
+        }
         e.setPointerCapture(ev.pointerId);
         e.classList.add('is-down');
         this.held.set(ev.pointerId, b.code);
@@ -192,6 +204,32 @@ export class TouchControls {
       e.addEventListener('pointerup', up);
       e.addEventListener('pointercancel', up);
     }
+  }
+
+  /** 가방 펼침: 칸마다 큰 버튼 (아이콘·이름·개수). 누르면 먹고 접힌다 */
+  private updateTray(ctx: TouchContext, available: boolean): void {
+    if (!available) this.bagOpen = false;
+    const s = ctx.session;
+    const slots = s && this.bagOpen ? s.bagSlots().map((id) => [id, s.player.inventory.consumables[id] ?? 0] as const) : [];
+    show(this.tray, slots.length > 0, 'flex');
+    // 버튼 묶음 바로 위에 뜬다
+    if (slots.length) this.tray.style.bottom = `${window.innerHeight - this.pad.getBoundingClientRect().top + 8}px`;
+    const sig = JSON.stringify(slots);
+    if (sig === this.traySignature) return;
+    this.traySignature = sig;
+    this.tray.replaceChildren();
+    slots.forEach(([id, n], i) => {
+      const d = this.cfg.items.consumables.find((c) => c.id === id);
+      if (!d) return;
+      const b = el('button', 'touch__item', this.tray);
+      b.type = 'button';
+      b.innerHTML = `${itemIcon(d.icon, 30)}<span>${this.tx(d.nameKey)}</span><b>×${n}</b>`;
+      b.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        this.tap(`Digit${i + 1}`);
+        this.bagOpen = false;
+      });
+    });
   }
 
   /** 한 번 톡 (아이템 아이콘 등) */
