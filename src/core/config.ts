@@ -7,6 +7,7 @@ import {
   dialoguePoolSchema,
   inputConfigSchema,
   itemsConfigSchema,
+  choresConfigSchema,
   lifeConfigSchema,
   monologueTriggersSchema,
   npcProfilesSchema,
@@ -25,6 +26,7 @@ import {
   type DialogueFileConfig,
   type InputConfig,
   type ItemsConfig,
+  type ChoresConfig,
   type LifeConfig,
   type MonologueTrigger,
   type NpcProfile,
@@ -45,6 +47,7 @@ export interface GameConfig {
   input: InputConfig;
   balance: BalanceConfig;
   items: ItemsConfig;
+  chores: ChoresConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -91,6 +94,7 @@ export function parseGameConfig(raw: RawConfig): GameConfig {
     input: parseConfig(inputConfigSchema, j('input.json'), 'data/input.json'),
     balance: parseConfig(balanceConfigSchema, j('balance.json'), 'data/balance.json'),
     items: parseConfig(itemsConfigSchema, j('items.json'), 'data/items.json'),
+    chores: parseConfig(choresConfigSchema, j('chores.json'), 'data/chores.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -153,12 +157,14 @@ export function crossCheck(cfg: GameConfig): string[] {
     if (it.speech && !has(cfg.speeches, it.speech)) errors.push(`interactable ${it.id}: 발화 없음 "${it.speech}"`);
     if (it.monologue && !has(cfg.monologue, it.monologue)) errors.push(`interactable ${it.id}: 독백 없음 "${it.monologue}"`);
     if (it.kind === 'shop' && !(it.shop && has(cfg.items.shops, it.shop))) errors.push(`interactable ${it.id}: 상점 없음 "${it.shop ?? ''}" (data/items.json)`);
+    if (it.kind === 'chore' && !(it.chore && has(cfg.chores, it.chore))) errors.push(`interactable ${it.id}: 생활 행동 없음 "${it.chore ?? ''}" (data/chores.json)`);
   }
   const itemIds = new Set(cfg.items.consumables.map((c) => c.id));
   for (const c of cfg.items.consumables) {
     needText(c.nameKey, `item ${c.id}`);
     needText(c.useKey, `item ${c.id}`);
   }
+  for (const [id, ch] of Object.entries(cfg.chores)) needText(ch.toastKey, `chore ${id}`);
   for (const [id, shop] of Object.entries(cfg.items.shops)) {
     needText(shop.titleKey, `shop ${id}`);
     for (const s of shop.stock) if (!itemIds.has(s.item)) errors.push(`shop ${id}: 아이템 없음 "${s.item}"`);

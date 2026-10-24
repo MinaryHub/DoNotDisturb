@@ -117,6 +117,25 @@ export const balanceConfigSchema = z.object({
 });
 export type BalanceConfig = z.infer<typeof balanceConfigSchema>;
 
+/** 회복 효과 (소모품·생활 행동 공용) */
+const recoveryEffects = z.object({
+  /** 배터리 회복량 */
+  battery: nonNegative.optional(),
+  /** 스트레스 감소량 */
+  stress: nonNegative.optional(),
+  /** 증상 강도 감소 (0~1) */
+  flush: unit.optional(),
+  migraine: unit.optional(),
+});
+export type RecoveryEffects = z.infer<typeof recoveryEffects>;
+
+/** 생활 행동 (data/chores.json): 고양이 밥, 설거지, 분리수거… 하루 한 번씩 */
+export const choresConfigSchema = z.record(
+  z.string(),
+  z.object({ toastKey: z.string(), minutes: nonNegative, effects: recoveryEffects, life: lifeDelta.optional() }),
+);
+export type ChoresConfig = z.infer<typeof choresConfigSchema>;
+
 /** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~8 */
 export const itemsConfigSchema = z.object({
   consumables: z
@@ -126,15 +145,7 @@ export const itemsConfigSchema = z.object({
         nameKey: z.string(),
         useKey: z.string(),
         icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch']).optional(),
-        effects: z.object({
-          /** 배터리 회복량 */
-          battery: nonNegative.optional(),
-          /** 스트레스 감소량 */
-          stress: nonNegative.optional(),
-          /** 증상 강도 감소 (0~1) */
-          flush: unit.optional(),
-          migraine: unit.optional(),
-        }),
+        effects: recoveryEffects,
         /** 나를 보는 사람이 없고 군중 속이 아닐 때만 */
         cornerOnly: z.boolean().optional(),
       }),
@@ -287,6 +298,8 @@ export const presentationConfigSchema = z.object({
     /** 은신·세이프 지점이 보이는 거리 (칸) */
     zoneRange: positive,
   }),
+  /** 해 질 녘: duskStart~duskEnd 사이에 어두워진다. 실내·가로등·창문은 밝게 남는다 */
+  night: z.object({ duskStart: hhmm, duskEnd: hhmm, darkness: unit, lampRadius: positive }),
   audio: z.object({
     masterVolume: unit,
     murmurGain: nonNegative,
@@ -411,7 +424,7 @@ export const tileDefsSchema = z
       accent: z.string().optional(),
       /** 장식 (src/presentation/draw/tiles.ts) */
       deco: z
-        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench', 'books', 'washer'])
+        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench', 'books', 'washer', 'vending'])
         .optional(),
     }),
   )
@@ -441,6 +454,7 @@ export const interactableKinds = [
   'shop',
   'laundry',
   'browse',
+  'chore',
   'soloMeal',
   'bench',
   'martItem',
@@ -485,6 +499,7 @@ export const worldDefSchema = z.object({
       target: z.string().optional(),
       monologue: z.string().optional(),
       shop: z.string().optional(),
+      chore: z.string().optional(),
     }),
   ),
   portals: z.array(
@@ -502,6 +517,16 @@ export const worldDefSchema = z.object({
   spawns: z.record(z.string(), vec2),
   paths: z.record(z.string(), z.object({ points: z.array(vec2).min(1), loop: z.boolean() })),
   crowdLanes: z.array(crowdLaneSchema),
+  /** 충돌 없는 거리·생활 소품 (src/presentation/draw/props.ts) */
+  props: z
+    .array(
+      z.object({
+        kind: z.enum(['lamp', 'bin', 'bike', 'aircon', 'pot', 'hydrant', 'manhole', 'recycleGreen', 'recycleBlue', 'recycleYellow', 'catBowl']),
+        at: vec2,
+        rot: z.number().optional(),
+      }),
+    )
+    .optional(),
   /** color가 있으면 가게 간판처럼 그 색 바탕으로 그린다 */
   labels: z.array(z.object({ at: vec2, textKey: z.string(), color: z.string().optional() })),
 });

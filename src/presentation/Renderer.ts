@@ -4,6 +4,8 @@ import type { GameSession } from '../gameplay/GameSession';
 import type { Npc } from '../npc/Npc';
 import { inRect, type Rect, type TileMap, type Vec2 } from '../world/TileMap';
 import { Camera2D } from './Camera2D';
+import { parseTime } from '../sim/DayCycle';
+import { drawProp } from './draw/props';
 import { paintDeco } from './draw/tiles';
 import { drawPerson, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
@@ -34,6 +36,9 @@ export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly world: HTMLCanvasElement;
   private readonly wctx: CanvasRenderingContext2D;
+  /** 밤 조명: 어둠을 칠하고 불빛 자리를 지워 낸 뒤 월드 위에 덮는다 */
+  private readonly light: HTMLCanvasElement;
+  private readonly lctx: CanvasRenderingContext2D;
   private readonly chunks = new Map<string, HTMLCanvasElement>();
   private dpr = 1;
   private rings: SoundRing[] = [];
@@ -52,13 +57,15 @@ export class Renderer {
     this.ctx = canvas.getContext('2d')!;
     this.world = document.createElement('canvas');
     this.wctx = this.world.getContext('2d')!;
+    this.light = document.createElement('canvas');
+    this.lctx = this.light.getContext('2d')!;
   }
 
   resize(): void {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = window.innerWidth;
     const h = window.innerHeight;
-    for (const c of [this.canvas, this.world]) {
+    for (const c of [this.canvas, this.world, this.light]) {
       c.width = Math.round(w * this.dpr);
       c.height = Math.round(h * this.dpr);
     }
@@ -132,16 +139,89 @@ export class Renderer {
       }
     }
 
+    // 밤 어둠은 바닥·소품까지만 덮는다. 시야 콘·표식·간판·사람은 그 위에 그려 밤에도 잘 보이게
     this.drawStalls(s);
+    const night = this.nightLevel(s);
+    this.drawProps(night, ps.time);
+    if (night > 0.01 && this.layer!.id === 'ground') this.drawNight(s, night);
+    this.drawZones(s, ps);
     this.drawLabels(s);
     this.drawInteractHints(s, ps);
-    this.drawZones(s, ps);
     this.drawViewCones(s, ps);
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
     this.drawGaze(s, ps);
     this.updateRings(s, ps, st, dt);
+    ctx.restore();
+  }
+
+  /** 0(낮) ~ 1(밤) */
+  private nightLevel(s: GameSession): number {
+    const n = this.cfg.presentation.night;
+    const a = parseTime(n.duskStart);
+    const b = parseTime(n.duskEnd);
+    return Math.min(1, Math.max(0, (s.clock.minutes - a) / (b - a)));
+  }
+
+  private drawProps(night: number, time: number): void {
+    const ctx = this.wctx;
+    for (const p of this.cfg.world.props ?? []) {
+      const [x, y] = p.at;
+      if (Math.abs(x - this.camera.x) > 40 || Math.abs(y - this.camera.y) > 28 || !this.visible({ x, y })) continue;
+      drawProp(ctx, p.kind, x, y, p.rot ?? 0, night, time);
+    }
+  }
+
+  private drawNight(s: GameSession, night: number): void {
+    const cam = this.camera;
+    const n = this.cfg.presentation.night;
+    const l = this.lctx;
+    l.setTransform(1, 0, 0, 1, 0, 0);
+    l.globalCompositeOperation = 'source-over';
+    l.clearRect(0, 0, this.light.width, this.light.height);
+    l.fillStyle = `rgba(12, 16, 42, ${night * n.darkness})`;
+    l.fillRect(0, 0, this.light.width, this.light.height);
+    l.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    l.translate(cam.viewW / 2 + cam.shakeX, cam.viewH / 2 + cam.shakeY);
+    l.scale(cam.scale, cam.scale);
+    l.translate(-cam.x, -cam.y);
+    l.globalCompositeOperation = 'destination-out';
+    // 불 켜진 실내
+    l.fillStyle = 'rgba(0,0,0,0.88)';
+    for (const a of this.cfg.world.areas) if (a.kind !== 'outdoor') l.fillRect(a.rect[0], a.rect[1], a.rect[2], a.rect[3]);
+    const hole = (x: number, y: number, r: number, a: number) => {
+      const g = l.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(0,0,0,${a})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      l.fillStyle = g;
+      l.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    const lamps = (this.cfg.world.props ?? []).filter((p) => p.kind === 'lamp' && Math.abs(p.at[0] - cam.x) < 45 && Math.abs(p.at[1] - cam.y) < 32);
+    for (const p of lamps) hole(p.at[0], p.at[1] - 0.6, n.lampRadius, 0.95);
+    // 창문 불빛이 바깥으로 새어 나온다
+    const v = cam.visibleTiles(2);
+    for (let y = Math.max(0, v.y0); y <= Math.min(this.map.height - 1, v.y1); y++) {
+      for (let x = Math.max(0, v.x0); x <= Math.min(this.map.width - 1, v.x1); x++) {
+        if (this.map.def(x, y).id === 'window') hole(x + 0.5, y + 0.5, 1.8, 0.55);
+      }
+    }
+    hole(s.player.pos.x, s.player.pos.y, 2.4, 0.5);
+    const ctx = this.wctx;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.light, 0, 0);
+    ctx.restore();
+    // 가로등의 따뜻한 빛 번짐
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of lamps) {
+      const g = ctx.createRadialGradient(p.at[0], p.at[1] - 0.6, 0, p.at[0], p.at[1] - 0.6, n.lampRadius * 0.6);
+      g.addColorStop(0, `rgba(255, 190, 110, ${0.22 * night})`);
+      g.addColorStop(1, 'rgba(255, 190, 110, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(p.at[0] - n.lampRadius, p.at[1] - 0.6 - n.lampRadius, n.lampRadius * 2, n.lampRadius * 2);
+    }
     ctx.restore();
   }
 

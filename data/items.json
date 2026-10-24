@@ -28,6 +28,15 @@
         { "item": "herbalTea", "price": 2500 },
         { "item": "water", "price": 800 }
       ]
+    },
+    "vending": {
+      "titleKey": "shop.vending",
+      "stock": [
+        { "item": "water", "price": 1200 },
+        { "item": "coldDrink", "price": 1500 },
+        { "item": "energyDrink", "price": 2000 },
+        { "item": "herbalTea", "price": 1800 }
+      ]
     }
   }
 }

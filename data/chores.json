@@ -1,0 +1,8 @@
+{
+  "makeBed": { "toastKey": "chore.makeBed", "minutes": 3, "effects": { "battery": 2 } },
+  "feedCat": { "toastKey": "chore.feedCat", "minutes": 5, "effects": { "battery": 3, "stress": 8 } },
+  "waterPlants": { "toastKey": "chore.waterPlants", "minutes": 5, "effects": { "battery": 3, "stress": 5 } },
+  "shower": { "toastKey": "chore.shower", "minutes": 20, "effects": { "stress": 20, "flush": 0.4, "migraine": 0.3 } },
+  "dishes": { "toastKey": "chore.dishes", "minutes": 15, "effects": {}, "life": { "essentials": 4 } },
+  "recycle": { "toastKey": "chore.recycle", "minutes": 5, "effects": {}, "life": { "essentials": 3, "housing": 2 } }
+}

@@ -27,7 +27,7 @@ export interface TileDef {
   pattern?: 'none' | 'stripe' | 'dots' | 'grid' | 'plank';
   accent?: string;
   /** 장식 종류 (렌더러 전용) */
-  deco?: 'wall' | 'window' | 'door' | 'doorClosed' | 'desk' | 'shelf' | 'rack' | 'table' | 'counter' | 'bed' | 'sofa' | 'tree' | 'plant' | 'appliance' | 'grill' | 'partition' | 'grass' | 'bench' | 'books' | 'washer';
+  deco?: 'wall' | 'window' | 'door' | 'doorClosed' | 'desk' | 'shelf' | 'rack' | 'table' | 'counter' | 'bed' | 'sofa' | 'tree' | 'plant' | 'appliance' | 'grill' | 'partition' | 'grass' | 'bench' | 'books' | 'washer' | 'vending';
 }
 
 export type AreaKind = 'outdoor' | 'indoor' | 'home';

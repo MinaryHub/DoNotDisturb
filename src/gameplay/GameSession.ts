@@ -1,6 +1,6 @@
 import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
-import type { ConsumableDef, DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import type { ConsumableDef, RecoveryEffects, DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
 import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
@@ -173,6 +173,8 @@ export class GameSession {
   area: AreaDef | null = null;
   phoneOpen = false;
   phoneCursor = 0;
+  /** 오늘 이미 한 생활 행동 */
+  private readonly choresDone = new Set<string>();
   /** 이번 프레임 상호작용 안내 */
   prompt: { labelKey: string; at: Vec2 } | null = null;
   rehearsed = false;
@@ -260,6 +262,7 @@ export class GameSession {
     this.pendingEscalations = [];
     this.homeLocked = true;
     this.rehearsed = false;
+    this.choresDone.clear();
     this.hobbyDone = false;
     this.calmBuff = false;
     this.sosUsed = false;
@@ -729,7 +732,7 @@ export class GameSession {
       case 'coldDrink':
         if (this.pay(it.price ?? 0)) {
           // 무료(탕비실 정수기)는 그 자리에서 마시고, 사 온 것은 들고 다닌다
-          if ((it.price ?? 0) === 0) this.applyEffects(this.consumable('coldDrink')!);
+          if ((it.price ?? 0) === 0) this.applyEffects(this.consumable('coldDrink')!.effects);
           else this.addItem('coldDrink');
           this.toast('coldDrink.done');
         }
@@ -737,6 +740,20 @@ export class GameSession {
       case 'shop':
         this.mode = { kind: 'shop', shopId: it.shop!, cursor: 0 };
         break;
+      case 'chore': {
+        const ch = this.cfg.chores[it.chore!]!;
+        if (this.choresDone.has(it.chore!)) {
+          this.toast('chore.already');
+          break;
+        }
+        this.choresDone.add(it.chore!);
+        this.applyEffects(ch.effects);
+        if (ch.life) this.sim.life.apply(ch.life);
+        this.clock.advance(ch.minutes, 1);
+        this.toast(ch.toastKey);
+        this.gameEvent(`chore:${it.chore!}`);
+        break;
+      }
       case 'laundry':
         this.mode = { kind: 'laundry', time: 0 };
         this.toast('laundry.start');
@@ -818,13 +835,12 @@ export class GameSession {
       this.toast('snack.notHere');
       return;
     }
-    this.applyEffects(def);
+    this.applyEffects(def.effects);
     inv[def.id]!--;
     this.toast(def.useKey);
   }
 
-  private applyEffects(def: ConsumableDef): void {
-    const e = def.effects;
+  private applyEffects(e: RecoveryEffects): void {
     if (e.battery) this.sim.energy.recover(e.battery);
     if (e.stress) this.sim.energy.relieveStress(e.stress);
     if (e.flush) this.sim.somatic.relieve('flush', e.flush);

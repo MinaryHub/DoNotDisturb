@@ -27,6 +27,7 @@
     "markerRange": 9,
     "zoneRange": 14
   },
+  "night": { "duskStart": "17:30", "duskEnd": "19:30", "darkness": 0.62, "lampRadius": 4.5 },
   "audio": {
     "masterVolume": 0.8,
     "murmurGain": 0.32,

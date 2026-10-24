@@ -24,7 +24,8 @@ export type TileDeco =
   | 'grass'
   | 'bench'
   | 'books'
-  | 'washer';
+  | 'washer'
+  | 'vending';
 
 export interface TileNeighbors {
   up: TileDef;
@@ -339,6 +340,24 @@ export function paintDeco(g: CanvasRenderingContext2D, d: TileDef, n: TileNeighb
         g.fillStyle = CLOTHES[(h >> 3) % CLOTHES.length]!;
         circle(g, x + 0.56, y + 0.55, 0.07);
       }
+      break;
+    }
+    case 'vending': {
+      // 자판기: 위쪽 유리 진열창에 음료 두 줄, 아래 버튼·배출구
+      g.fillStyle = shade(d.color, 0.08);
+      g.fillRect(x + 0.04, y + 0.04, 0.92, 0.92);
+      g.fillStyle = '#e8f1f5';
+      g.fillRect(x + 0.12, y + 0.1, 0.76, 0.45);
+      for (let row = 0; row < 2; row++) {
+        for (let i = 0; i < 4; i++) {
+          g.fillStyle = PRODUCT[hash2(tx, ty, row * 4 + i) % PRODUCT.length]!;
+          g.fillRect(x + 0.16 + i * 0.18, y + 0.14 + row * 0.2, 0.11, 0.15);
+        }
+      }
+      g.fillStyle = '#2b2f38';
+      g.fillRect(x + 0.2, y + 0.72, 0.6, 0.12);
+      g.fillStyle = '#9fd38a';
+      circle(g, x + 0.78, y + 0.63, 0.04);
       break;
     }
     default:
