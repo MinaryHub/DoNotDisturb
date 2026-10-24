@@ -1,282 +1,232 @@
-import * as THREE from 'three';
 import './style.css';
-import { loadConfig, loadStage } from './core/config';
 import { GameLoop } from './core/GameLoop';
 import { Input } from './core/Input';
-import { NoclipCamera } from './gameplay/NoclipCamera';
-import { StageSession, type SessionInput } from './gameplay/StageSession';
-import { initPhysics } from './world/physics';
-import { initNavigation } from './world/navigation';
-import type { VolumeDef } from './world/LevelLoader';
-import { DebugOverlay } from './debug/DebugOverlay';
+import { loadConfig } from './core/loadConfig';
+import { t, type GameConfig } from './core/config';
 import { DebugPanel } from './debug/DebugPanel';
-import { watchKreateAssets } from './debug/hotReload';
-import { PresentationState } from './presentation/PresentationState';
-import { PostFX } from './presentation/PostFX';
-import { CameraRig } from './presentation/CameraRig';
+import { GameSession, NO_CONTROLS, type Controls, type SaveState } from './gameplay/GameSession';
+import { replies } from './sim/DialogueBattle';
 import { AudioDirector } from './presentation/AudioDirector';
-import { Hud } from './presentation/ui/Hud';
-import { NpcTags } from './presentation/ui/NpcTags';
+import { PresentationState } from './presentation/PresentationState';
+import { Renderer } from './presentation/Renderer';
+import { loadSettings, saveSettings } from './presentation/Settings';
+import { GameUI } from './presentation/ui/GameUI';
 
-const ASSET_BASE = '/kreate/';
+// 진입점: 설정 로드 → 타이틀 → 고정 스텝(60Hz) 게임 루프 + 가변 프레임 렌더링
 
-async function main(): Promise<void> {
-  const cfg = loadConfig();
-  const params = new URLSearchParams(location.search);
-  const stage = loadStage(params.get('stage') ?? 'stage01');
-  let levelPath = params.get('level') ?? stage.level;
-  // 개발용: ?nolock 이면 마우스 고정 없이도 플레이 (자동화 테스트)
-  const noLock = import.meta.env.DEV && params.has('nolock');
-  await Promise.all([initPhysics(), initNavigation()]);
+const SAVE_KEY = 'dnd.save.v2';
+/** 고정 시간 스텝 시뮬레이션 주파수 (CLAUDE.md 8) */
+const SIM_HZ = 60;
 
-  // ───── 렌더링 ─────
-  const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  // 톤 매핑은 후처리(ToneMappingEffect)에서 한다
-
-  // 임시 조명 (Kreate 레벨에 조명이 들어오면 그쪽을 사용)
-  const light = cfg.world.lighting;
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(light.background);
-  scene.add(new THREE.AmbientLight(light.ambient.color, light.ambient.intensity));
-  scene.add(new THREE.HemisphereLight(light.hemisphere.sky, light.hemisphere.ground, light.hemisphere.intensity));
-  const keyLight = new THREE.DirectionalLight(light.key.color, light.key.intensity);
-  keyLight.position.fromArray(light.key.position);
-  scene.add(keyLight);
-
-  const camera = new THREE.PerspectiveCamera(
-    cfg.world.camera.fov,
-    window.innerWidth / window.innerHeight,
-    cfg.world.camera.near,
-    cfg.world.camera.far,
-  );
-  camera.rotation.order = 'YXZ';
-  const noclip = new NoclipCamera(cfg.world, window.innerWidth / window.innerHeight);
-  let noclipOn = false;
-
-  // ───── 연출 ─────
-  const postfx = new PostFX(renderer, scene, camera, cfg.presentation.postfx);
-  const rig = new CameraRig(cfg.presentation.camera, cfg.world.camera.fov);
-  const audio = new AudioDirector(cfg.presentation.audio, cfg.skills.earphones);
-  const pstate = new PresentationState(cfg.balance);
-  const hud = new Hud(cfg.text);
-  const tags = new NpcTags(cfg.text);
-  const input = new Input(cfg.input, canvas);
-  const overlay = new DebugOverlay();
-  scene.add(overlay.root);
-
-  let session: StageSession | null = null;
-  let loading = false;
-  let started = false;
-
-  const panel = new DebugPanel(
-    overlay,
-    {
-      reloadLevel: () => void openSession(levelPath),
-      loadLevel: (path) => void openSession(path),
-      respawn: () => {
-        const spawn = session?.level.spawns.get('player');
-        if (spawn) session!.player.placeAt(spawn.position, spawn.yaw);
-      },
-      toggleNoclip: () => toggleNoclip(),
-    },
-    levelPath,
-  );
-  panel.toggle(); // 기본은 숨김, F1로 표시
-
-  function toggleNoclip(): void {
-    noclipOn = !noclipOn;
-    if (noclipOn) noclip.camera.position.copy(camera.position);
-    postfx.setCamera(noclipOn ? noclip.camera : camera);
-    panel.log(noclipOn ? '자유 비행 카메라 켜짐 (플레이어 정지)' : '자유 비행 카메라 꺼짐');
+function readSave(): SaveState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? (JSON.parse(raw) as SaveState) : null;
+  } catch {
+    return null;
   }
-
-  async function openSession(path: string): Promise<void> {
-    if (loading) return;
-    loading = true;
-    try {
-      const next = await StageSession.load(cfg, stage, `${ASSET_BASE}${path}?t=${Date.now()}`);
-      session?.dispose();
-      tags.clear();
-      pstate.reset();
-      session = next;
-      levelPath = path;
-      scene.add(session.level.root);
-      overlay.build(session.level);
-      panel.setLevel(session.level);
-      panel.bindSession(session, {
-        emit: (id) => session?.sim.bus.emit(id, 'debug'),
-        setBattery: (v) => session?.sim.energy.debugSet({ battery: v }),
-      });
-      session.on('message', ({ key }) => hud.showToast(key));
-      session.on('trigger', ({ eventId }) => panel.log(`이벤트: ${eventId}`, 'event'));
-      session.on('objective', ({ id }) => panel.log(`목표 완료: ${id}`, 'event'));
-      session.on('outcome', ({ outcome }) => {
-        panel.log(`결과: ${outcome}`, 'event');
-        if (outcome === 'clear') hud.showScreen('clear');
-      });
-      panel.log(`레벨 로드: ${path}`);
-      for (const w of session.level.warnings) {
-        const text = `[${w.node}] ${w.message}`;
-        if (w.level === 'error') console.error(text);
-        else console.warn(text);
-        panel.log(text, w.level === 'error' ? 'error' : 'info');
-      }
-    } catch (err) {
-      console.error(err);
-      panel.log(`레벨 로드 실패: ${path} — ${(err as Error).message}`, 'error');
-    } finally {
-      loading = false;
-    }
-  }
-
-  watchKreateAssets(cfg.world.hotReloadDebounceMs, (path) => {
-    if (path !== levelPath) return;
-    panel.log(`Kreate 에셋 변경 감지 → ${path} 다시 불러오기`, 'event');
-    void openSession(path);
-  });
-
-  // 시작·일시정지: 클릭으로 마우스 고정 + 오디오 시작 (브라우저 정책)
-  canvas.addEventListener('click', () => audio.resume());
-  document.querySelector('.screen')?.addEventListener('click', () => {
-    audio.resume();
-    started = true;
-    void canvas.requestPointerLock();
-  });
-
-  window.addEventListener('resize', () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    postfx.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    noclip.setAspect(camera.aspect);
-  });
-
-  // ───── 루프 ─────
-  // 눌린 키는 다음 고정 스텝이 처리할 때까지 보관한다.
-  // (주사율이 60Hz보다 높으면 고정 스텝이 0번인 렌더 프레임이 있어서, 프레임 단위로 지우면 입력이 사라진다)
-  const pending = { interact: false, earphones: false };
-  const move = new THREE.Vector2();
-  const isLocked = () => input.pointerLocked || noLock;
-
-  const loop = new GameLoop(cfg.world.simulationHz, {
-    fixedUpdate(dt) {
-      if (!session) return;
-      const playing = started && isLocked() && !noclipOn;
-      let sessionInput: SessionInput = {
-        move: move.set(0, 0),
-        run: false,
-        interact: false,
-        toggleEarphones: false,
-        phonePretend: false,
-      };
-      if (playing) {
-        move.set(
-          Number(input.isDown('moveRight')) - Number(input.isDown('moveLeft')),
-          Number(input.isDown('moveBackward')) - Number(input.isDown('moveForward')),
-        );
-        sessionInput = {
-          move,
-          run: input.isDown('sprint'),
-          interact: pending.interact,
-          toggleEarphones: pending.earphones,
-          phonePretend: input.isDown('phonePretend'),
-        };
-      }
-      pending.interact = pending.earphones = false;
-      if (noclipOn) noclip.update(dt, input);
-      // 시작 전·일시정지 중에는 시간이 흐르지 않는다
-      if (started && (isLocked() || session.outcome !== 'playing' || noclipOn)) session.fixedUpdate(dt, sessionInput);
-    },
-
-    render(frameDt, alpha) {
-      panel.beginFrame();
-      if (input.wasPressed('toggleDebug')) panel.toggle();
-      if (input.wasPressed('toggleNoclip')) toggleNoclip();
-      if (input.wasPressed('reloadLevel')) void openSession(levelPath);
-
-      if (session) {
-        const look = noclipOn || !input.pointerLocked ? { dx: 0, dy: 0 } : input.consumeMouseDelta();
-        session.frameUpdate(frameDt, alpha, look);
-        if (session.outcome !== 'playing' && input.wasPressed('restart')) void openSession(levelPath);
-
-        const snap = session.sim.snapshot();
-        pstate.update(frameDt, snap, session.drainSimEvents(), cfg.balance.ambush.shakeSec);
-        rig.apply(
-          camera,
-          {
-            eye: session.player.eyePosition(alpha),
-            yaw: session.player.yaw,
-            pitch: session.player.pitch,
-            speed: session.player.horizontalSpeed,
-          },
-          pstate,
-          frameDt,
-        );
-
-        // 플레이어가 있는 소음 구역 강도
-        let zoneMurmur = 0;
-        for (const v of session.sensors.activeVolumes) {
-          if (v.kind === 'ZONE') zoneMurmur += (v as VolumeDef<'ZONE'>).props.intensity ?? 1;
-        }
-        audio.update(frameDt, {
-          state: pstate,
-          earphones: session.skills.earphones,
-          zoneMurmur,
-          listener: { position: camera.position, forward: new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion) },
-          npcs: session.npcs.map((n) => ({ id: n.id, position: n.model.position, speed: n.moveSpeed })),
-          worldMuted: session.outcome !== 'playing',
-        });
-
-        // HUD
-        const focused = session.interaction.focused;
-        hud.setPrompt(focused ? (stage.interactions[focused.props.eventId] ?? null) : null);
-        hud.setObjective(session.currentObjective?.textKey ?? null);
-        hud.setSkills(session.skills.earphones, session.skills.phonePretend);
-        hud.update(frameDt);
-        if (session.outcome === 'burnout' && pstate.burnoutTime > cfg.presentation.camera.burnoutSinkSec) hud.showScreen('burnout');
-        else if (session.outcome === 'playing') hud.showScreen(!started ? 'start' : isLocked() || noclipOn ? null : 'paused', stage.titleKey);
-        tags.update(session.npcs, camera, window.innerWidth, window.innerHeight);
-
-        overlay.root.visible = panel.visible;
-        overlay.update(session.sensors.activeVolumes);
-        panel.updateSim(session);
-      }
-
-      if (noclipOn) noclip.camera.updateMatrixWorld();
-      postfx.render(frameDt, pstate, audio.heartbeatBpm);
-      panel.endFrame(renderer, noclipOn ? noclip.camera : camera);
-      if (input.wasPressed('interact')) pending.interact = true;
-      if (input.wasPressed('earphones')) pending.earphones = true;
-      input.endFrame();
-    },
-  });
-
-  hud.showScreen('start', stage.titleKey);
-  await openSession(levelPath);
-  if (import.meta.env.DEV) {
-    // 개발용 디버그 핸들 (자동화 테스트·콘솔 확인)
-    Object.assign(window, {
-      __dnd: {
-        get session() {
-          return session;
-        },
-        start: () => {
-          started = true;
-        },
-      },
-    });
-  }
-  loop.start();
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  const pre = document.createElement('pre');
-  pre.className = 'fatal';
-  pre.textContent = String(err);
-  document.body.appendChild(pre);
-});
+function writeSave(s: SaveState | null): void {
+  try {
+    if (s) localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // 저장소를 쓸 수 없으면 이어하기만 안 된다
+  }
+}
+
+/** 아직 소비되지 않은 눌림(prev)과 새 입력(next)을 합친다 */
+function mergePressed(prev: Controls, next: Controls): Controls {
+  const out: Controls = { ...next };
+  for (const key of Object.keys(prev) as (keyof Controls)[]) {
+    const a = prev[key];
+    if (typeof a === 'boolean' && a && !next[key]) (out as unknown as Record<string, unknown>)[key] = true;
+  }
+  out.reply = next.reply ?? prev.reply;
+  out.note = next.note ?? prev.note;
+  out.slot = next.slot ?? prev.slot;
+  out.dodge = next.dodge || prev.dodge;
+  out.phoneNav = next.phoneNav || prev.phoneNav;
+  return out;
+}
+
+function boot(): void {
+  let cfg: GameConfig;
+  try {
+    cfg = loadConfig();
+  } catch (e) {
+    const pre = document.createElement('pre');
+    pre.className = 'fatal';
+    pre.textContent = String(e instanceof Error ? e.message : e);
+    document.body.appendChild(pre);
+    throw e;
+  }
+
+  const canvas = document.getElementById('game') as HTMLCanvasElement;
+  const params = new URLSearchParams(location.search);
+  const settings = loadSettings();
+  const input = new Input(cfg.input);
+  const ui = new GameUI(cfg, settings, saveSettings);
+  const audio = new AudioDirector(cfg.presentation.audio, cfg.skills.earphones);
+  const ps = new PresentationState(cfg.balance);
+  audio.onBeat = () => ps.pulse();
+
+  let session: GameSession | null = null;
+  let renderer: Renderer | null = null;
+  let debug: DebugPanel | null = null;
+  let screen: 'title' | 'game' = 'title';
+  let savedDay = -1;
+  const save = readSave();
+  ui.showTitle(save ? t(cfg.text, cfg.days[save.dayIndex]?.titleKey ?? '') : null);
+
+  const start = (fresh: boolean) => {
+    audio.resume();
+    session = new GameSession(cfg, fresh ? undefined : (readSave() ?? undefined));
+    if (params.has('day')) session.startDay(Math.min(cfg.days.length - 1, Number(params.get('day')) || 0));
+    renderer = new Renderer(canvas, cfg, session.world.map);
+    renderer.resize();
+    ui.setMinimap(renderer.buildMinimap(4));
+    debug = new DebugPanel(
+      {
+        getSession: () => session!,
+        jumpToDay: (i) => session!.startDay(i),
+        teleportToMarker: () => {
+          const tgt = ui.markerTarget(session!);
+          if (tgt) {
+            const near = session!.world.map.nearestWalkable(Math.floor(tgt.x), Math.floor(tgt.y + 1), 3);
+            if (near) Object.assign(session!.player.pos, { x: near.x + 0.5, y: near.y + 0.5 });
+          }
+        },
+      },
+      cfg.days.length,
+    );
+    screen = 'game';
+  };
+
+  window.addEventListener('resize', () => renderer?.resize());
+
+  // 한 렌더 프레임 동안 모은 입력 → 첫 고정 스텝에만 '눌림'을 전달
+  let pending: Controls | null = null;
+  let pendingFresh = false;
+
+  const buildControls = (s: GameSession): Controls => {
+    const mode = s.mode.kind;
+    const move = { x: 0, y: 0 };
+    if (input.isDown('moveLeft')) move.x -= 1;
+    if (input.isDown('moveRight')) move.x += 1;
+    if (input.isDown('moveUp')) move.y -= 1;
+    if (input.isDown('moveDown')) move.y += 1;
+    let aim: number | null = null;
+    if (input.mouse && input.mouseActive && renderer) {
+      const pp = renderer.camera.toScreen(s.player.pos);
+      aim = Math.atan2(input.mouse.y - pp.y, input.mouse.x - pp.x);
+    }
+    const keyed = mode === 'dialogue' || mode === 'work';
+    let reply: Controls['reply'] = null;
+    if (keyed) {
+      (['reply1', 'reply2', 'reply3', 'reply4'] as const).forEach((a, i) => {
+        if (input.wasPressed(a)) reply = replies[i]!;
+      });
+    }
+    let note: number | null = null;
+    if (mode === 'piano') ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ'].forEach((code, i) => input.codePressed(code) && (note = i));
+    let slot: number | null = null;
+    if (mode === 'seated') ['Digit1', 'Digit2', 'Digit3'].forEach((code, i) => input.codePressed(code) && (slot = i));
+    const phoneOpen = s.phoneOpen;
+    const qte = s.qte;
+    return {
+      move: phoneOpen || qte?.kind === 'dodge' ? { x: 0, y: 0 } : move,
+      sprint: input.isDown('sprint'),
+      aim,
+      interactPressed: input.wasPressed('interact'),
+      interactHeld: input.isDown('interact'),
+      earphonesPressed: input.wasPressed('earphones'),
+      phonePretend: input.isDown('phonePretend'),
+      cover: input.isDown('coverCheeks'),
+      eyesClosed: input.isDown('closeEyes'),
+      maskPressed: input.wasPressed('mask'),
+      useDrink: !keyed && input.wasPressed('useDrink'),
+      useSnack: !keyed && input.wasPressed('useSnack'),
+      useCoffee: !keyed && input.wasPressed('useCoffee'),
+      reply,
+      smile: input.isDown('smile'),
+      spacePressed: input.codePressed('Space'),
+      sos: input.wasPressed('sos'),
+      confirm: input.wasPressed('confirm'),
+      accept: input.wasPressed('accept'),
+      decline: input.wasPressed('decline'),
+      textInstead: input.wasPressed('textInstead'),
+      dodge: qte?.kind === 'dodge' ? (input.wasPressed('dodgeLeft') ? -1 : input.wasPressed('dodgeRight') ? 1 : 0) : 0,
+      phoneToggle: input.wasPressed('phone'),
+      phoneNav: phoneOpen ? (input.codePressed('ArrowUp') || input.codePressed('KeyW') ? -1 : input.codePressed('ArrowDown') || input.codePressed('KeyS') ? 1 : 0) : 0,
+      phoneReply: phoneOpen && input.codePressed('Enter'),
+      phoneIgnore: phoneOpen && input.codePressed('Backspace'),
+      note,
+      slot,
+      retry: input.codePressed('KeyR'),
+    };
+  };
+
+  let paused = false;
+  const loop = new GameLoop(SIM_HZ, {
+    fixedUpdate(dt) {
+      if (screen !== 'game' || !session || paused || ui.optionsOpen) return;
+      session.step(dt, pending ?? NO_CONTROLS);
+      // '눌림'은 첫 스텝에만 전달하고, 이후 스텝에는 '누르고 있음'만 남긴다
+      if (pending && pendingFresh) {
+        pending = { ...NO_CONTROLS, move: pending.move, sprint: pending.sprint, aim: pending.aim, interactHeld: pending.interactHeld, phonePretend: pending.phonePretend, cover: pending.cover, eyesClosed: pending.eyesClosed, smile: pending.smile };
+        pendingFresh = false;
+      }
+    },
+    render(frameDt) {
+      if (screen === 'title') {
+        if (input.wasPressed('confirm')) start(false);
+        else if (input.codePressed('KeyN')) {
+          writeSave(null);
+          start(true);
+        }
+        if (input.wasPressed('options')) ui.toggleOptions();
+        input.endFrame(frameDt);
+        return;
+      }
+      const s = session!;
+      debug?.beginFrame();
+      if (input.wasPressed('toggleDebug')) debug?.toggle();
+      if (input.wasPressed('options')) ui.toggleOptions();
+      if (input.wasPressed('map') && !s.isModal()) ui.toggleMap();
+      if (input.wasPressed('pause') && s.mode.kind === 'free') {
+        paused = !paused;
+        ui.toast(paused ? 'screen.paused' : 'screen.resume');
+      }
+      // 고정 스텝이 한 번도 돌지 않은 프레임의 눌림은 잃지 않도록 합친다
+      const fresh = buildControls(s);
+      pending = pending && pendingFresh ? mergePressed(pending, fresh) : fresh;
+      pendingFresh = true;
+      input.endFrame(frameDt);
+
+      // 진행 저장: 하루가 바뀌면
+      if (s.dayIndex !== savedDay && s.mode.kind === 'dayIntro') {
+        savedDay = s.dayIndex;
+        writeSave(s.saveState());
+      }
+      const fx = s.drainFx();
+      for (const e of fx) {
+        if (e.type === 'toast') ui.toast(e.key, e.vars);
+        if (e.type === 'rumble') navigator.getGamepads?.()[0]?.vibrationActuator?.playEffect('dual-rumble', { duration: cfg.balance.sweat.rumbleMs, strongMagnitude: 0.6, weakMagnitude: 0.9 }).catch(() => undefined);
+      }
+      ps.update(frameDt, s, fx);
+      audio.update(s, ps, settings);
+      renderer!.render(frameDt, s, ps, settings);
+      ui.update(frameDt, s, ps, renderer!.camera);
+      debug?.update(s);
+      debug?.endFrame();
+    },
+  });
+  loop.start();
+
+  // 자동화 테스트·디버그용
+  (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg };
+}
+
+boot();

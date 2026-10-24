@@ -1,0 +1,18 @@
+{
+  "meeting": {
+    "chunks": ["이번 주는", "지난주 이슈", "마무리하고,", "새 기능", "테스트까지", "진행하겠습니다."],
+    "stimulus": "meetingSpeech", "audience": 6, "objectiveEvent": "done:meeting", "introKey": "speech.meeting.intro"
+  },
+  "toast": {
+    "chunks": ["다들", "한 주", "고생 많으셨습니다.", "앞으로도", "잘 부탁드립니다.", "건배!"],
+    "stimulus": "toastSpeech", "audience": 8, "objectiveEvent": "done:toast", "introKey": "speech.toast.intro"
+  },
+  "returnClothes": {
+    "chunks": ["저기…", "이거", "반품하고 싶은데요.", "아,", "다음에 올게요."],
+    "stimulus": "returnSpeech", "audience": 1, "objectiveEvent": "done:return", "introKey": "speech.return.intro"
+  },
+  "checkoutNormal": {
+    "chunks": ["봉투는", "괜찮아요.", "적립도", "괜찮습니다."],
+    "stimulus": "checkoutTalk", "audience": 1, "objectiveEvent": "done:checkout", "introKey": "speech.checkout.intro"
+  }
+}

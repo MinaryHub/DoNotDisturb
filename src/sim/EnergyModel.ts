@@ -31,7 +31,12 @@ export interface EnergyContext {
   outdoor: boolean;
   /** 세이프 존 안에 있는지 (회복) */
   inSafe: boolean;
+  /** 세이프 존 외의 추가 회복 (집 안 안전지대, 내 사람 곁 등) 초당 */
+  extraRecoverPerSec?: number;
 }
+
+/** 초당 이 미만의 지속 자극은 '자극이 없는 상태'로 본다 (스트레스 자연 감소 유지) */
+const BACKGROUND_RATE = 0.5;
 
 export function tierOf(battery: number, tiers: EnergyConfig['battery']['tiers']): BatteryTier {
   if (battery <= 0) return 'burnout';
@@ -44,14 +49,21 @@ export function tierOf(battery: number, tiers: EnergyConfig['battery']['tiers'])
 export class EnergyModel {
   private _battery: number;
   private _stress = 0;
+  private _max: number;
   private sinceStimulus = Infinity;
 
   constructor(private readonly cfg: EnergyConfig) {
-    this._battery = cfg.battery.start;
+    this._max = cfg.battery.max;
+    this._battery = Math.min(cfg.battery.start, this._max);
   }
 
   get battery(): number {
     return this._battery;
+  }
+
+  /** 오늘의 배터리 상한 (전날 밤 회복 결과로 변동) */
+  get max(): number {
+    return this._max;
   }
 
   get stress(): number {
@@ -71,11 +83,19 @@ export class EnergyModel {
     return 1 + this._stress / 100;
   }
 
+  /** 새 하루 시작: 상한을 정하고 가득 채운 상태로 시작, 스트레스 초기화 */
+  startDay(max: number): void {
+    this._max = Math.max(1, Math.min(this.cfg.battery.max, max));
+    this._battery = this._max;
+    this._stress = 0;
+    this.sinceStimulus = Infinity;
+  }
+
   /**
    * 자극 적용. 최종 데미지 = 기본 데미지 × 스트레스 배율 × 채널 배율.
    * @returns 실제로 깎인 배터리 양
    */
-  applyHits(hits: readonly StimulusHit[], modifiers: ChannelModifiers = NO_MODIFIERS): number {
+  applyHits(hits: readonly StimulusHit[], modifiers: ChannelModifiers = NO_MODIFIERS, dt = 0): number {
     if (this.burnedOut) return 0;
     let total = 0;
     for (const hit of hits) {
@@ -84,10 +104,30 @@ export class EnergyModel {
       if (damage <= 0) continue;
       total += damage;
       this._stress = Math.min(this.cfg.stress.max, this._stress + damage * this.cfg.stress.gainPerDamage);
-      this.sinceStimulus = 0;
+      // 배경 소음 같은 약한 지속 자극은 스트레스가 가라앉는 것까지 막지는 않는다
+      const background = hit.kind === 'continuous' && dt > 0 && hit.amount / dt < BACKGROUND_RATE;
+      if (!background) this.sinceStimulus = 0;
     }
     this._battery = Math.max(0, this._battery - total);
     return total;
+  }
+
+  /** 회복 아이템·이벤트 (간식 +20, 약속 취소 +50 등). 상한을 넘지 않는다 */
+  recover(amount: number): number {
+    if (this.burnedOut || amount <= 0) return 0;
+    const before = this._battery;
+    this._battery = Math.min(this._max, this._battery + amount);
+    return this._battery - before;
+  }
+
+  /** 스트레스 직접 상승 (마스크 답답함 등, 배터리는 깎지 않음) */
+  addStress(amount: number): void {
+    this._stress = Math.min(this.cfg.stress.max, this._stress + Math.max(0, amount));
+  }
+
+  /** 스트레스 직접 완화 (찬물 세수, 반려동물 등) */
+  relieveStress(amount: number): void {
+    this._stress = Math.max(0, this._stress - amount);
   }
 
   /** 시간 경과: 실외 자연 감소, 세이프 존 회복, 스트레스 자연 감소 */
@@ -97,8 +137,9 @@ export class EnergyModel {
     if (this.sinceStimulus >= this.cfg.stress.decayDelaySec) {
       this._stress = Math.max(0, this._stress - this.cfg.stress.decayPerSec * dt);
     }
-    if (ctx.inSafe) {
-      this._battery = Math.min(this.cfg.battery.max, this._battery + this.cfg.battery.safeRecoverPerSec * dt);
+    const recover = (ctx.inSafe ? this.cfg.battery.safeRecoverPerSec : 0) + (ctx.extraRecoverPerSec ?? 0);
+    if (recover > 0) {
+      this._battery = Math.min(this._max, this._battery + recover * dt);
     } else if (ctx.outdoor) {
       this._battery = Math.max(0, this._battery - this.cfg.battery.outdoorDrainPerSec * dt);
     }
@@ -106,7 +147,7 @@ export class EnergyModel {
 
   /** 디버그용 직접 설정 */
   debugSet(values: { battery?: number; stress?: number }): void {
-    if (values.battery !== undefined) this._battery = Math.min(this.cfg.battery.max, Math.max(0, values.battery));
+    if (values.battery !== undefined) this._battery = Math.min(this._max, Math.max(0, values.battery));
     if (values.stress !== undefined) this._stress = Math.min(this.cfg.stress.max, Math.max(0, values.stress));
   }
 }

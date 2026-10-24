@@ -1,0 +1,796 @@
+import { t } from '../core/config';
+import type { GameConfig } from '../core/config';
+import type { GameSession } from '../gameplay/GameSession';
+import type { Npc } from '../npc/Npc';
+import { inRect, type Rect, type TileMap, type Vec2 } from '../world/TileMap';
+import { Camera2D } from './Camera2D';
+import type { PresentationState } from './PresentationState';
+import type { Settings } from './Settings';
+
+// 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
+//   월드 → 오프스크린 캔버스 → (채도·블러·앰버·색수차·늘림) 합성 → 심리 오버레이(비네팅·터널·홍조·암전)
+
+const CHUNK = 16;
+const CHUNK_PX = 32;
+const MAX_CHUNKS = 48;
+
+interface SoundRing {
+  x: number;
+  y: number;
+  age: number;
+  life: number;
+  radius: number;
+  color: string;
+}
+
+export class Renderer {
+  readonly camera = new Camera2D();
+  private readonly ctx: CanvasRenderingContext2D;
+  private readonly world: HTMLCanvasElement;
+  private readonly wctx: CanvasRenderingContext2D;
+  private readonly chunks = new Map<string, HTMLCanvasElement>();
+  private dpr = 1;
+  private rings: SoundRing[] = [];
+  private ringTimer = 0;
+  private stretchAxis = 0;
+  private firstFrame = true;
+  /** 지금 그리는 층 (플레이어가 있는 층만 보인다) */
+  private layer: { id: string; rect: Rect } | null = null;
+
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly cfg: GameConfig,
+    private readonly map: TileMap,
+  ) {
+    this.ctx = canvas.getContext('2d')!;
+    this.world = document.createElement('canvas');
+    this.wctx = this.world.getContext('2d')!;
+  }
+
+  resize(): void {
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    for (const c of [this.canvas, this.world]) {
+      c.width = Math.round(w * this.dpr);
+      c.height = Math.round(h * this.dpr);
+    }
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+    this.camera.viewW = w;
+    this.camera.viewH = h;
+  }
+
+  render(dt: number, s: GameSession, ps: PresentationState, st: Settings): void {
+    const cam = this.camera;
+    const pc = this.cfg.presentation;
+    const dist = st.distortion;
+    const p = s.player;
+
+    // 카메라: 플레이어 (외시경이면 복도). Danger 이하에서는 세상이 멀어진다(줌 아웃)
+    const target = s.viewTarget ?? p.pos;
+    this.layer = this.cfg.world.layers.find((l) => inRect(l.rect, target.x, target.y)) ?? this.cfg.world.layers[0]!;
+    cam.follow(target, dt, pc.camera.followLerp, this.firstFrame || s.mode.kind === 'travel');
+    this.firstFrame = false;
+    const peep = s.mode.kind === 'peephole' ? -0.35 : 0;
+    const zoom = 1 + peep - pc.camera.dangerZoomOut * (ps.danger * 0.7 + ps.critical * 0.3) * dist + ps.phone * 0.12 + ps.sanctuary * 0.05;
+    cam.scale = pc.camera.tilePx * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
+    const shake = st.shake ? ps.trauma * ps.trauma * pc.camera.shakePx : 0;
+    cam.shakeX = (Math.random() * 2 - 1) * shake + (st.shake ? Math.sin(ps.time * 40) * ps.sweat * 0.6 : 0);
+    cam.shakeY = (Math.random() * 2 - 1) * shake;
+
+    this.drawWorld(s, ps, st, dt);
+    this.composite(s, ps, st);
+    this.overlays(s, ps, st);
+  }
+
+  // ───────────────────────── 월드 ─────────────────────────
+
+  private drawWorld(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    const ctx = this.wctx;
+    const cam = this.camera;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = this.cfg.tiles[0]!.color;
+    ctx.fillRect(0, 0, this.world.width, this.world.height);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.save();
+    ctx.translate(cam.viewW / 2 + cam.shakeX, cam.viewH / 2 + cam.shakeY);
+    ctx.scale(cam.scale, cam.scale);
+    ctx.translate(-cam.x, -cam.y);
+
+    const v = cam.visibleTiles();
+    const cx0 = Math.floor(v.x0 / CHUNK);
+    const cy0 = Math.floor(v.y0 / CHUNK);
+    const cx1 = Math.floor(v.x1 / CHUNK);
+    const cy1 = Math.floor(v.y1 / CHUNK);
+    ctx.imageSmoothingEnabled = true;
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const chunk = this.chunk(cx, cy);
+        if (chunk) ctx.drawImage(chunk, cx * CHUNK, cy * CHUNK, CHUNK, CHUNK);
+      }
+    }
+
+    // Danger: 벽이 조여 온다 (천장이 낮아지는 감각의 2D 번역)
+    const closeIn = this.cfg.presentation.fx.wallCloseIn * (ps.danger + ps.critical * 0.6) * st.distortion;
+    if (closeIn > 0.01) {
+      ctx.fillStyle = `rgba(30, 30, 38, ${Math.min(0.85, 0.35 + closeIn)})`;
+      const pulse = closeIn * (1 + 0.15 * Math.sin(ps.time * 2));
+      for (let y = Math.max(0, v.y0); y <= Math.min(this.map.height - 1, v.y1); y++) {
+        for (let x = Math.max(0, v.x0); x <= Math.min(this.map.width - 1, v.x1); x++) {
+          const d = this.map.def(x, y);
+          if (!d.tall || d.id === 'window' || !inRect(this.layer!.rect, x, y)) continue;
+          ctx.fillRect(x - pulse, y - pulse, 1 + pulse * 2, 1 + pulse * 2);
+        }
+      }
+    }
+
+    this.drawLabels(s);
+    this.drawInteractHints(s, ps);
+    this.drawViewCones(s);
+    this.drawCrowd(s, ps);
+    for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
+    this.drawPlayer(s, ps);
+    this.drawGaze(s, ps);
+    this.updateRings(s, ps, st, dt);
+    ctx.restore();
+  }
+
+  private visible(p: Vec2): boolean {
+    return !this.layer || inRect(this.layer.rect, p.x, p.y);
+  }
+
+  private chunk(cx: number, cy: number): HTMLCanvasElement | null {
+    if (cx < 0 || cy < 0 || cx * CHUNK >= this.map.width || cy * CHUNK >= this.map.height) return null;
+    const layer = this.layer!;
+    const key = `${layer.id}:${cx},${cy}`;
+    let c = this.chunks.get(key);
+    if (c) {
+      // LRU: 최근 사용으로 이동
+      this.chunks.delete(key);
+      this.chunks.set(key, c);
+      return c;
+    }
+    c = document.createElement('canvas');
+    c.width = c.height = CHUNK * CHUNK_PX;
+    const g = c.getContext('2d')!;
+    g.scale(CHUNK_PX, CHUNK_PX);
+    for (let y = 0; y < CHUNK; y++) {
+      for (let x = 0; x < CHUNK; x++) {
+        const tx = cx * CHUNK + x;
+        const ty = cy * CHUNK + y;
+        if (inRect(layer.rect, tx, ty)) this.paintTile(g, tx, ty, x, y);
+        else {
+          g.fillStyle = this.cfg.tiles[0]!.color;
+          g.fillRect(x, y, 1.02, 1.02);
+        }
+      }
+    }
+    this.chunks.set(key, c);
+    if (this.chunks.size > MAX_CHUNKS) this.chunks.delete(this.chunks.keys().next().value!);
+    return c;
+  }
+
+  private paintTile(g: CanvasRenderingContext2D, tx: number, ty: number, x: number, y: number): void {
+    const d = this.map.def(tx, ty);
+    g.fillStyle = d.color;
+    g.fillRect(x, y, 1.02, 1.02);
+    const a = d.accent ?? d.color;
+    g.fillStyle = a;
+    g.strokeStyle = a;
+    g.lineWidth = 0.06;
+    switch (d.pattern) {
+      case 'dots':
+        if ((tx * 7 + ty * 13) % 5 === 0) g.fillRect(x + 0.3, y + 0.6, 0.12, 0.12);
+        if ((tx * 3 + ty * 11) % 7 === 0) g.fillRect(x + 0.7, y + 0.2, 0.1, 0.1);
+        break;
+      case 'grid':
+        g.strokeRect(x + 0.03, y + 0.03, 0.94, 0.94);
+        break;
+      case 'plank':
+        g.fillRect(x, y + ((tx % 2) * 0.5 + 0.47), 1, 0.05);
+        break;
+      case 'stripe':
+        for (let i = 0; i < 3; i++) g.fillRect(x + 0.12 + i * 0.3, y + 0.1, 0.14, 0.8);
+        break;
+      default:
+        break;
+    }
+    if (d.tall) {
+      // 위쪽은 밝게, 아래쪽은 어둡게 → 살짝 서 있는 느낌
+      g.fillStyle = 'rgba(255,255,255,0.10)';
+      g.fillRect(x, y, 1, 0.18);
+      g.fillStyle = 'rgba(0,0,0,0.18)';
+      g.fillRect(x, y + 0.82, 1, 0.18);
+      if (d.id === 'window') {
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.fillRect(x + 0.15, y + 0.2, 0.12, 0.6);
+      }
+      if (d.id === 'tree' || d.id === 'plant') {
+        g.fillStyle = d.accent ?? '#3f6a3c';
+        g.beginPath();
+        g.arc(x + 0.5, y + 0.45, 0.42, 0, Math.PI * 2);
+        g.fill();
+      }
+    } else if (this.map.def(tx, ty - 1).tall) {
+      // 벽 아래 바닥에 그림자
+      const grad = g.createLinearGradient(0, y, 0, y + 0.45);
+      grad.addColorStop(0, 'rgba(0,0,0,0.22)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(x, y, 1, 0.45);
+    }
+    if (d.id === 'bed') {
+      g.fillStyle = '#f7f2e8';
+      g.fillRect(x + 0.1, y + 0.1, 0.8, 0.8);
+    }
+    if (d.id === 'road' && ty % 6 === 2 && tx % 4 < 2) {
+      g.fillStyle = 'rgba(240,230,190,0.5)';
+      g.fillRect(x, y + 0.45, 1, 0.08);
+    }
+  }
+
+  private drawLabels(s: GameSession): void {
+    const ctx = this.wctx;
+    ctx.save();
+    ctx.font = '600 0.55px system-ui, "Malgun Gothic", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const l of this.cfg.world.labels) {
+      const [x, y] = l.at;
+      if (Math.abs(x - this.camera.x) > 40 || Math.abs(y - this.camera.y) > 30 || !this.visible({ x, y })) continue;
+      const text = t(this.cfg.text, l.textKey);
+      const w = ctx.measureText(text).width + 0.5;
+      ctx.fillStyle = 'rgba(40,38,44,0.75)';
+      roundRect(ctx, x - w / 2, y - 0.38, w, 0.76, 0.2);
+      ctx.fill();
+      ctx.fillStyle = '#f3ead8';
+      ctx.fillText(text, x, y + 0.02);
+    }
+    void s;
+    ctx.restore();
+  }
+
+  private drawInteractHints(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const p = s.player.pos;
+    const markers = new Set(s.objectives.visible().map((o) => o.def.marker).filter((m): m is string => !!m));
+    for (const it of this.cfg.world.interactables) {
+      const [x, y] = it.at;
+      const d = Math.hypot(x - p.x, y - p.y);
+      const objective = markers.has(it.id);
+      if (d > 7 && !objective) continue;
+      const a = objective ? 0.8 : Math.max(0, 1 - d / 7) * 0.5;
+      ctx.fillStyle = objective ? `rgba(255, 214, 102, ${a})` : `rgba(255, 250, 230, ${a})`;
+      ctx.beginPath();
+      ctx.arc(x, y, objective ? 0.16 + 0.05 * Math.sin(ps.time * 4) : 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (const portal of this.cfg.world.portals) {
+      const [x, y] = portal.at;
+      if (Math.hypot(x - p.x, y - p.y) > 9) continue;
+      ctx.strokeStyle = 'rgba(255,250,230,0.5)';
+      ctx.lineWidth = 0.06;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.35 + 0.05 * Math.sin(ps.time * 3), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  private drawViewCones(s: GameSession): void {
+    const ctx = this.wctx;
+    const p = s.player.pos;
+    for (const n of s.activeNpcs()) {
+      const prof = n.profile;
+      if (!prof.approaches || n.state === 'dialogue' || n.state === 'seated') continue;
+      if (Math.hypot(n.pos.x - p.x, n.pos.y - p.y) > prof.viewDistance + 6) continue;
+      const half = (prof.viewHalfAngleDeg * Math.PI) / 180;
+      const r = prof.viewDistance;
+      const g = ctx.createRadialGradient(n.pos.x, n.pos.y, 0.3, n.pos.x, n.pos.y, r);
+      const hot = n.pursuing ? 0.16 : 0.06 + n.notice * 0.1;
+      g.addColorStop(0, `rgba(255, 200, 150, ${hot})`);
+      g.addColorStop(1, 'rgba(255, 200, 150, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(n.pos.x, n.pos.y);
+      ctx.arc(n.pos.x, n.pos.y, r, n.facing - half, n.facing + half);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  private drawCrowd(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const v = this.camera.visibleTiles(3);
+    for (const a of s.crowd.agents) {
+      if (!a.active || a.pos.x < v.x0 || a.pos.x > v.x1 || a.pos.y < v.y0 || a.pos.y > v.y1 || !this.visible(a.pos)) continue;
+      const r = a.large ? 0.42 : 0.3;
+      const bob = Math.sin(a.phase) * 0.03;
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.beginPath();
+      ctx.ellipse(a.pos.x, a.pos.y + 0.18, r, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 피곤할수록 군중은 얼굴 없는 회색 덩어리처럼 보인다
+      const sat = Math.round(22 * (1 - ps.tired * 0.6 - ps.danger * 0.4));
+      ctx.fillStyle = `hsl(${a.hue}, ${sat}%, ${52 - ps.danger * 12}%)`;
+      ctx.beginPath();
+      ctx.arc(a.pos.x, a.pos.y + bob, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `hsl(${a.hue}, 10%, 74%)`;
+      ctx.beginPath();
+      ctx.arc(a.pos.x + a.dir.x * r * 0.35, a.pos.y + a.dir.y * r * 0.35 + bob, r * 0.48, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  private drawNpc(s: GameSession, n: Npc, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const { x, y } = n.pos;
+    const r = n.radius;
+    if (n.type === 'pet') {
+      this.drawCat(n, ps);
+      return;
+    }
+    if (n.type === 'ally') {
+      // 내 사람: 노란 오라
+      const g = ctx.createRadialGradient(x, y, 0.2, x, y, 2.4);
+      g.addColorStop(0, `rgba(255, 214, 90, ${0.35 + 0.08 * Math.sin(ps.time * 2)})`);
+      g.addColorStop(1, 'rgba(255, 214, 90, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const walking = n.speed > 0.1;
+    const bob = walking ? Math.sin(ps.time * 9 + x) * 0.04 : 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 0.2, r * 1.05, r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = n.profile.color;
+    ctx.beginPath();
+    ctx.arc(x, y + bob, r, 0, Math.PI * 2);
+    ctx.fill();
+    // 손 (몸짓)
+    const fx = Math.cos(n.facing);
+    const fy = Math.sin(n.facing);
+    if (n.gesture === 'reach' || n.gesture === 'wave') {
+      const ext = n.gesture === 'reach' ? 0.55 : 0.35 + 0.1 * Math.sin(ps.time * 10);
+      ctx.fillStyle = '#f0d9c2';
+      ctx.beginPath();
+      ctx.arc(x + fx * (r + ext) - fy * 0.18, y + fy * (r + ext) + fx * 0.18 + bob, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      if (n.gesture === 'reach') {
+        ctx.fillStyle = '#fffbe8';
+        ctx.fillRect(x + fx * (r + ext) - 0.12, y + fy * (r + ext) - 0.16, 0.24, 0.32);
+      }
+    }
+    // 머리 + 바라보는 쪽
+    ctx.fillStyle = '#f0d9c2';
+    ctx.beginPath();
+    ctx.arc(x + fx * r * 0.3, y + fy * r * 0.3 + bob, r * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a3036';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(x + fx * r * 0.62 - fy * side * 0.1, y + fy * r * 0.62 + fx * side * 0.1 + bob, 0.045, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 알아챔 표시 (물음표 → 느낌표). 수치 대신 모양으로
+    if (n.notice > 0.15 && n.type !== 'ally' && n.state !== 'dialogue' && n.state !== 'seated') {
+      const full = n.pursuing;
+      ctx.save();
+      ctx.font = `700 ${full ? 0.62 : 0.5}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = full ? '#ff8a6a' : `rgba(255, 240, 210, ${0.4 + n.notice * 0.6})`;
+      ctx.fillText(full ? '!' : '?', x, y - r - 0.35 + bob);
+      ctx.restore();
+    }
+    void s;
+  }
+
+  private drawCat(n: Npc, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const { x, y } = n.pos;
+    const fx = Math.cos(n.facing);
+    const fy = Math.sin(n.facing);
+    ctx.fillStyle = n.profile.color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 0.3, 0.2, n.facing, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + fx * 0.27, y + fy * 0.27, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = n.profile.color;
+    ctx.lineWidth = 0.07;
+    ctx.beginPath();
+    ctx.moveTo(x - fx * 0.28, y - fy * 0.28);
+    ctx.quadraticCurveTo(x - fx * 0.5 + Math.sin(ps.time * 3) * 0.15, y - fy * 0.5, x - fx * 0.55, y - fy * 0.55 - 0.15);
+    ctx.stroke();
+  }
+
+  private drawPlayer(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const p = s.player;
+    if (s.mode.kind === 'travel') return;
+    const { x, y } = p.pos;
+    const r = this.cfg.player.radius;
+    // 번아웃: 주저앉는다
+    const sink = ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0;
+    const bob = p.moving ? Math.sin(p.walkPhase) * 0.035 : 0;
+    // 개인 공간 버블
+    ctx.strokeStyle = `rgba(255,255,255,${0.08 + ps.stress * 0.12})`;
+    ctx.lineWidth = 0.04;
+    ctx.setLineDash([0.12, 0.12]);
+    ctx.beginPath();
+    ctx.arc(x, y, this.cfg.balance.personalSpace.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 0.2, r * 1.1 * (1 + sink * 0.4), r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const scale = 1 - sink * 0.25;
+    ctx.save();
+    ctx.translate(x, y + bob + sink * 0.12);
+    ctx.scale(scale, scale);
+    // 후드티
+    ctx.fillStyle = s.player.hidden ? '#567a8f' : '#6c8fb2';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    const fx = Math.cos(p.facing);
+    const fy = Math.sin(p.facing);
+    // 얼굴: 홍조만큼 붉어진다
+    const fl = ps.flush;
+    ctx.fillStyle = `rgb(${240 + fl * 10}, ${218 - fl * 90}, ${196 - fl * 90})`;
+    const look = ps.phone > 0.5 ? 0.12 : 0.3;
+    ctx.beginPath();
+    ctx.arc(fx * r * look, fy * r * look, r * 0.56, 0, Math.PI * 2);
+    ctx.fill();
+    if (!p.mask) {
+      ctx.fillStyle = '#2e2a30';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        if (ps.eyes > 0.5) ctx.rect(fx * r * 0.62 - fy * side * 0.1 - 0.05, fy * r * 0.62 + fx * side * 0.1 - 0.012, 0.1, 0.024);
+        else ctx.arc(fx * r * 0.62 - fy * side * 0.1, fy * r * 0.62 + fx * side * 0.1, 0.045, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = '#e8edf0';
+      ctx.beginPath();
+      ctx.arc(fx * r * 0.5, fy * r * 0.5, r * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3d4250';
+      ctx.beginPath();
+      ctx.arc(-fx * r * 0.1, -fy * r * 0.1, r * 0.62, p.facing + Math.PI * 0.6, p.facing + Math.PI * 1.4);
+      ctx.fill();
+    }
+    if (p.earphones) {
+      ctx.fillStyle = '#f5f5f5';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(-fy * side * r * 0.62, fx * side * r * 0.62, 0.08, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (ps.cover > 0.3) {
+      ctx.fillStyle = '#f0d4bb';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(fx * r * 0.5 - fy * side * r * 0.55, fy * r * 0.5 + fx * side * r * 0.55, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (ps.phone > 0.3) {
+      ctx.fillStyle = '#20232b';
+      ctx.fillRect(fx * r * 0.95 - 0.1, fy * r * 0.95 - 0.13, 0.2, 0.26);
+      ctx.fillStyle = `rgba(160, 210, 255, ${0.8 * ps.phone})`;
+      ctx.fillRect(fx * r * 0.95 - 0.07, fy * r * 0.95 - 0.1, 0.14, 0.2);
+    }
+    // 진땀
+    if (ps.sweat > 0.3) {
+      ctx.fillStyle = 'rgba(170, 215, 255, 0.85)';
+      const k = (ps.time * 1.5) % 1;
+      ctx.beginPath();
+      ctx.arc(r * 0.7, -r * 0.5 + k * 0.4, 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** 나를 보는 시선: 가늘고 따가운 선 */
+  private drawGaze(s: GameSession, ps: PresentationState): void {
+    const ctx = this.wctx;
+    const p = s.player.pos;
+    const alpha = this.cfg.presentation.fx.gazeLineAlpha;
+    for (const n of s.activeNpcs()) {
+      if (!n.gazing || n.type === 'ally' || n.type === 'pet') continue;
+      const d = Math.hypot(n.pos.x - p.x, n.pos.y - p.y);
+      if (d > this.cfg.balance.gaze.range) continue;
+      const a = alpha * Math.min(1, n.notice) * (0.6 + 0.4 * ps.stress);
+      ctx.strokeStyle = n.percept.eyeContact ? `rgba(255, 120, 100, ${a})` : `rgba(255, 230, 200, ${a * 0.6})`;
+      ctx.lineWidth = 0.035 + ps.flush * 0.03;
+      ctx.beginPath();
+      const steps = Math.ceil(d * 3);
+      for (let i = 0; i <= steps; i++) {
+        const k = i / steps;
+        const jitter = (i % 2 === 0 ? 1 : -1) * 0.06 * (0.3 + ps.stress) * (i > 0 && i < steps ? 1 : 0);
+        const nx = -(p.y - n.pos.y) / d;
+        const ny = (p.x - n.pos.x) / d;
+        const px = n.pos.x + (p.x - n.pos.x) * k + nx * jitter;
+        const py = n.pos.y + (p.y - n.pos.y) * k + ny * jitter;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  }
+
+  /** 소리의 시각 대체 표시: 발소리·말소리 파동. 이어폰을 끼면 보이지 않는다 (후방 접근 감지 불가) */
+  private updateRings(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    const ctx = this.wctx;
+    const p = s.player.pos;
+    this.ringTimer -= dt;
+    if (this.ringTimer <= 0 && st.visualCues && this.cfg.presentation.fx.soundRings) {
+      this.ringTimer = 0.45;
+      for (const n of s.activeNpcs()) {
+        if (Math.hypot(n.pos.x - p.x, n.pos.y - p.y) > 14) continue;
+        if (n.speed > 0.1 && ps.earphones < 0.5) this.rings.push({ x: n.pos.x, y: n.pos.y, age: 0, life: 0.9, radius: n.pursuing ? 1.6 : 1, color: n.pursuing ? '255,150,120' : '230,230,240' });
+        if (n.state === 'dialogue' && s.mode.kind !== 'dialogue') this.rings.push({ x: n.pos.x, y: n.pos.y, age: 0, life: 1, radius: 1.3, color: '255,220,160' });
+      }
+      if (s.phone.ringing) this.rings.push({ x: p.x, y: p.y, age: 0, life: 0.6, radius: 1.2, color: '160,210,255' });
+    }
+    for (const e of ps.sounds) if (e.id === 'knock' || e.id === 'doorbell') this.rings.push({ x: p.x, y: p.y, age: 0, life: 1, radius: 3, color: '255,190,120' });
+    for (const r of this.rings) r.age += dt;
+    this.rings = this.rings.filter((r) => r.age < r.life);
+    ctx.lineWidth = 0.05;
+    for (const r of this.rings) {
+      const k = r.age / r.life;
+      ctx.strokeStyle = `rgba(${r.color}, ${(1 - k) * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 0.3 + k * r.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // ───────────────────────── 합성 ─────────────────────────
+
+  private composite(s: GameSession, ps: PresentationState, st: Settings): void {
+    const ctx = this.ctx;
+    const fx = this.cfg.presentation.fx;
+    const dist = st.distortion;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    const sat = Math.max(0.15, 1 - ps.tired * fx.tiredDesaturation - ps.danger * 0.2 - ps.critical * 0.25 + ps.sanctuary * 0.1);
+    const blur = st.chromatic ? ps.migraine * fx.migraineBlurPx * dist : 0;
+    const sepia = ps.sanctuary * fx.homeAmber;
+    const bright = 1 + ps.migraine * 0.15 * dist - ps.critical * 0.12 + ps.sanctuary * 0.03;
+    const filter = `saturate(${sat.toFixed(3)}) sepia(${sepia.toFixed(3)}) brightness(${bright.toFixed(3)})${blur > 0.05 ? ` blur(${(blur * this.dpr).toFixed(2)}px)` : ''}`;
+
+    // Danger: 진행 방향으로 공간이 늘어난다 (복도가 길어 보이는 원근 왜곡)
+    const stretch = this.cfg.presentation.camera.dangerStretch * (ps.danger + ps.critical * 0.5) * dist;
+    const md = s.player.moveDir;
+    if (md) this.stretchAxis = lerpAngle(this.stretchAxis, Math.atan2(md.y, md.x), 0.05);
+    const pp = this.camera.toScreen(s.player.pos);
+    ctx.save();
+    if (stretch > 0.002) {
+      ctx.translate(pp.x * this.dpr, pp.y * this.dpr);
+      ctx.rotate(this.stretchAxis);
+      ctx.scale(1 + stretch, 1 - stretch * 0.3);
+      ctx.rotate(-this.stretchAxis);
+      ctx.translate(-pp.x * this.dpr, -pp.y * this.dpr);
+    }
+    ctx.filter = filter;
+    ctx.drawImage(this.world, 0, 0);
+    ctx.filter = 'none';
+    // 편두통: 색수차(겹쳐 보임)와 번지는 빛
+    if (st.chromatic && ps.migraine > 0.04) {
+      const off = fx.chromaticPx * ps.migraine * dist * this.dpr * (1 + 0.3 * Math.sin(ps.time * 5));
+      ctx.globalAlpha = 0.22 * ps.migraine;
+      ctx.filter = `${filter} hue-rotate(110deg)`;
+      ctx.drawImage(this.world, off, 0);
+      ctx.filter = `${filter} hue-rotate(-110deg)`;
+      ctx.drawImage(this.world, -off, off * 0.3);
+      ctx.globalCompositeOperation = 'screen';
+      ctx.filter = `blur(${(6 * this.dpr).toFixed(1)}px)`;
+      ctx.globalAlpha = 0.1 * ps.migraine;
+      ctx.drawImage(this.world, 0, 0);
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+  }
+
+  // ───────────────────────── 심리 오버레이 ─────────────────────────
+
+  private overlays(s: GameSession, ps: PresentationState, st: Settings): void {
+    const ctx = this.ctx;
+    const fx = this.cfg.presentation.fx;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const d = this.dpr;
+    const pp = this.camera.toScreen(s.player.pos);
+    const cx = pp.x * d;
+    const cy = pp.y * d;
+    const tile = this.camera.scale * d;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // 시야 반경: 지칠수록 주변이 어두워지고 좁아진다 (터널)
+    const lightT = Math.min(1, ps.tired * 0.25 + ps.danger * 0.45 + ps.critical * 0.6);
+    const radius = (fx.lightRadiusTiles + (fx.lightRadiusCritical - fx.lightRadiusTiles) * lightT) * tile * (1 - ps.phone * fx.lightRadiusTiles * 0.04);
+    const dark = Math.min(0.94, 0.12 + ps.tired * 0.15 + ps.danger * 0.3 + ps.critical * fx.criticalTunnel * 0.5 + ps.phone * 0.35) * (1 - ps.sanctuary * 0.85);
+    if (dark > 0.02) {
+      const g = ctx.createRadialGradient(cx, cy, radius * 0.35, cx, cy, radius * 1.15);
+      g.addColorStop(0, 'rgba(8,8,12,0)');
+      g.addColorStop(1, `rgba(8,8,12,${dark})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 스트레스: 붉은 테두리 비네팅 (심박에 맞춰 조여 든다)
+    const v = ps.stress * fx.stressVignette * (1 - ps.sanctuary);
+    if (v > 0.02) {
+      const inner = Math.min(W, H) * (0.42 - 0.08 * ps.beat * ps.stress);
+      const g = ctx.createRadialGradient(W / 2, H / 2, inner, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+      g.addColorStop(0, 'rgba(120, 10, 20, 0)');
+      g.addColorStop(1, fx.redTint.replace(/[\d.]+\)$/, `${Math.min(0.75, v)})`));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Critical: 검은 터널 + 박동
+    if (ps.critical > 0.02) {
+      const inner = Math.min(W, H) * (0.3 - ps.critical * 0.12 - ps.beat * 0.03);
+      const g = ctx.createRadialGradient(cx, cy, Math.max(10, inner), cx, cy, Math.hypot(W, H) * 0.55);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, `rgba(0,0,0,${ps.critical * fx.criticalTunnel})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 홍조: 화면 아래에서 올라오는 붉은 열 아지랑이
+    if (ps.flush > 0.03) {
+      const h = H * fx.flushHeight * (0.5 + ps.flush * 0.5);
+      for (let i = 0; i < 6; i++) {
+        const yy = H - (h * i) / 6;
+        const wave = Math.sin(ps.time * 3 + i * 1.3) * 8 * d * st.distortion;
+        const g = ctx.createLinearGradient(0, yy - h / 6, 0, yy);
+        const a = ps.flush * 0.22 * (1 - i / 6);
+        g.addColorStop(0, 'rgba(220, 50, 50, 0)');
+        g.addColorStop(1, `rgba(225, 60, 55, ${a})`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, yy);
+        for (let x = 0; x <= W; x += W / 12) ctx.lineTo(x, yy - h / 6 + Math.sin(x / (80 * d) + ps.time * 2 + i) * wave);
+        ctx.lineTo(W, yy);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // 폰 화면만 보는 중: 아래쪽에서 올라오는 차가운 빛
+    if (ps.phone > 0.05) {
+      const g = ctx.createRadialGradient(cx, cy + 40 * d, 5, cx, cy + 40 * d, 160 * d);
+      g.addColorStop(0, `rgba(150, 200, 255, ${0.18 * ps.phone})`);
+      g.addColorStop(1, 'rgba(150, 200, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 안전지대: 앰버 톤
+    if (ps.sanctuary > 0.02) {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) * 0.7);
+      g.addColorStop(0, `rgba(255, 190, 110, ${0.1 * ps.sanctuary})`);
+      g.addColorStop(1, `rgba(120, 60, 20, ${0.28 * ps.sanctuary})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 기습: 짧은 섬광 (깜빡임 끄기 지원)
+    if (st.flash && ps.trauma > 0.5) {
+      ctx.fillStyle = `rgba(255, 245, 235, ${(ps.trauma - 0.5) * 0.35})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (st.flash && ps.hurt > 0.05) {
+      ctx.fillStyle = `rgba(160, 20, 30, ${ps.hurt * 0.12})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 눈 감기: 암전. 소리 파동만 희미하게 남는다
+    if (ps.eyes > 0.01) {
+      ctx.fillStyle = `rgba(4, 4, 8, ${ps.eyes * 0.96})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 번아웃: 시야 암전
+    if (ps.burnoutTime >= 0) {
+      const k = Math.min(1, ps.burnoutTime / fx.burnoutFadeSec);
+      const g = ctx.createRadialGradient(cx, cy, Math.max(1, (1 - k) * Math.max(W, H) * 0.5), cx, cy, Math.max(W, H));
+      g.addColorStop(0, `rgba(0,0,0,${k * k})`);
+      g.addColorStop(1, `rgba(0,0,0,${Math.min(1, k * 1.5)})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 외시경: 둥근 렌즈 너머로만 보인다
+    if (s.mode.kind === 'peephole') {
+      const r = Math.min(W, H) * 0.32;
+      const g = ctx.createRadialGradient(W / 2, H / 2, r * 0.85, W / 2, H / 2, r);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.arc(W / 2, H / 2, r, 0, Math.PI * 2, true);
+      ctx.fill();
+    }
+
+    // 이동 중 페이드 (계단·지하철)
+    if (s.mode.kind === 'travel') {
+      const m = s.mode;
+      const k = Math.min(1, Math.min(m.timer, m.total - m.timer) / 0.4);
+      ctx.fillStyle = `rgba(0,0,0,${Math.max(0, Math.min(1, k))})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (s.mode.kind === 'elevator' && s.mode.phase === 'riding') {
+      ctx.fillStyle = `rgba(20,20,26,${0.25 + ps.awkward * 0.25})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /** 전체 지도 (폰 지도 앱) 용 미니맵 이미지 */
+  buildMinimap(scale: number): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = this.map.width * scale;
+    c.height = 140 * scale;
+    const g = c.getContext('2d')!;
+    for (let y = 0; y < 140; y++) {
+      for (let x = 0; x < this.map.width; x++) {
+        g.fillStyle = this.map.def(x, y).color;
+        g.fillRect(x * scale, y * scale, scale, scale);
+      }
+    }
+    g.font = `600 ${scale * 2.6}px system-ui, "Malgun Gothic", sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    for (const l of this.cfg.world.labels) {
+      if (l.at[1] >= 140) continue;
+      const text = t(this.cfg.text, l.textKey);
+      const w = g.measureText(text).width + scale * 2;
+      g.fillStyle = 'rgba(30,28,34,0.8)';
+      g.fillRect(l.at[0] * scale - w / 2, l.at[1] * scale - scale * 1.8, w, scale * 3.6);
+      g.fillStyle = '#f3ead8';
+      g.fillText(text, l.at[0] * scale, l.at[1] * scale);
+    }
+    return c;
+  }
+}
+
+function lerpAngle(a: number, b: number, k: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * k;
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+export type { Vec2 };

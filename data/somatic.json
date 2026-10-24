@@ -1,0 +1,15 @@
+{
+  "flush": {
+    "gazeCount": 2,
+    "gazeRisePerSec": 0.06,
+    "decayPerSec": 0.025,
+    "coverDecayPerSec": 0.15,
+    "refusal": 0.35,
+    "slip": 0.3,
+    "remarkThreshold": 0.55
+  },
+  "migraine": { "onsetSec": 60, "risePerSec": 0.02, "decayPerSec": 0.01, "eyesClosedDecayPerSec": 0.08 },
+  "stutter": { "stress": 80 },
+  "sweat": { "stress": 70, "sustainSec": 30, "slipChance": 0.05 },
+  "remedies": { "coldDrink": 0.5, "washFaceStressRelief": 25 }
+}

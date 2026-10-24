@@ -1,0 +1,257 @@
+{
+  "id": "day3",
+  "weekdayKey": "weekday.fri",
+  "titleKey": "day3.title",
+  "introKey": "day3.intro",
+  "start": "07:50",
+  "spawn": "player",
+  "flags": {
+    "weeklyEval": true,
+    "monthEnd": false
+  },
+  "objectives": [
+    {
+      "id": "commute",
+      "textKey": "obj.commute",
+      "on": "enter:officeFloor",
+      "deadline": "09:00",
+      "late": {
+        "income": -8
+      },
+      "marker": "officeFloor"
+    },
+    {
+      "id": "work",
+      "textKey": "obj.workFriday",
+      "on": "done:work",
+      "requires": [
+        "commute"
+      ],
+      "marker": "officeDesk"
+    },
+    {
+      "id": "dinner",
+      "textKey": "obj.dinner",
+      "on": "seated",
+      "requires": [
+        "work"
+      ],
+      "deadline": "19:40",
+      "late": {
+        "income": -6
+      },
+      "marker": "restaurant"
+    },
+    {
+      "id": "toast",
+      "textKey": "obj.toast",
+      "on": "done:toast",
+      "mandatory": true,
+      "requires": [
+        "dinner"
+      ]
+    },
+    {
+      "id": "escape",
+      "textKey": "obj.escape",
+      "on": "exit:restaurant",
+      "requires": [
+        "toast"
+      ],
+      "deadline": "21:30",
+      "lateStimulus": "secondRound",
+      "marker": "alleySouth"
+    },
+    {
+      "id": "home",
+      "textKey": "obj.home",
+      "on": "interact:bed",
+      "requires": [
+        "escape"
+      ],
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "08:20",
+      "kind": "message",
+      "contact": "teamChat",
+      "textKey": "phone.team.dinner"
+    },
+    {
+      "at": "08:45",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.friday"
+    },
+    {
+      "on": "done:work",
+      "kind": "call",
+      "contact": "bank",
+      "textKey": "phone.bank.card"
+    },
+    {
+      "on": "done:toast",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.sos"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "to": "09:30"
+    },
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "guard",
+      "profile": "staff",
+      "at": "guard"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer"
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "boss",
+      "profile": "boss",
+      "at": "boss",
+      "from": "09:00",
+      "to": "18:00"
+    },
+    {
+      "id": "coworkerA",
+      "profile": "coworker",
+      "at": "coworkerA",
+      "from": "09:00",
+      "to": "18:00"
+    },
+    {
+      "id": "coworkerB",
+      "profile": "coworker",
+      "at": "pantryA",
+      "path": "pantryIdle",
+      "from": "09:00",
+      "to": "18:00"
+    },
+    {
+      "id": "coworkerC",
+      "profile": "coworker",
+      "at": "coworkerC",
+      "path": "officeLoop",
+      "from": "09:00",
+      "to": "18:00"
+    },
+    {
+      "id": "restBoss",
+      "profile": "boss",
+      "at": "restBoss",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "restCoworkerA",
+      "profile": "coworker",
+      "at": "restCoworkerA",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "restCoworkerB",
+      "profile": "coworker",
+      "at": "restCoworkerB",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "restCoworkerC",
+      "profile": "coworker",
+      "at": "restCoworkerC",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "restCoworkerD",
+      "profile": "coworker",
+      "at": "restCoworkerD",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "diners1",
+      "profile": "diner",
+      "at": "diners1",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "diners2",
+      "profile": "diner",
+      "at": "diners2",
+      "from": "18:00",
+      "seated": true
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    }
+  ],
+  "work": {
+    "endTime": "18:20",
+    "tasks": 4,
+    "focusPerSec": 22,
+    "pingEverySec": [
+      4,
+      7
+    ],
+    "pingTimeoutSec": 4
+  },
+  "dinner": {
+    "area": "restaurant",
+    "seatChoiceSec": 5,
+    "toastAfterSec": 35,
+    "laughEverySec": [
+      18,
+      32
+    ],
+    "laughWindowSec": 0.5,
+    "grillCookSec": 6,
+    "grillBurnSec": 4,
+    "seatEffects": {
+      "head": {
+        "gazeExtra": 3,
+        "bossAttention": 1
+      },
+      "middle": {
+        "gazeExtra": 2,
+        "bossAttention": 0.5
+      },
+      "corner": {
+        "gazeExtra": 0,
+        "bossAttention": 0.2
+      }
+    },
+    "minutesPerSecond": 1.5
+  }
+}

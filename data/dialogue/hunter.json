@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "안녕하세요~ 잠깐만 시간 괜찮으세요?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "이번에 새로 오픈한 필라테스인데요, 첫 달 무료예요!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "혹시 이 근처 직장 다니세요?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "설문 하나만 해주시면 선물도 드려요~",
+      "kind": "opening",
+      "durationSec": 2.2
+    },
+    {
+      "text": "피부가 좀 건조해 보이시는데, 저희 샘플 써보세요.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 수줍음 많으시구나~",
+    "kind": "remark",
+    "durationSec": 2.0
+  },
+  "closers": {
+    "satisfied": "네~ 좋은 하루 되세요!",
+    "parried": "아 네네, 다음에 들러주세요~",
+    "endured": "전단지만 가져가세요~",
+    "sos": "아 통화하세요~",
+    "awkward": "…네, 안녕히 가세요."
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "고객님~ 이거 하나 드셔보고 가세요!",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "오늘 만두 행사해요, 하나 사면 하나 더!",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "어떠세요? 맛있죠?",
+      "kind": "question",
+      "durationSec": 2.0
+    },
+    {
+      "text": "이거 진짜 요즘 제일 잘 나가요.",
+      "kind": "story",
+      "durationSec": 2.2
+    },
+    {
+      "text": "장바구니에 하나 넣어드릴까요?",
+      "kind": "question",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "고객님 얼굴 빨개지셨다~ 매웠어요?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "맛있게 드세요~!",
+    "parried": "네~ 천천히 보세요!",
+    "endured": "또 오세요~",
+    "sos": "네네 통화하세요~",
+    "awkward": "…네, 천천히 보세요."
+  }
+}

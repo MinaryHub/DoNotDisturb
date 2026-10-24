@@ -1,0 +1,13 @@
+{
+  "parryWindowSec": 0.4,
+  "gapSec": 0.9,
+  "satisfactionPerReply": 16,
+  "perfectMultiplier": 1.6,
+  "wrongExtraSec": 10,
+  "wrongSatisfactionLoss": 12,
+  "smileDropPerSec": 6,
+  "ignoredLoss": 6,
+  "sosDelaySec": 10,
+  "flushRemarkChance": 0.35,
+  "speech": { "beatSec": 1.5, "zoneCenter": 0.72, "zoneWidth": 0.24 }
+}

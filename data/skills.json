@@ -1,13 +1,8 @@
 {
-  "earphones": {
-    "auditoryMultiplier": 0.5,
-    "lowpassHz": 700,
-    "npcFootstepGain": 0
-  },
-  "phonePretend": {
-    "blocksEyeContact": true,
-    "pitchDeg": -35,
-    "moveMultiplier": 0.6,
-    "pitchLerpPerSec": 6
-  }
+  "earphones": { "auditoryMultiplier": 0.5, "lowpassHz": 700, "ambushChanceMultiplier": 2, "backApproachTapChance": 0.5 },
+  "phonePretend": { "blocksEyeContact": true, "moveMultiplier": 0.6, "viewNarrow": 0.55, "bumpMultiplier": 2 },
+  "coverCheeks": { "moveMultiplier": 0.8 },
+  "closeEyes": { "moveMultiplier": 0.7 },
+  "hide": { "noticeMultiplier": 0.25 },
+  "mask": { "hidesFlush": true, "stuffyStressPerSec": 0.4 }
 }

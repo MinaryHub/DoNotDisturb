@@ -1,0 +1,175 @@
+{
+  "id": "day1",
+  "weekdayKey": "weekday.mon",
+  "titleKey": "day1.title",
+  "introKey": "day1.intro",
+  "start": "07:50",
+  "spawn": "player",
+  "flags": {
+    "weeklyEval": false,
+    "monthEnd": false
+  },
+  "objectives": [
+    {
+      "id": "mgmtCall",
+      "textKey": "obj.mgmtCall",
+      "on": "answered:mgmtOffice",
+      "mandatory": true
+    },
+    {
+      "id": "commute",
+      "textKey": "obj.commute",
+      "on": "enter:officeFloor",
+      "deadline": "09:00",
+      "late": {
+        "income": -8
+      },
+      "marker": "officeFloor"
+    },
+    {
+      "id": "meeting",
+      "textKey": "obj.meeting",
+      "on": "done:meeting",
+      "mandatory": true,
+      "requires": [
+        "commute"
+      ],
+      "marker": "meetingSeat"
+    },
+    {
+      "id": "work",
+      "textKey": "obj.work",
+      "on": "done:work",
+      "requires": [
+        "meeting"
+      ],
+      "marker": "officeDesk"
+    },
+    {
+      "id": "home",
+      "textKey": "obj.home",
+      "on": "interact:bed",
+      "requires": [
+        "work",
+        "meeting",
+        "mgmtCall"
+      ],
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "08:02",
+      "kind": "call",
+      "contact": "mgmtOffice",
+      "textKey": "phone.mgmt.inspection",
+      "mandatory": true
+    },
+    {
+      "at": "08:30",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.meeting"
+    },
+    {
+      "on": "done:meeting",
+      "kind": "message",
+      "contact": "teamChat",
+      "textKey": "phone.team.lunch"
+    },
+    {
+      "on": "done:work",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.park"
+    },
+    {
+      "at": "19:30",
+      "kind": "call",
+      "contact": "mom",
+      "textKey": "phone.mom.dinner"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "to": "09:30"
+    },
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "guard",
+      "profile": "staff",
+      "at": "guard"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer"
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "boss",
+      "profile": "boss",
+      "at": "boss",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerA",
+      "profile": "coworker",
+      "at": "coworkerA",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerB",
+      "profile": "coworker",
+      "at": "pantryA",
+      "path": "pantryIdle",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerC",
+      "profile": "coworker",
+      "at": "coworkerC",
+      "path": "officeLoop",
+      "from": "09:00"
+    },
+    {
+      "id": "friend",
+      "profile": "friend",
+      "at": "friendBench",
+      "from": "18:00"
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    }
+  ],
+  "work": {
+    "endTime": "18:05",
+    "tasks": 5,
+    "focusPerSec": 22,
+    "pingEverySec": [
+      4,
+      7
+    ],
+    "pingTimeoutSec": 4
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "어서 오세요~ 봉투 필요하세요?",
+    "kind": "question",
+    "durationSec": 2.0
+  },
+  "lines": [
+    {
+      "text": "포인트 적립하시겠어요?",
+      "kind": "question",
+      "durationSec": 2.0
+    },
+    {
+      "text": "영수증 드릴까요?",
+      "kind": "question",
+      "durationSec": 1.8
+    },
+    {
+      "text": "오늘 날씨 좋죠?",
+      "kind": "opening",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "괜찮으세요?",
+    "kind": "remark",
+    "durationSec": 1.6
+  },
+  "closers": {
+    "satisfied": "감사합니다~ 안녕히 가세요!",
+    "parried": "네, 안녕히 가세요~",
+    "endured": "감사합니다~",
+    "sos": "네, 안녕히 가세요~",
+    "awkward": "…감사합니다."
+  }
+}

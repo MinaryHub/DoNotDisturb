@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "어머, 302호 아니에요? 출근하시나 봐요~",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "요즘 엘리베이터 점검한다던데 혹시 들었어요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "우리 애가 이번에 시험을 봤는데요, 글쎄 그게…",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "날이 많이 쌀쌀해졌죠? 감기 조심해요.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "아, 그러고 보니 저번에 택배가 우리 집으로 잘못 왔더라고요.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "혼자 사시면 밥은 잘 챙겨 드세요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "관리비가 또 올랐대요. 진짜 너무하지 않아요?",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "아이고, 내가 바쁜 사람 붙잡고 있네.",
+      "kind": "opening",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 얼굴이 왜 이렇게 빨개요? 어디 아파요?",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "그럼 좋은 하루 보내요~!",
+    "parried": "아 그래요, 얼른 가봐요!",
+    "endured": "아이고 내 정신 좀 봐. 들어가요~",
+    "sos": "어머 전화 왔네, 받아요 받아요!",
+    "awkward": "…응, 그래요. 들어가요."
+  }
+}

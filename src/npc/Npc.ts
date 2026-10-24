@@ -1,329 +1,361 @@
-import * as THREE from 'three';
 import type { NpcProfile } from '../core/configSchemas';
-import type { StimulusBus } from '../sim/StimulusBus';
-import type { Navigation } from '../world/navigation';
-import { findProceduralRig, ProceduralAnimator, type CharacterAnimator } from './CharacterAnimator';
-import { perceive, type LineOfSight, type PerceptionResult } from './perception';
+import { dist, type TileMap, type Vec2 } from '../world/TileMap';
+import { angleDiff, angleTo, perceive, type Perception, type PlayerPercept } from './perception';
 
-/** 경량 행동 상태 (CLAUDE.md 5.9: Idle → Notice → Approach → AttemptTalk → Dialogue / GiveUp) */
-export type NpcState = 'patrol' | 'notice' | 'approach' | 'talk' | 'giveUp';
+// NPC 행동 상태 머신 (CLAUDE.md 5.9). 경량 행동 트리 대신 유형별 분기가 있는 상태 머신.
+//   Idle/Patrol → Notice → Approach → AttemptTalk → Dialogue / GiveUp
+//   Hunter: 알아채면 직선 돌진 / Stalker: 같은 매장 안에서 3m 거리 유지, 3초 응시 시 순간 접근
+//   Ally: 다가오지 않고 곁에 있으면 회복 / Pet: 집 안을 어슬렁거림
+// 사람은 적이 아니다. 이 코드는 '말을 걸고 싶어 하는 평범한 사람'의 동선을 흉내 낼 뿐이다.
 
-export interface NpcPlayerView {
-  eye: THREE.Vector3;
-  feet: THREE.Vector3;
-  forward: THREE.Vector3;
-  speed: number;
-  eyeContactBlocked: boolean;
-  /** 집(세이프 존) 안이면 NPC가 접근하지 않는다 */
-  inSafe: boolean;
+export type NpcState = 'idle' | 'patrol' | 'notice' | 'approach' | 'attemptTalk' | 'dialogue' | 'giveUp' | 'stalk' | 'seated';
+
+export interface NpcSpawn {
+  id: string;
+  profileId: string;
+  profile: NpcProfile;
+  pos: Vec2;
+  path?: { points: Vec2[]; loop: boolean };
+  seated?: boolean;
+  /** 이 NPC가 머무는 영역 (Stalker는 이 영역 안에서만 따라온다) */
+  areaId: string | null;
 }
 
 export interface NpcContext {
-  player: NpcPlayerView;
-  bus: StimulusBus;
-  los: LineOfSight;
+  map: TileMap;
+  player: PlayerPercept;
+  playerAreaId: string | null;
+  /** 지금은 누구도 말을 걸 수 없는 상황 (대화 중, 미니게임 중 등) */
+  talkBlocked: boolean;
+  rng: () => number;
 }
 
-const EYE_HEIGHT = 1.6;
-const REPATH_SEC = 0.4;
-
-/** 코드로 만든 그레이박스 NPC 모델. Kreate 캐릭터가 생기면 같은 노드 이름(HEAD/BODY/ARM_L/ARM_R)으로 교체 */
-export function createGreyboxNpcModel(color = 0x9fb4c8): THREE.Group {
-  const root = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
-  const skin = new THREE.MeshStandardMaterial({ color: 0xe8c9a8, roughness: 0.9 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.8, 4, 12), mat);
-  body.name = 'BODY';
-  body.position.y = 0.9;
-  const head = new THREE.Group();
-  head.name = 'HEAD';
-  head.position.y = 1.55;
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), skin);
-  skull.position.y = 0.05;
-  // 얼굴 방향 표시 (−Z가 정면)
-  const face = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.04), new THREE.MeshStandardMaterial({ color: 0x3b3b44 }));
-  face.position.set(0, 0.07, -0.13);
-  head.add(skull, face);
-  const arm = (name: string, x: number) => {
-    const pivot = new THREE.Group();
-    pivot.name = name;
-    pivot.position.set(x, 1.32, 0);
-    const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.5, 4, 8), mat);
-    mesh.position.y = -0.3;
-    pivot.add(mesh);
-    return pivot;
-  };
-  root.add(body, head, arm('ARM_L', -0.31), arm('ARM_R', 0.31));
-  return root;
-}
+export type NpcEvent = { type: 'talk'; npc: Npc; fromBehind: boolean } | { type: 'noticed'; npc: Npc };
 
 export class Npc {
-  readonly model: THREE.Group;
-  private readonly animator: CharacterAnimator;
-  state: NpcState = 'patrol';
-  /** 0~1, 1이 되면 플레이어를 알아챔 */
+  readonly id: string;
+  readonly profileId: string;
+  readonly profile: NpcProfile;
+  readonly pos: Vec2;
+  readonly home: Vec2;
+  readonly radius: number;
+  readonly areaId: string | null;
+  facing = Math.PI / 2;
+  state: NpcState;
   notice = 0;
-  readonly position = new THREE.Vector3();
-  private readonly prevPosition = new THREE.Vector3();
-  yaw = 0;
-  private prevYaw = 0;
-  lastPerception: PerceptionResult | null = null;
+  /** 이번 스텝 지각 결과 */
+  percept: Perception = { dist: Infinity, inView: false, heard: false, eyeContact: false };
+  /** 플레이어를 바라보고 있는지 (시선 수 집계·홍조 연출) */
+  gazing = false;
+  speed = 0;
+  /** 몸짓 애니메이션용 (끄덕임, 손 내밀기) */
+  gesture: 'none' | 'reach' | 'wave' | 'laugh' = 'none';
+  cooldown = 0;
+  /** 플레이어가 이 NPC를 응시한 누적 시간 (Stalker) */
+  staredAt = 0;
 
-  private waypointIndex = 0;
-  private waitTimer = 0;
-  private stateTimer = 0;
-  private stareTimer = 0;
-  private lostTimer = 0;
-  private outOfRangeTimer = 0;
-  private path: THREE.Vector3[] = [];
+  private readonly path?: { points: Vec2[]; loop: boolean };
   private pathIndex = 0;
-  private repathTimer = 0;
-  private speed = 0;
-  private readonly gazeKey: string;
-  private readonly lingerKey: string;
+  private pathDir = 1;
+  private wait = 0;
+  private stateTime = 0;
+  private route: Vec2[] = [];
+  private repath = 0;
+  private lostSight = 0;
+  private stare = 0;
+  private readonly events: NpcEvent[] = [];
 
-  constructor(
-    readonly id: string,
-    readonly profile: NpcProfile,
-    spawn: { position: THREE.Vector3; yaw: number },
-    private readonly patrol: THREE.Vector3[],
-    private readonly nav: Navigation | null,
-  ) {
-    this.model = createGreyboxNpcModel();
-    this.model.name = `npc:${id}`;
-    const rig = findProceduralRig(this.model);
-    if (!rig) throw new Error(`NPC ${id}: HEAD/BODY/ARM_L/ARM_R 노드가 없습니다`);
-    this.animator = new ProceduralAnimator(rig);
-    this.position.copy(this.snap(spawn.position));
-    this.prevPosition.copy(this.position);
-    this.yaw = this.prevYaw = spawn.yaw;
-    this.gazeKey = `npc:${id}:gaze`;
-    this.lingerKey = `npc:${id}:linger`;
-    this.syncVisual(1);
+  constructor(spawn: NpcSpawn) {
+    this.id = spawn.id;
+    this.profileId = spawn.profileId;
+    this.profile = spawn.profile;
+    this.pos = { ...spawn.pos };
+    this.home = { ...spawn.pos };
+    this.path = spawn.path;
+    this.areaId = spawn.areaId;
+    this.radius = spawn.profile.radius ?? 0.33;
+    this.state = spawn.seated ? 'seated' : spawn.path ? 'patrol' : 'idle';
   }
 
-  /** 현재 이동 속도 (발소리 연출용) */
-  get moveSpeed(): number {
-    return this.speed;
+  get type(): NpcProfile['type'] {
+    return this.profile.type;
   }
 
-  get eye(): THREE.Vector3 {
-    return this.position.clone().setY(this.position.y + EYE_HEIGHT);
+  /** 다가오는 중인지 (위협 태그 강조·발소리) */
+  get pursuing(): boolean {
+    return this.state === 'approach' || this.state === 'attemptTalk' || this.state === 'notice';
   }
 
-  get forward(): THREE.Vector3 {
-    return new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-  }
-
-  fixedUpdate(dt: number, ctx: NpcContext): void {
-    this.prevPosition.copy(this.position);
-    this.prevYaw = this.yaw;
+  update(dt: number, ctx: NpcContext): void {
+    this.stateTime += dt;
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    this.gesture = 'none';
+    this.speed = 0;
     const p = this.profile;
     const player = ctx.player;
 
-    const perception = perceive(
-      {
-        npcEye: this.eye,
-        npcForward: this.forward,
-        playerEye: player.eye,
-        playerForward: player.forward,
-        playerSpeed: player.speed,
-        eyeContactBlocked: player.eyeContactBlocked,
-      },
-      p,
-      ctx.los,
-    );
-    this.lastPerception = perception;
-    const aware = (perception.sees || perception.hears) && !player.inSafe;
-    this.stateTimer += dt;
+    this.percept = perceive(ctx.map, this.pos, this.facing, p, player);
+    const { inView, heard, eyeContact } = this.percept;
+    const reachable = !player.unreachable;
+
+    // 알아챔 게이지
+    if ((inView || heard) && reachable) {
+      // 가까울수록 빨리 알아챈다
+      const near = 1.2 - Math.min(1, this.percept.dist / p.viewDistance) * 0.8;
+      const mul = (inView ? near : 0.5) * (eyeContact ? p.eyeContactMultiplier : 1) * (player.hidden ? 0.25 : 1);
+      this.notice = Math.min(1, this.notice + p.noticeFillPerSec * mul * dt);
+    } else {
+      this.notice = Math.max(0, this.notice - p.noticeDecayPerSec * dt);
+    }
+    this.gazing = inView && reachable && this.notice >= 0.35 && this.state !== 'dialogue';
+    if (this.gazing && this.state !== 'approach') this.turnToward(angleTo(this.pos, player.pos), dt, 3);
+
+    // Stalker: 플레이어가 이쪽을 응시하는 시간 누적
+    if (this.type === 'stalker') {
+      const playerLooks = angleDiff(angleTo(player.pos, this.pos), player.facing) < 0.35 && !player.phonePretend && this.percept.dist < 10;
+      this.staredAt = playerLooks ? this.staredAt + dt : Math.max(0, this.staredAt - dt * 0.5);
+    }
 
     switch (this.state) {
-      case 'patrol': {
-        if (aware) {
-          // 가까울수록, 눈이 마주칠수록 빨리 알아챈다
-          const proximity = 1 + Math.max(0, 1 - perception.distance / p.viewDistance);
-          const eye = perception.eyeContact ? p.eyeContactMultiplier : 1;
-          this.notice = Math.min(1, this.notice + p.noticeFillPerSec * proximity * eye * dt * (perception.sees ? 1 : 0.5));
-        } else {
-          this.notice = Math.max(0, this.notice - p.noticeDecayPerSec * dt);
-        }
-        if (this.notice >= 1) this.enter('notice');
-        else this.followPatrol(dt);
+      case 'seated':
+        if (this.gazing) this.gesture = 'none';
         break;
-      }
+      case 'idle':
+      case 'patrol':
+        this.wander(dt, ctx);
+        this.considerApproach(ctx);
+        break;
+      case 'stalk':
+        this.updateStalk(dt, ctx);
+        break;
       case 'notice':
-        this.speed = 0;
-        this.faceTowards(player.feet, dt, 8);
-        if (this.stateTimer >= p.noticePauseSec) this.enter('approach');
+        // 잠깐 멈칫 → 다가옴 (Hunter는 바로 돌진)
+        if (this.stateTime >= (this.type === 'hunter' ? 0.15 : 0.6)) this.setState('approach');
         break;
-      case 'approach': {
-        this.lostTimer = aware ? 0 : this.lostTimer + dt;
-        if (this.lostTimer >= p.loseSightGiveUpSec || player.inSafe) {
-          this.enter('giveUp');
-          break;
-        }
-        const close = perception.distance <= p.talkRange;
-        this.stareTimer = close && perception.sees ? this.stareTimer + dt : 0;
-        if (this.stareTimer >= p.stareSec) {
-          this.enter('talk');
-          ctx.bus.emit(p.encounterStimulus, this.id);
-          break;
-        }
-        if (perception.distance > p.talkRange * 0.8) this.moveTo(player.feet, p.approachSpeed, dt);
-        else {
-          this.speed = 0;
-          this.faceTowards(player.feet, dt, 6);
-        }
+      case 'approach':
+        this.updateApproach(dt, ctx);
         break;
-      }
-      case 'talk': {
-        this.speed = 0;
-        this.faceTowards(player.feet, dt, 6);
-        const inRange = perception.distance <= p.lingerRange;
-        this.outOfRangeTimer = inRange ? 0 : this.outOfRangeTimer + dt;
-        if (this.stateTimer >= p.talkDurationSec || this.outOfRangeTimer > 1) this.enter('giveUp');
+      case 'attemptTalk':
+        this.updateAttempt(dt, ctx);
         break;
-      }
+      case 'dialogue':
+        this.turnToward(angleTo(this.pos, player.pos), dt, 6);
+        if (this.type === 'hunter') this.gesture = 'reach';
+        break;
       case 'giveUp':
-        this.notice = 0;
-        this.followPatrol(dt);
-        if (this.stateTimer >= p.cooldownSec) this.enter('patrol');
+        this.walkHome(dt, ctx);
         break;
     }
-
-    // 지속 자극: 대화 중 머무름, 다가오며 눈 맞춤
-    const talking = this.state === 'talk' && perception.distance <= p.lingerRange;
-    ctx.bus.setContinuous(this.lingerKey, p.lingerStimulus, talking ? 1 : 0);
-    const gazing = (this.state === 'notice' || this.state === 'approach') && perception.eyeContact;
-    ctx.bus.setContinuous(this.gazeKey, p.gazeStimulus, gazing ? 1 : 0);
-
-    this.animator.setLocomotion(this.speed);
-    this.animator.setTalking(this.state === 'talk');
-    this.animator.lookAt(this.state === 'patrol' && !aware ? null : player.eye);
   }
 
-  /** 렌더 프레임: 보간 + 애니메이션 */
-  frameUpdate(dt: number, alpha: number): void {
-    this.syncVisual(alpha);
-    this.animator.update(dt);
+  /** 대화 시작 (세션이 호출) */
+  beginDialogue(): void {
+    this.setState('dialogue');
   }
 
-  private syncVisual(alpha: number): void {
-    this.model.position.lerpVectors(this.prevPosition, this.position, alpha);
-    let d = this.yaw - this.prevYaw;
-    d = Math.atan2(Math.sin(d), Math.cos(d));
-    this.model.rotation.y = this.prevYaw + d * alpha;
+  /** 대화 종료: 쿨다운 후 원래 자리로 */
+  endDialogue(graceSec?: number): void {
+    this.notice = 0;
+    this.cooldown = graceSec ?? this.profile.cooldownSec;
+    this.staredAt = 0;
+    this.setState('giveUp');
   }
 
-  /** 스테이지 종료·재시작 시 지속 자극 해제 */
-  release(bus: StimulusBus): void {
-    bus.setContinuous(this.lingerKey, this.profile.lingerStimulus, 0);
-    bus.setContinuous(this.gazeKey, this.profile.gazeStimulus, 0);
+  /** 플레이어를 놓침 (세이프 존 잠금 = 추적 초기화) */
+  loseTrack(): void {
+    if (this.state === 'approach' || this.state === 'attemptTalk' || this.state === 'notice' || this.state === 'stalk') {
+      this.notice = 0;
+      this.cooldown = Math.max(this.cooldown, this.profile.cooldownSec * 0.5);
+      this.setState('giveUp');
+    }
   }
 
-  private enter(state: NpcState): void {
-    this.state = state;
-    this.stateTimer = 0;
-    this.stareTimer = 0;
-    this.lostTimer = 0;
-    this.outOfRangeTimer = 0;
-    this.path = [];
-    this.repathTimer = 0;
-    if (state === 'patrol' || state === 'giveUp') this.waypointIndex = this.nearestWaypoint();
+  drainEvents(): NpcEvent[] {
+    return this.events.splice(0);
   }
 
-  private followPatrol(dt: number): void {
-    if (this.patrol.length === 0) {
-      this.speed = 0;
+  private considerApproach(ctx: NpcContext): void {
+    const p = this.profile;
+    if (!p.approaches || this.cooldown > 0 || ctx.player.unreachable || ctx.talkBlocked) return;
+    if (this.type === 'stalker') {
+      if (ctx.playerAreaId && ctx.playerAreaId === this.areaId) this.setState('stalk');
       return;
     }
-    const target = this.patrol[this.waypointIndex]!;
-    if (this.position.distanceTo(target) < 0.2) {
-      this.speed = 0;
-      this.waitTimer += dt;
-      if (this.waitTimer >= this.profile.waypointWaitSec) {
-        this.waitTimer = 0;
-        this.waypointIndex = (this.waypointIndex + 1) % this.patrol.length;
-        this.path = [];
+    if (this.notice >= 1 && this.withinLeash(ctx.player.pos)) {
+      this.events.push({ type: 'noticed', npc: this });
+      this.setState('notice');
+    }
+  }
+
+  private updateStalk(dt: number, ctx: NpcContext): void {
+    const p = this.profile;
+    const player = ctx.player;
+    if (ctx.playerAreaId !== this.areaId || player.unreachable) {
+      this.setState('giveUp');
+      return;
+    }
+    const d = dist(this.pos, player.pos);
+    const keep = p.stalkDistance ?? 3;
+    this.turnToward(angleTo(this.pos, player.pos), dt, 4);
+    if (d > keep + 0.6) this.moveToward(player.pos, p.walkSpeed * 1.2, dt, ctx);
+    // 3초 응시하면 순간 접근 / 오래 따라다니면 결국 말을 건다
+    if (!ctx.talkBlocked && this.cooldown <= 0 && (this.staredAt >= (p.stareTriggerSec ?? 3) || this.stateTime > 25)) {
+      this.events.push({ type: 'noticed', npc: this });
+      this.setState('approach');
+    }
+  }
+
+  private updateApproach(dt: number, ctx: NpcContext): void {
+    const p = this.profile;
+    const player = ctx.player;
+    if (player.unreachable || ctx.talkBlocked) {
+      this.loseTrack();
+      return;
+    }
+    const d = dist(this.pos, player.pos);
+    this.lostSight = this.percept.inView || this.percept.heard ? 0 : this.lostSight + dt;
+    if (this.lostSight >= p.giveUpSec || !this.withinLeash(player.pos)) {
+      this.notice *= 0.3;
+      this.cooldown = p.cooldownSec * 0.4;
+      this.setState('giveUp');
+      return;
+    }
+    if (d <= p.talkRange) {
+      this.setState('attemptTalk');
+      return;
+    }
+    if (this.type === 'hunter') this.gesture = 'reach';
+    this.moveToward(player.pos, p.approachSpeed, dt, ctx);
+  }
+
+  private updateAttempt(dt: number, ctx: NpcContext): void {
+    const p = this.profile;
+    const player = ctx.player;
+    const d = dist(this.pos, player.pos);
+    this.turnToward(angleTo(this.pos, player.pos), dt, 8);
+    this.gesture = this.type === 'hunter' ? 'reach' : 'wave';
+    if (player.unreachable || ctx.talkBlocked) {
+      this.loseTrack();
+      return;
+    }
+    if (d > p.talkRange * 1.7) {
+      this.stare = 0;
+      this.setState('approach');
+      return;
+    }
+    // 1초 응시(또는 붙잡힘) → 대화. 뒤에서 다가온 경우 어깨 톡톡
+    const playerFacesMe = angleDiff(angleTo(player.pos, this.pos), player.facing) < Math.PI / 2;
+    this.stare += dt;
+    if (this.stare >= p.stareSec || d < 0.9) {
+      this.stare = 0;
+      this.events.push({ type: 'talk', npc: this, fromBehind: !playerFacesMe });
+      this.setState('dialogue');
+    }
+  }
+
+  private wander(dt: number, ctx: NpcContext): void {
+    if (this.type === 'pet') {
+      this.petWander(dt, ctx);
+      return;
+    }
+    if (!this.path || this.path.points.length < 2) {
+      if (dist(this.pos, this.home) > 0.3) this.moveToward(this.home, this.profile.walkSpeed, dt, ctx);
+      return;
+    }
+    if (this.wait > 0) {
+      this.wait -= dt;
+      return;
+    }
+    const target = this.path.points[this.pathIndex]!;
+    if (dist(this.pos, target) < 0.3) {
+      this.wait = this.profile.waypointWaitSec * (0.6 + ctx.rng() * 0.8);
+      const n = this.path.points.length;
+      if (this.path.loop) this.pathIndex = (this.pathIndex + 1) % n;
+      else {
+        if (this.pathIndex + this.pathDir >= n || this.pathIndex + this.pathDir < 0) this.pathDir *= -1;
+        this.pathIndex += this.pathDir;
       }
       return;
     }
-    this.moveTo(target, this.profile.walkSpeed, dt);
+    this.moveToward(target, this.profile.walkSpeed, dt, ctx);
   }
 
-  private nearestWaypoint(): number {
-    let best = 0;
-    let bestD = Infinity;
-    this.patrol.forEach((p, i) => {
-      const d = p.distanceTo(this.position);
-      if (d < bestD) {
-        bestD = d;
-        best = i;
-      }
-    });
-    return best;
-  }
-
-  private moveTo(goal: THREE.Vector3, speed: number, dt: number): void {
-    this.repathTimer -= dt;
-    if (this.path.length === 0 || this.repathTimer <= 0) {
-      this.path = this.computePath(goal);
-      this.pathIndex = 0;
-      this.repathTimer = REPATH_SEC;
+  private petWander(dt: number, ctx: NpcContext): void {
+    const d = dist(this.pos, ctx.player.pos);
+    if (d < 6 && d > 1.4 && ctx.playerAreaId === this.areaId) {
+      this.moveToward(ctx.player.pos, this.profile.walkSpeed, dt, ctx);
+      return;
     }
-    let budget = speed * dt;
-    let moved = 0;
-    while (budget > 1e-6 && this.pathIndex < this.path.length) {
-      const corner = this.path[this.pathIndex]!;
-      const to = corner.clone().sub(this.position);
-      const dist = to.length();
-      if (dist <= budget) {
-        this.position.copy(corner);
-        budget -= dist;
-        moved += dist;
-        this.pathIndex++;
-      } else {
-        this.position.addScaledVector(to.normalize(), budget);
-        moved += budget;
-        budget = 0;
-      }
+    if (this.wait > 0) {
+      this.wait -= dt;
+      return;
     }
-    this.speed = moved / dt;
-    const next = this.path[this.pathIndex] ?? goal;
-    this.faceTowards(next, dt, 8);
+    if (this.route.length === 0) {
+      this.wait = 2 + ctx.rng() * 4;
+      const target = { x: this.home.x + (ctx.rng() - 0.5) * 6, y: this.home.y + (ctx.rng() - 0.5) * 4 };
+      if (ctx.map.walkable(Math.floor(target.x), Math.floor(target.y))) this.route = [target];
+      return;
+    }
+    const t = this.route[0]!;
+    if (dist(this.pos, t) < 0.3) this.route.shift();
+    else this.step(t, this.profile.walkSpeed, dt, ctx);
   }
 
-  private computePath(goal: THREE.Vector3): THREE.Vector3[] {
-    if (!this.nav) return [goal.clone()];
-    const { success, path } = this.nav.query.computePath(this.position, goal);
-    if (!success || path.length === 0) return [];
-    return path.map((p) => new THREE.Vector3(p.x, p.y, p.z));
+  private walkHome(dt: number, ctx: NpcContext): void {
+    const goal = this.path ? this.path.points[this.pathIndex]! : this.home;
+    if (dist(this.pos, goal) < 0.4 || this.stateTime > 30) {
+      this.route = [];
+      this.setState(this.path ? 'patrol' : 'idle');
+      return;
+    }
+    this.moveToward(goal, this.profile.walkSpeed, dt, ctx);
   }
 
-  private snap(point: THREE.Vector3): THREE.Vector3 {
-    if (!this.nav) return point.clone();
-    const r = this.nav.query.findClosestPoint(point);
-    return r.success ? new THREE.Vector3(r.point.x, r.point.y, r.point.z) : point.clone();
+  private withinLeash(target: Vec2): boolean {
+    const leash = this.profile.leash;
+    return leash === undefined || dist(this.home, target) <= leash;
   }
 
-  private faceTowards(target: THREE.Vector3, dt: number, rate: number): void {
-    const dx = target.x - this.position.x;
-    const dz = target.z - this.position.z;
-    if (dx * dx + dz * dz < 1e-4) return;
-    const desired = Math.atan2(-dx, -dz);
-    let d = desired - this.yaw;
-    d = Math.atan2(Math.sin(d), Math.cos(d));
-    this.yaw += d * (1 - Math.exp(-rate * dt));
+  /** A* 경로를 따라 이동 (0.5초마다 재계산) */
+  private moveToward(goal: Vec2, speed: number, dt: number, ctx: NpcContext): void {
+    this.repath -= dt;
+    if (this.repath <= 0 || this.route.length === 0) {
+      this.repath = 0.5 + ctx.rng() * 0.2;
+      if (ctx.map.lineOfSight(this.pos, goal) && dist(this.pos, goal) < 4) this.route = [goal];
+      else this.route = (ctx.map.findPath(this.pos, goal, 6000) ?? [goal]).slice(1);
+    }
+    let next = this.route[0];
+    while (next && dist(this.pos, next) < 0.25 && this.route.length > 1) {
+      this.route.shift();
+      next = this.route[0];
+    }
+    if (!next) return;
+    this.step(next, speed, dt, ctx);
   }
 
-  dispose(): void {
-    this.model.removeFromParent();
-    this.model.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.isMesh) {
-        m.geometry.dispose();
-        (m.material as THREE.Material).dispose();
-      }
-    });
+  private step(target: Vec2, speed: number, dt: number, ctx: NpcContext): void {
+    const dx = target.x - this.pos.x;
+    const dy = target.y - this.pos.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1e-3) return;
+    const s = Math.min(d, speed * dt);
+    ctx.map.moveCircle(this.pos, (dx / d) * s, (dy / d) * s, this.radius * 0.8);
+    this.speed = speed;
+    this.turnToward(Math.atan2(dy, dx), dt, 8);
+  }
+
+  private turnToward(target: number, dt: number, rate: number): void {
+    let d = (target - this.facing) % (Math.PI * 2);
+    if (d > Math.PI) d -= Math.PI * 2;
+    if (d < -Math.PI) d += Math.PI * 2;
+    this.facing += d * Math.min(1, rate * dt);
+  }
+
+  private setState(s: NpcState): void {
+    this.state = s;
+    this.stateTime = 0;
+    this.stare = 0;
+    this.lostSight = 0;
+    this.route = [];
   }
 }

@@ -1,12 +1,8 @@
 {
-  "walkSpeed": 2.6,
-  "runSpeed": 4.2,
-  "height": 1.7,
-  "radius": 0.3,
-  "eyeHeight": 1.6,
-  "stepHeight": 0.3,
-  "maxSlopeDeg": 45,
-  "gravity": -18,
-  "interactRange": 2,
-  "mouseSensitivity": 0.0022
+  "walkSpeed": 3.2,
+  "runSpeed": 5.2,
+  "radius": 0.32,
+  "interactRange": 1.6,
+  "runNoiseMultiplier": 2.2,
+  "stairsFatigue": 3
 }

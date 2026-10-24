@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "오, 좋은 아침~ 주말 잘 보냈어요?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "어제 그 드라마 봤어요? 마지막 장면 대박이던데.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "저 이번에 이사했잖아요, 근데 집주인이 진짜…",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "오늘 점심 뭐 먹을지 정했어요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "팀장님 오늘 기분 좀 안 좋아 보이시던데 조심해요.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "아 맞다, 이번 회식 날짜 나왔대요.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "요즘 운동 시작했는데 너무 힘들어요, 하하.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "커피 한 잔 하실래요? 아, 아니다 바쁘시죠.",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "어? 얼굴 왜 빨개요? 더워요?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "그럼 이따 봬요~",
+    "parried": "아 맞다 일해야지. 이따 봬요!",
+    "endured": "아무튼 그렇다고요. 수고해요~",
+    "sos": "전화 왔어요? 받아요 받아요.",
+    "awkward": "…아, 네. 수고해요."
+  }
+}

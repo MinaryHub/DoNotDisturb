@@ -1,0 +1,1676 @@
+import type { GameConfig } from '../core/config';
+import { simConfigOf } from '../core/config';
+import type { DayDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
+import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
+import type { DayReport } from '../sim/DayReport';
+import { NO_MODIFIERS, type ChannelModifiers } from '../sim/EnergyModel';
+import type { LifeSnapshot, LifeStatId } from '../sim/LifeStats';
+import { Phone, applyContactOutcome, type CallHow, type MessageHow } from '../sim/Phone';
+import { Simulation, type SimSnapshot } from '../sim/Simulation';
+import { SpeechChallenge } from '../sim/SpeechChallenge';
+import { Crowd, type CrowdAgent } from '../npc/Crowd';
+import { Npc } from '../npc/Npc';
+import { angleDiff, angleTo, type PlayerPercept } from '../npc/perception';
+import { dist, inRect, type AreaDef, type Vec2 } from '../world/TileMap';
+import { buildWorld, inHide, safeAt, type World } from '../world/World';
+import { GrillGame, PIANO_MELODY, PianoGame, WorkGame } from './minigames';
+import { MonologueDirector } from './Monologue';
+import { Objectives } from './Objectives';
+
+// 하루 단위 게임 진행 (DOM·렌더링 없음). 입력(Controls)을 받아 시뮬레이션과 월드를 진행하고,
+// 연출 계층은 이 객체의 상태를 읽기만 한다 (CLAUDE.md 8: 연출은 sim을 수정하지 않는다).
+
+export interface Controls {
+  move: Vec2;
+  sprint: boolean;
+  /** 마우스 방향 (라디안). null이면 이동 방향을 본다 */
+  aim: number | null;
+  interactPressed: boolean;
+  interactHeld: boolean;
+  earphonesPressed: boolean;
+  phonePretend: boolean;
+  cover: boolean;
+  eyesClosed: boolean;
+  maskPressed: boolean;
+  useDrink: boolean;
+  useSnack: boolean;
+  useCoffee: boolean;
+  reply: Reply | null;
+  smile: boolean;
+  spacePressed: boolean;
+  sos: boolean;
+  confirm: boolean;
+  accept: boolean;
+  decline: boolean;
+  textInstead: boolean;
+  dodge: -1 | 0 | 1;
+  phoneToggle: boolean;
+  phoneNav: -1 | 0 | 1;
+  phoneReply: boolean;
+  phoneIgnore: boolean;
+  note: number | null;
+  slot: number | null;
+  retry: boolean;
+}
+
+export const NO_CONTROLS: Controls = {
+  move: { x: 0, y: 0 },
+  sprint: false,
+  aim: null,
+  interactPressed: false,
+  interactHeld: false,
+  earphonesPressed: false,
+  phonePretend: false,
+  cover: false,
+  eyesClosed: false,
+  maskPressed: false,
+  useDrink: false,
+  useSnack: false,
+  useCoffee: false,
+  reply: null,
+  smile: false,
+  spacePressed: false,
+  sos: false,
+  confirm: false,
+  accept: false,
+  decline: false,
+  textInstead: false,
+  dodge: 0,
+  phoneToggle: false,
+  phoneNav: 0,
+  phoneReply: false,
+  phoneIgnore: false,
+  note: null,
+  slot: null,
+  retry: false,
+};
+
+export interface PlayerState {
+  pos: Vec2;
+  facing: number;
+  moving: boolean;
+  running: boolean;
+  moveDir: Vec2 | null;
+  earphones: boolean;
+  phonePretend: boolean;
+  cover: boolean;
+  eyesClosed: boolean;
+  mask: boolean;
+  frozen: number;
+  /** 계단 후 숨참: 달리기 불가 */
+  winded: number;
+  hidden: boolean;
+  lockedSafe: SafeDef | null;
+  safeTime: number;
+  knockTimer: number;
+  inventory: { drink: number; snack: number; coffee: number; clothes: boolean; items: string[] };
+  walkPhase: number;
+}
+
+export type Mode =
+  | { kind: 'dayIntro' }
+  | { kind: 'free' }
+  | { kind: 'dialogue'; battle: DialogueBattle; npc: Npc; pool: string; closer: string | null; closerTime: number; myLine: string | null; myLineTime: number }
+  | { kind: 'speech'; challenge: SpeechChallenge; speechId: string; time: number }
+  | { kind: 'work'; game: WorkGame }
+  | { kind: 'piano'; game: PianoGame; doneTime: number }
+  | { kind: 'travel'; portal: PortalDef; target: PortalDef; timer: number; total: number }
+  | { kind: 'elevator'; phase: 'waiting' | 'closing' | 'riding'; timer: number; from: string; to: string; companion: Npc | null; presses: number }
+  | { kind: 'selfCheckout'; timer: number; total: number }
+  | { kind: 'rest'; what: 'bench' | 'window'; time: number }
+  | { kind: 'peephole' }
+  | { kind: 'priceTag'; progress: number }
+  | { kind: 'seated'; seat: string; grill: GrillGame; time: number; toastDone: boolean; distractedFor: number; laughIn: number; bossCheckIn: number }
+  | { kind: 'burnout'; time: number }
+  | { kind: 'collapse'; stat: LifeStatId; time: number }
+  | { kind: 'night'; breakdown: Breakdown[]; settlement: SettlementLine[]; nextMax: number; report: DayReport; lifeEnd: Record<LifeStatId, number>; moneyEnd: number }
+  | { kind: 'final'; reports: DayReport[] };
+
+export interface Qte {
+  kind: 'dodge' | 'laugh' | 'knock';
+  timer: number;
+  window: number;
+  agent?: CrowdAgent;
+}
+
+export type FxEvent =
+  | { type: 'ambush'; stimulusId: string }
+  | { type: 'sound'; id: 'doorLock' | 'doorUnlock' | 'knock' | 'doorbell' | 'piano' | 'elevatorDing' | 'chime' | 'sigh' | 'laugh' | 'sizzle' | 'beep' | 'stairs' | 'vibrate' | 'fakeCall'; note?: number }
+  | { type: 'toast'; key: string; vars?: Record<string, string | number> }
+  | { type: 'rumble' };
+
+export interface SaveState {
+  dayIndex: number;
+  life: LifeSnapshot;
+  nextMax: number;
+  reports: DayReport[];
+}
+
+const INTERACT_RANGE_EXTRA = 0.2;
+
+export class GameSession {
+  readonly world: World;
+  readonly sim: Simulation;
+  readonly phone: Phone;
+  readonly monologue: MonologueDirector;
+  readonly crowd: Crowd;
+  clock: GameClock;
+  day!: DayDef;
+  dayIndex = 0;
+  objectives!: Objectives;
+  npcs: Npc[] = [];
+  mode: Mode = { kind: 'dayIntro' };
+  qte: Qte | null = null;
+  player!: PlayerState;
+  homeLocked = false;
+  /** 외시경으로 보는 지점 (연출 카메라) */
+  viewTarget: Vec2 | null = null;
+  area: AreaDef | null = null;
+  phoneOpen = false;
+  phoneCursor = 0;
+  /** 이번 프레임 상호작용 안내 */
+  prompt: { labelKey: string; at: Vec2 } | null = null;
+  rehearsed = false;
+  hobbyDone = false;
+  calmBuff = false;
+  sosUsed = false;
+  sanctuaryBroken = 0;
+  reports: DayReport[] = [];
+  readonly fx: FxEvent[] = [];
+
+  private nextMax: number;
+  private dayStart!: { life: LifeSnapshot; max: number };
+  private rngState = 12345;
+  private firedPhone = new Set<number>();
+  private pendingEscalations: string[] = [];
+  private personalSpaceCd = 0;
+  private ignoredBossMessages = 0;
+  private mandatoryRetry: { contact: string; textKey: string; timer: number } | null = null;
+  private dinnerSeatTimer = -1;
+  private stareTimers = new Map<string, number>();
+  private wasPursuing = new Set<string>();
+  private lastTier = '';
+
+  constructor(
+    readonly cfg: GameConfig,
+    save?: SaveState,
+  ) {
+    this.world = buildWorld(cfg.world, cfg.tiles);
+    this.sim = new Simulation(simConfigOf(cfg), cfg.stimuli);
+    this.phone = new Phone({ ringSec: 12, replyWaitSec: 25, maxVisible: 4 });
+    this.monologue = new MonologueDirector(cfg.monologueTriggers, cfg.monologue);
+    this.crowd = new Crowd(cfg.world.crowdLanes, () => this.rng());
+    this.clock = new GameClock(0);
+    this.nextMax = cfg.balance.battery.start;
+    if (save) {
+      this.dayIndex = Math.min(save.dayIndex, cfg.days.length - 1);
+      this.sim.life.restore(save.life);
+      this.nextMax = save.nextMax;
+      this.reports = save.reports;
+    }
+    this.startDay(this.dayIndex);
+  }
+
+  rng(): number {
+    // 결정적 난수 (테스트 재현성)
+    this.rngState = (this.rngState * 1664525 + 1013904223) >>> 0;
+    return this.rngState / 4294967296;
+  }
+
+  get snapshot(): SimSnapshot {
+    return this.sim.snapshot();
+  }
+
+  get sanctuary(): boolean {
+    return this.homeLocked && this.area?.kind === 'home' && this.sanctuaryBroken <= 0;
+  }
+
+  get atHome(): boolean {
+    return this.area?.kind === 'home';
+  }
+
+  get returning(): boolean {
+    return this.objectives.canEndDay;
+  }
+
+  saveState(): SaveState {
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports };
+  }
+
+  // ───────────────────────── 하루 시작·재시작 ─────────────────────────
+
+  startDay(index: number): void {
+    this.dayIndex = index;
+    this.day = this.cfg.days[index]!;
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax };
+    this.sim.startDay(this.nextMax);
+    this.clock = new GameClock(parseTime(this.day.start));
+    this.objectives = new Objectives(this.day);
+    this.phone.endDay();
+    this.phone.drainEvents();
+    this.monologue.reset();
+    this.firedPhone = new Set();
+    this.pendingEscalations = [];
+    this.homeLocked = true;
+    this.rehearsed = false;
+    this.hobbyDone = false;
+    this.calmBuff = false;
+    this.sosUsed = false;
+    this.sanctuaryBroken = 0;
+    this.phoneOpen = false;
+    this.qte = null;
+    this.viewTarget = null;
+    this.ignoredBossMessages = 0;
+    this.mandatoryRetry = null;
+    this.dinnerSeatTimer = -1;
+    this.stareTimers.clear();
+    this.wasPursuing.clear();
+    const spawn = this.world.spawns[this.day.spawn]!;
+    this.player = {
+      pos: { ...spawn },
+      facing: 0,
+      moving: false,
+      running: false,
+      moveDir: null,
+      earphones: false,
+      phonePretend: false,
+      cover: false,
+      eyesClosed: false,
+      mask: false,
+      frozen: 0,
+      winded: 0,
+      hidden: false,
+      lockedSafe: null,
+      safeTime: 0,
+      knockTimer: 0,
+      inventory: { drink: 0, snack: 0, coffee: 0, clothes: false, items: [] },
+      walkPhase: 0,
+    };
+    this.spawnNpcs();
+    this.area = this.world.map.areaAt(spawn.x, spawn.y);
+    this.mode = { kind: 'dayIntro' };
+    this.lastTier = 'stable';
+  }
+
+  /** 실패 후 오늘 다시 */
+  retryDay(): void {
+    this.sim.life.restore(this.dayStart.life);
+    this.nextMax = this.dayStart.max;
+    this.startDay(this.dayIndex);
+  }
+
+  /** 처음부터 */
+  static newGame(cfg: GameConfig): GameSession {
+    return new GameSession(cfg);
+  }
+
+  private spawnNpcs(): void {
+    this.npcs = [];
+    for (const n of this.day.npcs) {
+      const profile = this.cfg.npcProfiles[n.profile]!;
+      const pos = this.world.spawns[n.at]!;
+      this.npcs.push(
+        new Npc({
+          id: n.id,
+          profileId: n.profile,
+          profile,
+          pos,
+          path: n.path ? this.world.paths[n.path] : undefined,
+          seated: n.seated,
+          areaId: this.world.map.areaAt(pos.x, pos.y)?.id ?? null,
+        }),
+      );
+    }
+  }
+
+  /** NPC가 지금 시각에 활동 중인지 */
+  npcActive(npc: Npc): boolean {
+    const def = this.day.npcs.find((n) => n.id === npc.id);
+    if (!def) return false;
+    const m = this.clock.minutes;
+    if (def.from && m < parseTime(def.from)) return false;
+    if (def.to && m >= parseTime(def.to) && npc.state !== 'dialogue') return false;
+    return true;
+  }
+
+  activeNpcs(): Npc[] {
+    return this.npcs.filter((n) => this.npcActive(n));
+  }
+
+  // ───────────────────────── 메인 스텝 ─────────────────────────
+
+  step(dt: number, c: Controls): void {
+    switch (this.mode.kind) {
+      case 'dayIntro':
+        if (c.confirm) {
+          this.mode = { kind: 'free' };
+          this.gameEvent(`dayStart:${this.day.id}`);
+        }
+        return;
+      case 'night':
+        if (c.confirm) this.advanceDay();
+        return;
+      case 'final':
+        if (c.retry) {
+          this.sim.life.restore({ values: { ...this.cfg.life.stats.start }, money: this.cfg.life.stats.startMoney, avoidCounts: {} });
+          this.reports = [];
+          this.nextMax = this.cfg.balance.battery.start;
+          this.startDay(0);
+        }
+        return;
+      case 'burnout':
+      case 'collapse':
+        this.mode.time += dt;
+        if (c.retry && this.mode.time > 1) this.retryDay();
+        return;
+    }
+
+    const minutesPerSec = this.mode.kind === 'seated' && this.day.dinner ? this.day.dinner.minutesPerSecond : this.cfg.balance.clock.minutesPerSecond;
+    this.clock.advance(dt, minutesPerSec);
+    this.sanctuaryBroken = Math.max(0, this.sanctuaryBroken - dt);
+    this.personalSpaceCd = Math.max(0, this.personalSpaceCd - dt);
+
+    this.updatePlayerToggles(c);
+    this.updateMode(dt, c);
+    if (this.stopped()) return;
+    this.updatePhone(dt, c);
+    this.updateWorld(dt);
+    this.updateSim(dt);
+    this.updateMonologue(dt);
+  }
+
+  /** 실패·밤 화면으로 넘어가 하루 진행이 멈췄는지 (updateMode 안에서 모드가 바뀔 수 있다) */
+  private stopped(): boolean {
+    const k: Mode['kind'] = this.mode.kind;
+    return k === 'burnout' || k === 'night' || k === 'collapse';
+  }
+
+  // ───────────────────────── 플레이어 ─────────────────────────
+
+  private updatePlayerToggles(c: Controls): void {
+    const p = this.player;
+    const modal = this.isModal();
+    if (c.earphonesPressed) p.earphones = !p.earphones;
+    if (c.maskPressed) p.mask = !p.mask;
+    p.phonePretend = c.phonePretend && !modal && !c.cover;
+    p.cover = c.cover && this.mode.kind !== 'speech';
+    p.eyesClosed = c.eyesClosed && !modal;
+    if (c.phoneToggle && !p.cover && this.mode.kind !== 'speech') {
+      this.phoneOpen = !this.phoneOpen;
+      this.phoneCursor = 0;
+    }
+    if (p.cover) this.phoneOpen = false;
+    if (!modal) {
+      if (c.useDrink) this.useItem('drink');
+      if (c.useSnack) this.useItem('snack');
+      if (c.useCoffee) this.useItem('coffee');
+    }
+  }
+
+  /** 이동이 막히는 모드 */
+  isModal(): boolean {
+    const k = this.mode.kind;
+    return k !== 'free' && k !== 'peephole';
+  }
+
+  private movePlayer(dt: number, c: Controls): void {
+    const p = this.player;
+    const sk = this.cfg.skills;
+    p.frozen = Math.max(0, p.frozen - dt);
+    p.winded = Math.max(0, p.winded - dt);
+    let mx = c.move.x;
+    let my = c.move.y;
+    const len = Math.hypot(mx, my);
+    if (len > 1) {
+      mx /= len;
+      my /= len;
+    }
+    const canMove = p.frozen <= 0 && !this.phoneOpen && !p.lockedSafe && this.mode.kind === 'free';
+    p.moving = canMove && len > 0.01;
+    p.running = p.moving && c.sprint && p.winded <= 0 && !p.phonePretend;
+    let speed = p.running ? this.cfg.player.runSpeed : this.cfg.player.walkSpeed;
+    if (p.phonePretend) speed *= sk.phonePretend.moveMultiplier;
+    if (p.cover) speed *= sk.coverCheeks.moveMultiplier;
+    if (p.eyesClosed) speed *= sk.closeEyes.moveMultiplier;
+    // 바닥이 미는 힘 (무빙워크)
+    const tile = this.world.map.def(Math.floor(p.pos.x), Math.floor(p.pos.y));
+    const push = tile.push;
+    if (p.moving) {
+      this.world.map.moveCircle(p.pos, mx * speed * dt, my * speed * dt, this.cfg.player.radius);
+      p.moveDir = { x: mx, y: my };
+      p.walkPhase += dt * speed * 2.2;
+    } else p.moveDir = null;
+    if (push && !p.lockedSafe && this.mode.kind === 'free') this.world.map.moveCircle(p.pos, push[0] * dt, push[1] * dt, this.cfg.player.radius);
+
+    // 바라보는 방향: 마우스, 없으면 이동 방향. 편두통이면 시선이 흔들린다
+    let target = c.aim ?? (p.moving ? Math.atan2(my, mx) : p.facing);
+    const migraine = this.sim.somatic.intensity('migraine');
+    if (migraine > 0.2) target += Math.sin(this.sim.snapshot().time * 3.1) * migraine * 0.35;
+    p.facing = target;
+  }
+
+  // ───────────────────────── 모드별 ─────────────────────────
+
+  private updateMode(dt: number, c: Controls): void {
+    const m = this.mode;
+    switch (m.kind) {
+      case 'free':
+      case 'peephole':
+        this.movePlayer(dt, c);
+        this.updateFree(dt, c);
+        break;
+      case 'dialogue':
+        this.updateDialogue(dt, c, m);
+        break;
+      case 'speech':
+        this.updateSpeech(dt, c, m);
+        break;
+      case 'work':
+        this.updateWork(dt, c, m);
+        break;
+      case 'piano':
+        if (m.game.done) {
+          m.doneTime += dt;
+          if (m.doneTime > 1.6 || c.interactPressed) this.finishPiano();
+        } else if (c.note !== null) {
+          const ok = m.game.press(c.note);
+          this.fx.push({ type: 'sound', id: 'piano', note: c.note + (ok ? 0 : 0.5) });
+        } else if (c.interactPressed) this.mode = { kind: 'free' };
+        break;
+      case 'travel':
+        m.timer += dt;
+        if (m.timer >= m.total) {
+          this.teleport({ x: m.target.arrive[0], y: m.target.arrive[1] });
+          if (m.portal.kind === 'stairs') this.player.winded = 10;
+          this.mode = { kind: 'free' };
+        }
+        break;
+      case 'elevator':
+        this.updateElevator(dt, c, m);
+        break;
+      case 'selfCheckout':
+        m.timer += dt;
+        if (Math.floor(m.timer * 2) !== Math.floor((m.timer - dt) * 2)) this.fx.push({ type: 'sound', id: 'beep' });
+        if (m.timer >= m.total) {
+          this.completeCheckout();
+          this.mode = { kind: 'free' };
+        }
+        break;
+      case 'rest': {
+        m.time += dt;
+        const r = this.cfg.balance.recovery;
+        this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : r.windowPerSec) * dt);
+        if (m.what === 'window' && m.time > 4) this.calmBuff = true;
+        if (c.interactPressed || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
+        break;
+      }
+      case 'priceTag': {
+        const clerk = this.npcs.find((n) => n.type === 'stalker' && this.npcActive(n));
+        const watched = clerk ? clerk.gazing || clerk.pursuing : false;
+        if (c.smile && !watched) m.progress += dt / 2.5;
+        if (c.smile && watched && clerk) {
+          this.toast('priceTag.caught');
+          this.startDialogue(clerk, false);
+          return;
+        }
+        if (m.progress >= 1) {
+          this.toast('priceTag.done');
+          this.mode = { kind: 'free' };
+        } else if (c.interactPressed || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
+        break;
+      }
+      case 'seated':
+        this.updateSeated(dt, c, m);
+        break;
+    }
+  }
+
+  private updateFree(dt: number, c: Controls): void {
+    const p = this.player;
+    // 외시경: 누르고 있는 동안만
+    if (this.mode.kind === 'peephole') {
+      if (!c.interactHeld) {
+        this.mode = { kind: 'free' };
+        this.viewTarget = null;
+      }
+      return;
+    }
+    this.updateQte(dt, c);
+
+    // 세이프 존 (화장실 칸·피팅룸)
+    const safe = safeAt(this.world, p.pos);
+    if (p.lockedSafe) {
+      p.safeTime += dt;
+      const s = p.lockedSafe;
+      if (s.kind === 'fitting' && !this.objectives.isDone('tryOn') && p.inventory.clothes && p.safeTime > 3) this.gameEvent('tryOn');
+      if (p.safeTime >= s.noiseAfterSec) {
+        p.knockTimer -= dt;
+        if (p.knockTimer <= 0) {
+          p.knockTimer = this.cfg.balance.safe.knockRepeatSec;
+          this.sim.bus.emit('knock');
+          this.fx.push({ type: 'sound', id: 'knock' });
+          this.gameEvent('safe:knock');
+          if (s.kind === 'fitting') this.qte = { kind: 'knock', timer: 0, window: this.cfg.balance.safe.fittingAnswerSec };
+        }
+      }
+      if (c.interactPressed) {
+        p.lockedSafe = null;
+        this.toast('interact.unlockStall');
+      }
+      this.prompt = { labelKey: 'interact.unlockStall', at: p.pos };
+      return;
+    }
+
+    // 상호작용 대상
+    const target = this.nearestInteractable();
+    this.prompt = target ? { labelKey: target.labelKey, at: target.at } : null;
+    if (safe && !p.lockedSafe && !target) this.prompt = { labelKey: 'interact.lockStall', at: p.pos };
+    if (!c.interactPressed) return;
+    if (this.sim.somatic.slips(this.rng())) {
+      this.toast('slip');
+      return;
+    }
+    if (target) this.interact(target);
+    else if (safe) {
+      p.lockedSafe = safe;
+      p.safeTime = 0;
+      p.knockTimer = 0;
+      for (const n of this.npcs) n.loseTrack();
+      this.toast('safe.locked');
+      this.gameEvent('safe:lock');
+    }
+  }
+
+  // ───────────────────────── 상호작용 ─────────────────────────
+
+  private nearestInteractable(): (Pick<InteractableDef, 'labelKey' | 'kind'> & { at: Vec2; def?: InteractableDef; portal?: PortalDef; npc?: Npc }) | null {
+    const p = this.player.pos;
+    const range = this.cfg.player.interactRange + INTERACT_RANGE_EXTRA;
+    let best: ReturnType<GameSession['nearestInteractable']> = null;
+    let bestD = range;
+    for (const it of this.world.interactables) {
+      const at = { x: it.at[0], y: it.at[1] };
+      const d = dist(at, p);
+      if (d >= bestD) continue;
+      if (it.kind === 'doorLock' && !this.atHome) continue;
+      bestD = d;
+      best = { kind: it.kind, labelKey: it.kind === 'doorLock' && this.homeLocked ? 'interact.doorUnlock' : it.labelKey, at, def: it };
+    }
+    for (const portal of this.world.portals) {
+      const at = { x: portal.at[0], y: portal.at[1] };
+      const d = dist(at, p);
+      if (d < bestD) {
+        bestD = d;
+        best = { kind: 'flavor', labelKey: portal.labelKey, at, portal };
+      }
+    }
+    for (const npc of this.activeNpcs()) {
+      if (npc.type !== 'ally' && npc.type !== 'pet') continue;
+      const d = dist(npc.pos, p);
+      if (d < bestD + 0.4) {
+        bestD = d;
+        best = { kind: 'flavor', labelKey: npc.type === 'pet' ? 'interact.pet' : 'interact.talkAlly', at: npc.pos, npc };
+      }
+    }
+    return best;
+  }
+
+  private interact(target: NonNullable<ReturnType<GameSession['nearestInteractable']>>): void {
+    if (target.portal) {
+      this.startTravel(target.portal);
+      return;
+    }
+    if (target.npc) {
+      if (target.npc.type === 'pet') this.petCat();
+      else this.startDialogue(target.npc, false);
+      return;
+    }
+    const it = target.def!;
+    const r = this.cfg.balance.recovery;
+    const life = this.sim.life;
+    const canEndDay = this.objectives.canEndDay;
+    this.gameEvent(`interact:${it.id}`);
+    switch (it.kind) {
+      case 'bed':
+        if (canEndDay) this.endDay();
+        else this.toast('interact.bed.notYet');
+        break;
+      case 'piano':
+        this.mode = { kind: 'piano', game: new PianoGame(PIANO_MELODY), doneTime: 0 };
+        break;
+      case 'window':
+        this.mode = { kind: 'rest', what: 'window', time: 0 };
+        this.toast('window.done');
+        break;
+      case 'bench':
+        this.mode = { kind: 'rest', what: 'bench', time: 0 };
+        this.toast('bench.done');
+        break;
+      case 'drip':
+        this.player.inventory.coffee++;
+        this.clock.advance(10, 1);
+        this.toast('drip.done');
+        break;
+      case 'fridge':
+        if (life.get('essentials') > 10) {
+          this.sim.energy.recover(r.homeMeal);
+          life.apply({ essentials: this.cfg.life.rewards.homeMealEssentials });
+          this.toast('fridge.done');
+        } else this.toast('fridge.empty');
+        break;
+      case 'sink':
+        this.sim.somatic.clearAll();
+        this.sim.energy.relieveStress(r.washStressRelief);
+        this.toast('sink.done');
+        break;
+      case 'mirror':
+        this.rehearsed = true;
+        this.toast('mirror.done');
+        break;
+      case 'doorLock':
+        this.homeLocked = !this.homeLocked;
+        this.fx.push({ type: 'sound', id: this.homeLocked ? 'doorLock' : 'doorUnlock' });
+        this.toast(this.homeLocked ? 'doorLock.locked' : 'doorLock.unlocked');
+        if (this.homeLocked) this.gameEvent('home:lock');
+        break;
+      case 'peephole': {
+        this.mode = { kind: 'peephole' };
+        const hall = this.world.map.area('apt3f')!;
+        this.viewTarget = { x: hall.rect[0] + 10, y: hall.rect[1] + 2.5 };
+        const busy = this.activeNpcs().some((n) => inRect(hall.rect, n.pos.x, n.pos.y) && n.type !== 'pet');
+        this.gameEvent(busy ? 'peephole:busy' : 'peephole:clear');
+        break;
+      }
+      case 'elevator':
+        this.callElevator(it);
+        break;
+      case 'flavor':
+        if (it.monologue) this.monologue.say(it.monologue);
+        break;
+      case 'desk':
+        if (this.objectiveAvailable('done:work') && this.day.work) {
+          const w = this.day.work;
+          this.mode = { kind: 'work', game: new WorkGame(w.tasks, w.focusPerSec, w.pingEverySec, w.pingTimeoutSec, () => this.rng()) };
+        } else this.toast('interact.bed.notYet');
+        break;
+      case 'speech': {
+        const sp = this.cfg.speeches[it.speech!]!;
+        if (this.objectiveAvailable(sp.objectiveEvent)) this.startSpeech(it.speech!);
+        else this.toast('interact.bed.notYet');
+        break;
+      }
+      case 'coldDrink':
+        if (this.pay(it.price ?? 0)) {
+          if ((it.price ?? 0) === 0) {
+            this.sim.somatic.coldDrink();
+            this.toast('coldDrink.done');
+          } else {
+            this.player.inventory.drink++;
+            this.toast('coldDrink.done');
+          }
+        }
+        break;
+      case 'snack':
+        if (this.pay(it.price ?? 0)) {
+          this.player.inventory.snack++;
+          this.toast('snack.done');
+        }
+        break;
+      case 'soloMeal':
+        if (this.pay(it.price ?? 0)) {
+          this.sim.energy.recover(r.soloMeal);
+          this.clock.advance(30, 1);
+          this.toast('soloMeal.done');
+        }
+        break;
+      case 'martItem': {
+        const inv = this.player.inventory;
+        if (inv.items.includes(it.item!)) {
+          this.toast('martItem.already');
+          break;
+        }
+        inv.items.push(it.item!);
+        this.toast('martItem.done', { item: this.cfg.text[`interact.item.${it.item}`]?.replace(' 담기', '') ?? it.item!, n: inv.items.length });
+        this.gameEvent('pick:martItem');
+        break;
+      }
+      case 'checkout':
+        if (!this.objectiveAvailable('done:checkout')) {
+          this.toast('interact.bed.notYet');
+          break;
+        }
+        if (it.mode === 'self') {
+          this.mode = { kind: 'selfCheckout', timer: 0, total: 22 };
+          this.toast('checkout.self.waiting');
+        } else this.startSpeech('checkoutNormal');
+        break;
+      case 'priceTag':
+        this.mode = { kind: 'priceTag', progress: 0 };
+        this.toast('priceTag.hint');
+        break;
+      case 'clothesPick':
+        this.player.inventory.clothes = true;
+        this.toast('clothesPick.done');
+        break;
+      case 'seat':
+        this.takeSeat(it.seat ?? 'middle');
+        break;
+    }
+  }
+
+  private objectiveAvailable(event: string): boolean {
+    return this.objectives.list.some((o) => o.def.on === event && this.objectives.available(o));
+  }
+
+  private pay(price: number): boolean {
+    if (price <= 0) return true;
+    if (this.sim.life.spend(price)) return true;
+    this.toast('noMoney');
+    return false;
+  }
+
+  private useItem(kind: 'drink' | 'snack' | 'coffee'): void {
+    const inv = this.player.inventory;
+    if (inv[kind] <= 0) {
+      this.toast('use.none');
+      return;
+    }
+    const r = this.cfg.balance.recovery;
+    if (kind === 'snack') {
+      // 구석에서만: 나를 보는 사람이 없고 군중 속이 아닐 때
+      if (this.gazeCount() > 0 || this.crowd.countNear(this.player.pos, 3) > 0) {
+        this.toast('snack.notHere');
+        return;
+      }
+      this.sim.energy.recover(r.snack);
+    } else if (kind === 'coffee') this.sim.energy.recover(r.dripCoffee);
+    else this.sim.somatic.coldDrink();
+    inv[kind]--;
+    this.toast(`use.${kind}`);
+  }
+
+  private petCat(): void {
+    this.sim.somatic.clearAll();
+    this.sim.energy.relieveStress(this.cfg.balance.recovery.petStressRelief);
+    this.calmBuff = true;
+    this.gameEvent('pet');
+  }
+
+  // ───────────────────────── 이동 수단 ─────────────────────────
+
+  private startTravel(portal: PortalDef): void {
+    const target = this.world.portals.find((p) => p.id === portal.to)!;
+    this.mode = { kind: 'travel', portal, target, timer: 0, total: Math.max(0.6, portal.travelSec) };
+    this.gameEvent(`portal:${portal.kind}`);
+    if (portal.kind === 'stairs') this.fx.push({ type: 'sound', id: 'stairs' });
+  }
+
+  private teleport(to: Vec2): void {
+    this.player.pos.x = to.x;
+    this.player.pos.y = to.y;
+  }
+
+  private callElevator(it: InteractableDef): void {
+    const front = this.cfg.world.elevator.fronts[it.id];
+    const fp = front ? { x: front[0], y: front[1] } : this.player.pos;
+    // 근처에 있던 지인이 같이 탈 수도 있다
+    const companion =
+      this.activeNpcs().find(
+        (n) =>
+          (n.type === 'acquaintance' || n.type === 'boss') &&
+          n.state !== 'dialogue' &&
+          dist(n.pos, fp) < (n.pursuing ? 10 : 6) &&
+          (n.pursuing || this.rng() < 0.6),
+      ) ?? null;
+    this.mode = { kind: 'elevator', phase: 'waiting', timer: 3 + this.rng() * 4, from: it.id, to: it.target!, companion, presses: 0 };
+    this.gameEvent('elevator:call');
+  }
+
+  private updateElevator(dt: number, c: Controls, m: Extract<Mode, { kind: 'elevator' }>): void {
+    m.timer -= dt;
+    if (m.phase === 'waiting') {
+      if (Math.hypot(c.move.x, c.move.y) > 0.3 && !m.companion) {
+        this.mode = { kind: 'free' };
+        return;
+      }
+      if (m.timer <= 0) {
+        this.fx.push({ type: 'sound', id: 'elevatorDing' });
+        const car = this.cfg.world.elevator.car;
+        this.teleport({ x: car[0] - 0.8, y: car[1] });
+        if (m.companion) {
+          m.companion.pos.x = car[0] + 0.9;
+          m.companion.pos.y = car[1] - 0.4;
+          m.companion.beginDialogue();
+          this.gameEvent('elevator:awkward');
+          this.toast('elevator.joined');
+        }
+        m.phase = 'closing';
+        m.timer = 2.5;
+      }
+      return;
+    }
+    if (m.phase === 'closing') {
+      // 닫힘 버튼 연타: 문이 빨리 닫힌다
+      if (c.interactPressed) {
+        m.presses++;
+        m.timer -= 0.35;
+      }
+      if (m.timer <= 0) {
+        m.phase = 'riding';
+        m.timer = 7;
+      }
+      return;
+    }
+    if (m.timer <= 0) {
+      const front = this.cfg.world.elevator.fronts[m.to]!;
+      this.teleport({ x: front[0], y: front[1] });
+      this.fx.push({ type: 'sound', id: 'elevatorDing' });
+      if (m.companion) {
+        m.companion.pos.x = front[0] + 1.2;
+        m.companion.pos.y = front[1];
+        m.companion.endDialogue();
+      }
+      this.mode = { kind: 'free' };
+    }
+  }
+
+  // ───────────────────────── 대화 배틀 ─────────────────────────
+
+  startDialogue(npc: Npc, fromBehind: boolean): void {
+    if (this.mode.kind === 'dialogue' || this.mode.kind === 'speech') return;
+    const p = npc.profile;
+    const pool = this.cfg.dialoguePools[p.dialogue]!;
+    const ally = p.type === 'ally';
+    if (fromBehind && !ally) {
+      const chance = this.cfg.skills.earphones.backApproachTapChance * (this.player.earphones ? this.cfg.skills.earphones.ambushChanceMultiplier : 1);
+      if (this.rng() < chance) this.sim.bus.emit('shoulderTap', npc.id);
+    }
+    if (!ally) {
+      this.sim.bus.emit(p.encounterStimulus, npc.id);
+      this.sim.bus.setContinuous('dialogue', 'dialogue', 1);
+    }
+    this.phoneOpen = false;
+    npc.beginDialogue();
+    this.sim.life.recordAccept(npc.id);
+    const battle = new DialogueBattle(this.cfg.dialogueRules, pool, {
+      minDurationSec: p.minDurationSec,
+      baseDurationSec: p.baseDurationSec,
+      ally,
+      rng: () => this.rng(),
+    });
+    this.mode = { kind: 'dialogue', battle, npc, pool: p.dialogue, closer: null, closerTime: 0, myLine: null, myLineTime: 0 };
+  }
+
+  private updateDialogue(dt: number, c: Controls, m: Extract<Mode, { kind: 'dialogue' }>): void {
+    const b = m.battle;
+    m.myLineTime += dt;
+    if (b.ended) {
+      m.closerTime += dt;
+      if (m.closerTime > 1.8 || (m.closerTime > 0.4 && c.confirm)) this.finishDialogue(m);
+      return;
+    }
+    if (c.reply) {
+      b.respond(c.reply);
+      m.myLine = `dialogue.myLine.${c.reply}`;
+      m.myLineTime = 0;
+    }
+    if (c.sos && !this.sosUsed && this.sim.life.get('bond') >= this.cfg.balance.sos.bondMin && m.npc.type !== 'ally') {
+      this.sosUsed = true;
+      b.requestSos();
+    }
+    const flushVisible = !this.player.mask;
+    b.update(dt, {
+      smiling: c.smile,
+      stutter: this.sim.somatic.active('stutter'),
+      flushRemarkable: flushVisible && this.sim.somatic.flushRemarkable,
+    });
+    if (m.npc.type === 'ally') this.sim.energy.recover(this.cfg.balance.recovery.allyNearPerSec * dt);
+    for (const e of b.drainEvents()) {
+      switch (e.type) {
+        case 'wrong':
+          this.sim.somatic.trigger('flush', this.cfg.somatic.flush.slip, this.flushScale());
+          this.gameEvent('dialogue:wrong');
+          break;
+        case 'flushRemark':
+          this.sim.somatic.maxOut('flush');
+          this.sim.bus.emit('flushRemark', m.npc.id);
+          break;
+        case 'parry':
+          this.sim.report.parried++;
+          if (m.npc.type === 'hunter') {
+            this.sim.somatic.trigger('flush', this.cfg.somatic.flush.refusal, this.flushScale());
+            this.sim.bus.emit('refusal');
+          }
+          break;
+        case 'end':
+          m.closer = e.closer;
+          m.closerTime = 0;
+          if (e.outcome === 'sos') {
+            this.fx.push({ type: 'sound', id: 'fakeCall' });
+            this.gameEvent('dialogue:sos');
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  private finishDialogue(m: Extract<Mode, { kind: 'dialogue' }>): void {
+    const b = m.battle;
+    const npc = m.npc;
+    this.sim.bus.setContinuous('dialogue', 'dialogue', 0);
+    if (npc.type === 'ally') {
+      this.sim.life.apply(this.cfg.life.rewards.allyMeet);
+      this.gameEvent(`met:${npc.id}`);
+    } else {
+      this.sim.report.smalltalkEndured++;
+      if (b.wrongCount > 0) {
+        this.sim.bus.emit('rumination');
+        this.gameEvent('rumination');
+      }
+      if (npc.type === 'boss' && b.outcome === 'satisfied') this.sim.life.apply({ income: 4 });
+    }
+    npc.endDialogue(b.outcome === 'parried' ? npc.profile.graceAfterParrySec : undefined);
+    this.fx.push({ type: 'sound', id: 'sigh' });
+    this.mode = this.resumeMode();
+  }
+
+  // ───────────────────────── 필수 발화 ─────────────────────────
+
+  private startSpeech(speechId: string): void {
+    const sp = this.cfg.speeches[speechId]!;
+    const scale = this.rehearsed ? this.cfg.balance.rehearsal.damageScale : 1;
+    this.sim.bus.emit(sp.stimulus, speechId, scale);
+    this.phoneOpen = false;
+    this.mode = { kind: 'speech', challenge: new SpeechChallenge(this.cfg.dialogueRules.speech, sp.chunks), speechId, time: 0 };
+  }
+
+  private updateSpeech(dt: number, c: Controls, m: Extract<Mode, { kind: 'speech' }>): void {
+    m.time += dt;
+    const ch = m.challenge;
+    if (ch.done) {
+      if (m.time > 1.4) this.finishSpeech(m);
+      return;
+    }
+    if (m.time < 1.5) return; // 소개 문구 읽는 시간
+    if (c.spacePressed) ch.press();
+    ch.update(dt, this.sim.somatic.active('stutter'));
+    for (const e of ch.drainEvents()) {
+      if (e.type === 'chunk' && !e.clean) {
+        this.sim.bus.emit('speechSlip');
+        this.sim.somatic.trigger('flush', this.cfg.somatic.flush.slip * 0.6, this.flushScale());
+      }
+      if (e.type === 'done') m.time = 0;
+    }
+  }
+
+  private finishSpeech(m: Extract<Mode, { kind: 'speech' }>): void {
+    const sp = this.cfg.speeches[m.speechId]!;
+    if (m.challenge.misses >= 2) {
+      this.sim.bus.emit('rumination');
+      this.gameEvent('rumination');
+    }
+    if (m.speechId === 'checkoutNormal') this.completeCheckout();
+    else {
+      this.sim.report.mandatoryDone.push(m.speechId);
+      this.gameEvent(sp.objectiveEvent);
+    }
+    this.mode = this.resumeMode();
+    // 일반 계산대: 스몰토크 확률
+    if (m.speechId === 'checkoutNormal' && this.rng() < 0.5) {
+      const cashier = this.activeNpcs().find((n) => n.profileId === 'cashier' && dist(n.pos, this.player.pos) < 4);
+      if (cashier) this.startDialogue(cashier, false);
+    }
+  }
+
+  private completeCheckout(): void {
+    const total = this.player.inventory.items.reduce((s, item) => {
+      const it = this.world.interactables.find((i) => i.item === item);
+      return s + (it?.price ?? 0);
+    }, 0);
+    this.sim.life.addMoney(-Math.min(total, this.sim.life.money));
+    this.sim.life.apply(this.cfg.life.rewards.groceries);
+    this.toast('checkout.done');
+    this.gameEvent('done:checkout');
+    if (!this.sim.report.mandatoryDone.includes('checkout')) this.sim.report.mandatoryDone.push('checkout');
+  }
+
+  private flushScale(): number {
+    return this.rehearsed ? this.cfg.balance.rehearsal.flushScale : 1;
+  }
+
+  // ───────────────────────── 업무·취미 ─────────────────────────
+
+  private updateWork(dt: number, c: Controls, m: Extract<Mode, { kind: 'work' }>): void {
+    const g = m.game;
+    const rw = this.cfg.life.rewards;
+    if (c.reply === 'nod' || c.note === 0) {
+      const ping = g.reply();
+      if (ping) {
+        this.sim.bus.emit('workReply');
+        this.sim.life.apply(rw.workPingReplied);
+      }
+    }
+    g.update(dt, c.smile);
+    for (const e of g.drainEvents()) {
+      if (e.type === 'ping') {
+        this.sim.bus.emit('workPing');
+        this.fx.push({ type: 'sound', id: 'vibrate' });
+      } else if (e.type === 'pingIgnored') this.sim.life.apply(rw.workPingIgnored);
+      else if (e.type === 'task') this.sim.life.addMoney(rw.workPerTask);
+      else if (e.type === 'done') {
+        this.sim.life.apply(rw.workDone);
+        this.clock.skipTo(parseTime(this.day.work!.endTime));
+        this.sim.energy.recover(this.cfg.balance.recovery.workAfternoon);
+        this.toast('work.done');
+        this.mode = { kind: 'free' };
+        this.gameEvent('done:work');
+        return;
+      }
+    }
+    if (c.interactPressed) this.mode = { kind: 'free' };
+  }
+
+  private finishPiano(): void {
+    const n = this.sim.bus.clearRuminations();
+    this.sim.energy.relieveStress(this.cfg.balance.recovery.hobbyStressRelief);
+    this.hobbyDone = true;
+    this.sim.report.hobbies.push('piano');
+    this.toast('piano.done');
+    if (n > 0) this.fx.push({ type: 'sound', id: 'chime' });
+    this.mode = { kind: 'free' };
+  }
+
+  // ───────────────────────── 회식 ─────────────────────────
+
+  private takeSeat(seat: string): void {
+    const dinner = this.day.dinner;
+    if (!dinner || !this.objectiveAvailable('seated')) {
+      this.toast('interact.bed.notYet');
+      return;
+    }
+    this.dinnerSeatTimer = -1;
+    const it = this.world.interactables.find((i) => i.kind === 'seat' && i.seat === seat)!;
+    this.teleport({ x: it.at[0], y: it.at[1] });
+    this.gameEvent('seated');
+    this.gameEvent('dinner:grill');
+    const [a, b] = dinner.laughEverySec;
+    this.mode = {
+      kind: 'seated',
+      seat,
+      grill: new GrillGame(dinner.grillCookSec, dinner.grillBurnSec, () => this.rng()),
+      time: 0,
+      toastDone: false,
+      distractedFor: 0,
+      laughIn: a + this.rng() * (b - a),
+      bossCheckIn: 20,
+    };
+  }
+
+  private updateSeated(dt: number, c: Controls, m: Extract<Mode, { kind: 'seated' }>): void {
+    const dinner = this.day.dinner!;
+    m.time += dt;
+    // 플레이어는 상석 쪽을 바라본다
+    const boss = this.npcs.find((n) => n.id === 'restBoss');
+    if (boss) this.player.facing = angleTo(this.player.pos, boss.pos);
+    this.updateQte(dt, c);
+
+    if (c.slot !== null) m.grill.flip(c.slot);
+    m.grill.update(dt);
+    for (const e of m.grill.drainEvents()) {
+      if (e.type === 'burnt') {
+        this.sim.bus.emit('burntMeat');
+        this.sim.somatic.trigger('flush', 0.2, this.flushScale());
+        this.fx.push({ type: 'sound', id: 'sizzle' });
+      } else if (e.type === 'served') this.fx.push({ type: 'sound', id: 'sizzle' });
+    }
+
+    if (!m.toastDone && m.time >= dinner.toastAfterSec - 6 && m.time - dt < dinner.toastAfterSec - 6) {
+      this.toast('dinner.toastSoon');
+      this.gameEvent('dinner:toastSoon');
+    }
+    if (!m.toastDone && m.time >= dinner.toastAfterSec && this.objectiveAvailable('done:toast')) {
+      this.startSpeech('toast');
+      return;
+    }
+    // 단체 웃음 QTE
+    m.laughIn -= dt;
+    if (m.laughIn <= 0 && !this.qte) {
+      const [a, b] = dinner.laughEverySec;
+      m.laughIn = a + this.rng() * (b - a);
+      this.qte = { kind: 'laugh', timer: 0, window: dinner.laughWindowSec };
+      this.fx.push({ type: 'sound', id: 'laugh' });
+    }
+    // 건배사 후: 2차 얘기로 시선이 흩어지는 틈
+    if (m.toastDone) {
+      if (m.distractedFor <= 0 && m.time > dinner.toastAfterSec + 12 && m.time - dt <= dinner.toastAfterSec + 12) {
+        m.distractedFor = 15;
+        this.toast('dinner.secondRound');
+        this.gameEvent('dinner:secondRoundTalk');
+      }
+      m.distractedFor = Math.max(0, m.distractedFor - dt);
+    }
+    // 상사의 관심 (자리 효과)
+    m.bossCheckIn -= dt;
+    const eff = dinner.seatEffects[m.seat] ?? { gazeExtra: 0, bossAttention: 0.5 };
+    if (m.bossCheckIn <= 0 && boss && m.distractedFor <= 0) {
+      m.bossCheckIn = 22;
+      if (this.rng() < eff.bossAttention * 0.6) {
+        this.startDialogue(boss, false);
+        return;
+      }
+    }
+    // 일어나기: 시선이 흩어진 틈이면 조용히, 아니면 붙잡힌다
+    if (c.interactPressed && m.toastDone) {
+      this.mode = { kind: 'free' };
+      if (m.distractedFor <= 0 && boss && this.rng() < 0.7) this.startDialogue(boss, false);
+    }
+  }
+
+  /** 대화·발화가 끝난 뒤 돌아갈 모드 (회식 자리면 다시 자리로) */
+  private resumeMode(): Mode {
+    if (this.day.dinner && this.objectives.isDone('dinner') && !this.objectives.isDone('escape')) {
+      const area = this.world.map.areaAt(this.player.pos.x, this.player.pos.y);
+      const seat = this.world.interactables.find((i) => i.kind === 'seat' && dist({ x: i.at[0], y: i.at[1] }, this.player.pos) < 0.6);
+      if (area?.id === this.day.dinner.area && seat) {
+        const d = this.day.dinner;
+        return {
+          kind: 'seated',
+          seat: seat.seat ?? 'middle',
+          grill: new GrillGame(d.grillCookSec, d.grillBurnSec, () => this.rng()),
+          time: this.objectives.isDone('toast') ? d.toastAfterSec + 1 : d.toastAfterSec * 0.6,
+          toastDone: this.objectives.isDone('toast'),
+          distractedFor: 0,
+          laughIn: d.laughEverySec[0],
+          bossCheckIn: 25,
+        };
+      }
+    }
+    return { kind: 'free' };
+  }
+
+  // ───────────────────────── QTE ─────────────────────────
+
+  private updateQte(dt: number, c: Controls): void {
+    const q = this.qte;
+    if (!q) return;
+    q.timer += dt;
+    let resolved = false;
+    if (q.kind === 'dodge') {
+      if (c.dodge !== 0 && q.agent) {
+        const agentSide = this.rng() < 0.5 ? -1 : 1;
+        // 플레이어와 행인이 같은 방향(서로 마주 보며 같은 쪽)으로 비키면 부딪힌다
+        q.agent.dodge = agentSide;
+        q.agent.qteCooldown = 3;
+        if (agentSide === -c.dodge) {
+          this.bump();
+        } else {
+          const side = { x: -q.agent.dir.y * c.dodge * this.cfg.balance.bumpQte.sideStep, y: q.agent.dir.x * c.dodge * this.cfg.balance.bumpQte.sideStep };
+          this.world.map.moveCircle(this.player.pos, side.x, side.y, this.cfg.player.radius);
+        }
+        resolved = true;
+      } else if (q.timer >= q.window) {
+        if (q.agent) {
+          q.agent.qteCooldown = 3;
+          q.agent.dodge = 1;
+        }
+        this.bump();
+        resolved = true;
+      }
+    } else if (q.kind === 'laugh') {
+      if (c.spacePressed) resolved = true;
+      else if (q.timer >= q.window) {
+        this.sim.bus.emit('groupLaughMiss');
+        this.sim.somatic.trigger('flush', 0.25, this.flushScale());
+        resolved = true;
+      }
+    } else if (q.kind === 'knock') {
+      if (c.spacePressed) resolved = true;
+      else if (q.timer >= q.window) {
+        // 대답이 없으면 점원이 커튼 너머로 말을 건다
+        const clerk = this.activeNpcs().find((n) => n.type === 'stalker');
+        this.player.lockedSafe = null;
+        if (clerk) this.startDialogue(clerk, false);
+        resolved = true;
+      }
+    }
+    if (resolved) this.qte = null;
+  }
+
+  private bump(): void {
+    this.sim.bus.emit('bump');
+    this.toast('qte.bumped');
+    this.player.frozen = this.cfg.balance.ambush.freezeSec;
+  }
+
+  // ───────────────────────── 폰 ─────────────────────────
+
+  private updatePhone(dt: number, c: Controls): void {
+    const phone = this.phone;
+    // 예약된 전화·문자
+    this.day.phone.forEach((ev, i) => {
+      if (this.firedPhone.has(i) || !ev.at) return;
+      if (this.clock.minutes >= parseTime(ev.at)) {
+        this.firedPhone.add(i);
+        this.deliverPhoneEvent(ev);
+      }
+    });
+    if (this.mandatoryRetry) {
+      this.mandatoryRetry.timer -= dt;
+      if (this.mandatoryRetry.timer <= 0 && !phone.ringing) {
+        const r = this.mandatoryRetry;
+        this.mandatoryRetry = null;
+        this.deliverPhone('call', r.contact, r.textKey);
+      }
+    }
+    phone.update(dt);
+
+    // 전화 받기/거절 — 볼 감싸는 중이면 손을 쓸 수 없다
+    const call = phone.call;
+    const canUse = !this.player.cover && this.mode.kind !== 'speech';
+    if (call && canUse) {
+      const mandatory = this.isMandatoryCall(call.contactId);
+      const slips = (c.decline || c.textInstead) && this.sim.somatic.slips(this.rng());
+      if (slips) {
+        this.toast('slip.phone');
+        phone.answer();
+      } else if (c.accept) phone.answer();
+      else if (c.decline && !mandatory) phone.decline();
+      else if (c.textInstead && !mandatory) phone.textInstead();
+    }
+    this.sim.bus.setContinuous('phone', 'phoneRinging', phone.ringing ? 1 : 0);
+    this.sim.bus.setContinuous('replyAnxiety', 'replyAnxiety', phone.waitingReply ? 1 : 0);
+
+    // 폰 화면 조작
+    if (this.phoneOpen && canUse) {
+      const msgs = phone.messages.filter((m) => !m.resolved);
+      if (c.phoneNav !== 0 && msgs.length) this.phoneCursor = (this.phoneCursor + c.phoneNav + msgs.length) % msgs.length;
+      const sel = msgs[Math.min(this.phoneCursor, msgs.length - 1)];
+      if (sel) sel.read = true;
+      if (sel && c.phoneReply) {
+        if (this.sim.somatic.slips(this.rng())) this.toast('slip');
+        else {
+          this.sim.bus.emit('textMessage');
+          phone.reply(sel.id);
+        }
+      } else if (sel && c.phoneIgnore) phone.readIgnore(sel.id);
+    }
+
+    for (const e of phone.drainEvents()) {
+      switch (e.type) {
+        case 'ring':
+          this.sim.bus.emit('phoneRingStartle');
+          this.gameEvent('phone:ring');
+          if (this.sim.somatic.active('sweat')) this.fx.push({ type: 'rumble' });
+          break;
+        case 'message':
+          this.sim.bus.emit('textMessage');
+          if (phone.unread.length >= 3) this.gameEvent('phone:unread3');
+          break;
+        case 'callResolved':
+          this.resolveContact(e.call.contactId, e.how, e.call.textKey);
+          break;
+        case 'messageResolved':
+          this.resolveContact(e.message.contactId, e.how, e.message.textKey);
+          break;
+        case 'replyReceived':
+          this.toast('phone.replyReceived', { name: this.cfg.text[this.cfg.life.contacts[e.contactId]?.nameKey ?? ''] ?? e.contactId });
+          break;
+      }
+    }
+  }
+
+  /** 피할 수 없는 전화 (그 전화를 받는 것이 필수 목표) */
+  private isMandatoryCall(contactId: string): boolean {
+    return this.objectives.list.some((o) => o.def.on === `answered:${contactId}` && o.def.mandatory && !o.done);
+  }
+
+  private deliverPhoneEvent(ev: DayDef['phone'][number]): void {
+    if (ev.chance !== undefined && this.rng() >= ev.chance) return;
+    this.deliverPhone(ev.kind, ev.contact, ev.textKey);
+    if (ev.effect === 'plansCancelled') {
+      // 상대가 먼저 약속을 취소: 미안하지만, 솔직히 조금 기쁘다
+      this.sim.energy.recover(this.cfg.balance.recovery.plansCancelled);
+      for (const o of this.objectives.list) if (o.def.optional && o.def.on.startsWith(`met:`)) o.done = true;
+      this.toast('plansCancelled');
+      this.gameEvent('plansCancelled');
+    }
+  }
+
+  private deliverPhone(kind: 'call' | 'message', contact: string, textKey: string): void {
+    if (kind === 'call') this.phone.receiveCall(contact, textKey);
+    else this.phone.receiveMessage(contact, textKey);
+  }
+
+  private resolveContact(contactId: string, how: CallHow | MessageHow, textKey: string): void {
+    const contact = this.cfg.life.contacts[contactId];
+    if (!contact) return;
+    const report = this.sim.report;
+    if (how === 'answered') report.callsAnswered++;
+    if (how === 'declined' || how === 'missed') report.callsAvoided++;
+    if (how === 'replied') report.messagesReplied++;
+    if (how === 'readIgnored' || how === 'unread') report.messagesIgnored++;
+
+    // 피할 수 없는 전화: 놓치면 다시 온다
+    if ((how === 'missed' || how === 'declined') && this.isMandatoryCall(contactId)) {
+      this.mandatoryRetry = { contact: contactId, textKey, timer: 20 };
+    }
+    const out = applyContactOutcome(contactId, contact, how, this.sim.life);
+    if (out.stimulus) this.sim.bus.emit(out.stimulus, contactId);
+    if (how === 'answered' && contact.ally) this.sim.energy.recover(8);
+    if (how === 'answered') {
+      this.gameEvent(`answered:${contactId}`);
+      if (this.isMandatoryLike(contactId) && !report.mandatoryDone.includes(`call:${contactId}`)) report.mandatoryDone.push(`call:${contactId}`);
+    }
+    if (contactId === 'boss' && (how === 'readIgnored' || how === 'unread')) this.ignoredBossMessages++;
+    if (out.escalation) this.escalate(out.escalation);
+    else if (contactId === 'boss' && this.ignoredBossMessages >= this.cfg.balance.boss.visitAfterIgnoredMessages) {
+      this.ignoredBossMessages = 0;
+      this.escalate('bossVisit');
+    }
+  }
+
+  private isMandatoryLike(contactId: string): boolean {
+    return this.day.phone.some((p) => p.contact === contactId && p.mandatory);
+  }
+
+  /** 회피 에스컬레이션: 같은 대상 3회 회피 → 상위 자극 */
+  private escalate(id: string): void {
+    if (id === 'doorbell' && !this.atHome) {
+      this.pendingEscalations.push(id);
+      return;
+    }
+    this.sim.bus.emit(id);
+    this.gameEvent(`escalation:${id}`);
+    this.toast(`escalation.${id}`);
+    if (id === 'doorbell') {
+      this.sanctuaryBroken = 10;
+      this.fx.push({ type: 'sound', id: 'doorbell' });
+    }
+    if (id === 'bossVisit') {
+      const boss = this.activeNpcs().find((n) => n.profileId === 'boss');
+      if (boss && this.area?.id === 'officeFloor') boss.notice = 1;
+    }
+  }
+
+  // ───────────────────────── 월드 진행 ─────────────────────────
+
+  private updateWorld(dt: number): void {
+    const p = this.player;
+    const prevArea = this.area;
+    this.area = this.world.map.areaAt(p.pos.x, p.pos.y);
+    if (this.area && this.area !== prevArea) {
+      this.gameEvent(`enter:${this.area.id}`);
+      // 밖으로 나갔을 때만 '빠져나감' (건물 안 화장실로 가는 건 제외)
+      if (prevArea && this.area.kind === 'outdoor') this.gameEvent(`exit:${prevArea.id}`);
+      if (this.area.kind === 'home' && this.pendingEscalations.length) this.escalate(this.pendingEscalations.shift()!);
+    }
+    if (this.area?.kind !== 'home' && this.homeLocked && prevArea?.kind === 'home') this.homeLocked = false;
+    p.hidden = inHide(this.world, p.pos);
+
+    // 회식 자리 고르기 카운트다운
+    if (this.day.dinner && this.area?.id === this.day.dinner.area && this.objectiveAvailable('seated')) {
+      if (this.dinnerSeatTimer < 0) {
+        this.dinnerSeatTimer = this.day.dinner.seatChoiceSec;
+        this.gameEvent('dinner:seatChoice');
+      }
+      if (this.mode.kind === 'free') {
+        this.dinnerSeatTimer -= dt;
+        if (this.dinnerSeatTimer <= 0) this.takeSeat('head');
+      }
+    }
+
+    // NPC
+    const percept = this.playerPercept();
+    const talkBlocked = this.isModal() && this.mode.kind !== 'seated';
+    const seatedFocus = this.mode.kind === 'seated';
+    for (const npc of this.npcs) {
+      if (!this.npcActive(npc)) continue;
+      const wasPursuing = npc.pursuing;
+      npc.update(dt, {
+        map: this.world.map,
+        player: percept,
+        playerAreaId: this.area?.id ?? null,
+        talkBlocked: talkBlocked || (seatedFocus && npc.type !== 'boss'),
+        rng: () => this.rng(),
+      });
+      for (const e of npc.drainEvents()) {
+        if (e.type !== 'talk') continue;
+        if (this.mode.kind === 'free') this.startDialogue(e.npc, e.fromBehind);
+        else e.npc.endDialogue(5);
+      }
+      // 다가오던 사람이 말을 걸지 못하고 돌아섬 = 피한 스몰토크
+      if (wasPursuing && npc.state === 'giveUp') this.sim.report.smalltalkAvoided++;
+    }
+
+    // 군중
+    const rush = this.cfg.balance.clock.rushHours.some(([a, b]) => this.clock.minutes >= parseTime(a) && this.clock.minutes < parseTime(b));
+    this.crowd.setDensity(rush ? this.cfg.balance.clock.rushCrowdMultiplier : 1);
+    this.crowd.update(dt, p.pos, this.cfg.player.radius);
+    if (this.mode.kind === 'free' && !p.lockedSafe) this.crowdInteractions();
+  }
+
+  private crowdInteractions(): void {
+    const p = this.player;
+    const b = this.cfg.balance;
+    // 보행 충돌 QTE (눈을 감고 있으면 그냥 부딪힌다)
+    if (!this.qte) {
+      const mul = p.phonePretend ? this.cfg.skills.phonePretend.bumpMultiplier : 1;
+      const agent = this.crowd.incoming(p.pos, p.moveDir, b.bumpQte.lookAheadSec * mul, this.cfg.player.radius);
+      if (agent) {
+        if (p.eyesClosed) {
+          agent.qteCooldown = 3;
+          agent.dodge = 1;
+          this.bump();
+        } else this.qte = { kind: 'dodge', timer: 0, window: b.bumpQte.windowSec, agent };
+      }
+    }
+    // 개인 공간 침범
+    if (this.personalSpaceCd <= 0 && this.crowd.touching(p.pos, b.personalSpace.radius * 0.7)) {
+      this.personalSpaceCd = b.personalSpace.cooldownSec;
+      this.sim.bus.emit('personalSpace');
+      p.frozen = Math.max(p.frozen, b.personalSpace.freezeSec);
+    }
+  }
+
+  playerPercept(): PlayerPercept {
+    const p = this.player;
+    const m = this.mode.kind;
+    return {
+      pos: p.pos,
+      facing: p.facing,
+      moving: p.moving,
+      noise: p.running ? this.cfg.player.runNoiseMultiplier : 1,
+      phonePretend: p.phonePretend || this.phoneOpen,
+      eyesClosed: p.eyesClosed,
+      hidden: p.hidden,
+      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech',
+    };
+  }
+
+  /** 지금 나를 보고 있는 시선 수 */
+  gazeCount(): number {
+    let n = 0;
+    const range = this.cfg.balance.gaze.range;
+    for (const npc of this.activeNpcs()) if (npc.gazing && npc.percept.dist <= range && npc.type !== 'pet' && npc.type !== 'ally') n++;
+    if (this.mode.kind === 'seated') n += this.day.dinner?.seatEffects[this.mode.seat]?.gazeExtra ?? 0;
+    if (this.mode.kind === 'speech') n += this.cfg.speeches[this.mode.speechId]?.audience ?? 0;
+    return n;
+  }
+
+  // ───────────────────────── 시뮬레이션 ─────────────────────────
+
+  private updateSim(dt: number): void {
+    const p = this.player;
+    const bus = this.sim.bus;
+    const b = this.cfg.balance;
+    const areaStim = this.area?.stimulus;
+    // 환경 자극 구역 (ZONE)
+    bus.clearContinuous('zone:');
+    if (areaStim && !p.lockedSafe) bus.setContinuous(`zone:${this.area!.id}`, areaStim.id, areaStim.intensity);
+    // 군중 밀도
+    const near = this.crowd.countNear(p.pos, b.crowdDensity.radius);
+    let crowd = Math.min(b.crowdDensity.max, near * b.crowdDensity.perAgent);
+    if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
+    bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
+    // 아이컨택
+    const eye = this.activeNpcs().filter((n) => n.percept.eyeContact && n.type !== 'ally' && n.type !== 'pet').length;
+    bus.setContinuous('eye', 'eyeContact', eye);
+
+    // 어색한 침묵: 좁은 공간 + 지인
+    const awkwardPair = this.mode.kind === 'elevator' && this.mode.phase !== 'waiting' && this.mode.companion !== null;
+
+    const modifiers: ChannelModifiers = p.earphones ? { ...NO_MODIFIERS, auditory: this.cfg.skills.earphones.auditoryMultiplier } : NO_MODIFIERS;
+    const ally = this.activeNpcs().some((n) => n.type === 'ally' && dist(n.pos, p.pos) < b.recovery.allyRange);
+    let extra = 0;
+    if (this.sanctuary) extra += b.recovery.homeLockedPerSec;
+    if (ally) extra += b.recovery.allyNearPerSec;
+    this.sim.step(dt, {
+      outdoor: this.area?.kind === 'outdoor',
+      inSafe: !!p.lockedSafe,
+      extraRecoverPerSec: extra,
+      modifiers,
+      gazeCount: this.gazeCount(),
+      coveringCheeks: p.cover,
+      eyesClosed: p.eyesClosed,
+      flushRiseScale: this.flushScale(),
+      sanctuary: this.sanctuary,
+      awkwardPair,
+    });
+    // 모자·마스크: 홍조는 가려지지만 답답하다
+    if (p.mask) this.sim.energy.addStress(this.cfg.skills.mask.stuffyStressPerSec * dt);
+
+    for (const e of this.sim.drainEvents()) {
+      switch (e.type) {
+        case 'ambush':
+          p.frozen = Math.max(p.frozen, b.ambush.freezeSec * (this.calmBuff ? 0.7 : 1));
+          this.fx.push({ type: 'ambush', stimulusId: e.stimulusId });
+          break;
+        case 'tierChanged':
+          if (['tired', 'danger', 'critical'].includes(e.to) && e.to !== this.lastTier) this.gameEvent(`tier:${e.to}`);
+          this.lastTier = e.to;
+          break;
+        case 'burnout':
+          this.mode = { kind: 'burnout', time: 0 };
+          this.phoneOpen = false;
+          break;
+        case 'lifeCollapse':
+          this.mode = { kind: 'collapse', stat: e.stat, time: 0 };
+          break;
+        case 'onset':
+          this.gameEvent(`onset:${e.symptom}`);
+          if (e.symptom === 'sweat') this.fx.push({ type: 'rumble' });
+          break;
+        default:
+          break;
+      }
+    }
+
+    // 목표 마감
+    this.objectives.checkDeadlines(this.clock.minutes);
+    for (const e of this.objectives.drainEvents()) {
+      if (e.type === 'late') {
+        if (e.objective.def.late) this.sim.life.apply(e.objective.def.late);
+        if (e.objective.def.lateStimulus) {
+          this.sim.bus.emit(e.objective.def.lateStimulus);
+          this.toast(e.objective.def.lateStimulus);
+          // 2차에 끌려감: 시간이 흐르고 강제로 목표 처리
+          if (e.objective.def.lateStimulus === 'secondRound') {
+            this.clock.skipTo(this.clock.minutes + 90);
+            this.objectives.fire(e.objective.def.on);
+            this.mode = { kind: 'free' };
+          }
+        } else this.toast('late');
+        this.gameEvent(`late:${e.objective.def.id}`);
+      }
+    }
+  }
+
+  private updateMonologue(dt: number): void {
+    this.monologue.update(dt, {
+      areaId: this.area?.id ?? null,
+      returning: this.returning,
+      npcs: this.activeNpcs().map((n) => ({
+        profileId: n.profileId,
+        type: n.type,
+        dist: n.percept.dist,
+        visible: n.percept.inView || this.world.map.lineOfSight(this.player.pos, n.pos),
+        noticed: n.notice > 0.4,
+      })),
+    });
+  }
+
+  /** 게임 이벤트: 목표·독백·이벤트 전화로 퍼진다 */
+  gameEvent(event: string): void {
+    this.objectives.fire(event);
+    this.monologue.onEvent(event);
+    this.day.phone.forEach((ev, i) => {
+      if (ev.on === event && !this.firedPhone.has(i)) {
+        this.firedPhone.add(i);
+        this.deliverPhoneEvent(ev);
+      }
+    });
+  }
+
+  toast(key: string, vars?: Record<string, string | number>): void {
+    this.fx.push({ type: 'toast', key, vars });
+  }
+
+  drainFx(): FxEvent[] {
+    return this.fx.splice(0);
+  }
+
+  // ───────────────────────── 하루 끝 ─────────────────────────
+
+  private endDay(): void {
+    const life = this.sim.life;
+    this.phone.endDay();
+    for (const e of this.phone.drainEvents()) if (e.type === 'messageResolved') this.resolveContact(e.message.contactId, e.how, e.message.textKey);
+    for (const o of this.objectives.skippedOptional()) if (o.def.skip) life.apply(o.def.skip);
+    const settlement = settleDay(this.cfg.life.settlement, life, this.day.flags);
+    const night = nightRecovery(this.cfg.life.night, {
+      stressAtBed: this.sim.energy.stress,
+      ruminations: this.sim.bus.activeRuminations,
+      hobbyDone: this.hobbyDone,
+      bedMinutes: this.clock.minutes,
+      housing: life.get('housing'),
+      essentials: life.get('essentials'),
+    });
+    const report = this.sim.report;
+    this.reports = [...this.reports.slice(0, this.dayIndex), report];
+    this.nextMax = night.nextMax;
+    const collapsed = life.collapsed;
+    if (collapsed) {
+      this.mode = { kind: 'collapse', stat: collapsed, time: 0 };
+      return;
+    }
+    this.mode = { kind: 'night', breakdown: night.breakdown, settlement, nextMax: night.nextMax, report, lifeEnd: { ...life.all() }, moneyEnd: life.money };
+  }
+
+  private advanceDay(): void {
+    if (this.dayIndex + 1 >= this.cfg.days.length) {
+      this.mode = { kind: 'final', reports: this.reports };
+      return;
+    }
+    this.startDay(this.dayIndex + 1);
+  }
+
+  /** 대화 중 선택지 (UI가 표시) */
+  static readonly replies = replies;
+
+  /** 디버그: 자극 발생 */
+  debugEmit(stimulusId: string): void {
+    this.sim.bus.emit(stimulusId);
+  }
+
+  /** NPC가 플레이어를 쳐다보는지 (시선 연출) */
+  npcLooksAtPlayer(n: Npc): boolean {
+    return n.gazing && angleDiff(n.facing, angleTo(n.pos, this.player.pos)) < 0.6;
+  }
+
+  profileOf(n: Npc): NpcProfile {
+    return n.profile;
+  }
+}
