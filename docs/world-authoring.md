@@ -15,7 +15,7 @@
 
 | 층 | 사각형 | 내용 |
 |---|---|---|
-| `ground` | `[0, 0, 200, 140]` | 지상: 아파트 단지·공원·회사·카페·편의점·대로·마트·고깃집·옷 매장·골목 |
+| `ground` | `[0, 0, 260, 140]` | 지상: 아파트 단지·공원·회사·카페·편의점·대로·마트·고깃집·옷 매장·골목, 동쪽 골목(약국·코인세탁방·서점·쉼터) |
 | `subway` | `[0, 140, 124, 20]` | 지하철 환승 통로 (무빙워크, 인파) |
 | `apartment` | `[124, 140, 76, 20]` | 우리 집, 3층 복도, 엘리베이터 안 |
 
@@ -30,6 +30,7 @@
 | `tall` | 서 있는 물체처럼 그림 (그림자) |
 | `push` | 무빙워크: 위에 서면 밀려감 (타일/초) |
 | `pattern`, `accent` | 바닥 무늬 |
+| `deco` | 장식 그림 (`wall`, `window`, `desk`, `shelf`, `books`, `washer`, `bed`, `tree` …, `src/presentation/draw/tiles.ts`) |
 
 ## 월드 (`data/world/city.json`)
 
@@ -60,8 +61,14 @@
 - `stimulus`: `{ "id": "cafeChatter", "intensity": 1 }` — `data/stimuli.json`의 지속형 자극
 
 ### 상호작용 (`interactables`)
-`kind` 목록: `bed`, `piano`, `window`, `drip`, `fridge`, `sink`, `mirror`, `doorLock`, `peephole`, `elevator`, `flavor`, `desk`, `speech`, `coldDrink`, `snack`, `soloMeal`, `bench`, `martItem`, `checkout`, `priceTag`, `clothesPick`, `seat`.
+`kind` 목록: `bed`, `piano`, `window`, `drip`, `fridge`, `sink`, `mirror`, `doorLock`, `peephole`, `elevator`, `flavor`, `desk`, `speech`, `coldDrink`, `shop`, `laundry`, `browse`, `soloMeal`, `bench`, `martItem`, `checkout`, `priceTag`, `clothesPick`, `seat`.
+- `shop`: `shop`에 `data/items.json`의 상점 id. 상점 창이 열린다
+- `flavor` + `monologue`: 게시판·메뉴판 같은 읽을거리
+- `laundry`: 세탁 기다리기 (`balance.laundry`), `browse`: 책 구경 휴식
 상호작용 지점은 **걸을 수 있는 칸**에 두세요 (검증 도구가 확인).
+
+### 간판 (`labels`)
+`{ "at": [x, y], "textKey": "sign.cafe", "color": "#5b7d63" }` — `color`가 있으면 색 간판, 없으면 어두운 이름표.
 
 ### 군중 동선 (`crowdLanes`)
 `from` → `to` 직선을 따라 이름 없는 행인이 흐릅니다. `count`는 평시 인원, 러시아워에는 `balance.clock.rushCrowdMultiplier`배.
@@ -72,6 +79,10 @@
 - `requires`, `mandatory`(필수 상호작용), `optional` + `skip`(안 하면 생활 지표 감소), `deadline` + `late`/`lateStimulus`, `marker`(지도·화살표가 가리킬 상호작용 id 또는 영역 id), `endsDay`(침대)
 - `phone[]`: `at`(시각) 또는 `on`(이벤트)에 전화·문자
 - `npcs[]`: `profile`(data/npcProfiles.json), `at`(스폰 이름), `path`, `from`/`to`(활동 시간), `seated`
+- 그날만 생기는 것 (플리마켓 등): `crowdLanes`(군중 동선 추가), `areaStimuli`(영역 자극 덮어쓰기), `stalls`(노점 천막, 충돌 없음)
+- 하루 순서는 `data/campaign.json`. 바꾸면 `src/main.ts`의 `SAVE_KEY` 버전을 올린다
+
+독백 트리거(`data/monologue/triggers.json`)의 `when.day`로 특정 하루에만 나오게 할 수 있습니다.
 
 ## 확인
 

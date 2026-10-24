@@ -32,6 +32,7 @@ export class MonologueDirector {
   private readonly fired = new Set<number>();
   private lastArea: string | null = null;
   private checkTimer = 0;
+  private dayId = '';
 
   constructor(
     private readonly triggers: readonly MonologueTrigger[],
@@ -41,7 +42,7 @@ export class MonologueDirector {
   /** 이벤트 기반 독백 ("phone:ring", "onset:flush" …) */
   onEvent(event: string): void {
     this.triggers.forEach((tr, i) => {
-      if (tr.when.event === event) this.tryFire(i);
+      if (tr.when.event === event && this.today(tr)) this.tryFire(i);
     });
   }
 
@@ -67,7 +68,7 @@ export class MonologueDirector {
 
     this.triggers.forEach((tr, i) => {
       const w = tr.when;
-      if (w.event !== undefined) return;
+      if (w.event !== undefined || !this.today(tr)) return;
       if (w.area !== undefined) {
         if (enteredArea !== w.area) return;
         if (w.returning !== undefined && w.returning !== ctx.returning) return;
@@ -94,11 +95,16 @@ export class MonologueDirector {
   }
 
   /** 새 하루: 1회성 기록과 쿨다운 초기화 */
-  reset(): void {
+  reset(dayId: string): void {
+    this.dayId = dayId;
     this.clear();
     this.cooldown.clear();
     this.fired.clear();
     this.lastArea = null;
+  }
+
+  private today(tr: MonologueTrigger): boolean {
+    return tr.when.day === undefined || tr.when.day === this.dayId;
   }
 
   private tryFire(i: number): void {

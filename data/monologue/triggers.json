@@ -68,5 +68,8 @@
   {"key": "mono.bookstore.enter", "when": {"area": "bookstore"}, "cooldownSec": 600},
   {"key": "mono.kid", "when": {"npcProfile": "kid", "distMax": 10, "visible": true}, "cooldownSec": 120},
   {"key": "mono.courier", "when": {"npcProfile": "courier", "distMax": 10, "visible": true}, "cooldownSec": 120},
-  {"key": "mono.surveyor", "when": {"npcProfile": "surveyor", "distMax": 10, "visible": true}, "cooldownSec": 120}
+  {"key": "mono.surveyor", "when": {"npcProfile": "surveyor", "distMax": 10, "visible": true}, "cooldownSec": 120},
+  {"key": "mono.wake.halfday", "when": {"event": "dayStart:dayWed"}, "once": true},
+  {"key": "mono.halfday.out", "when": {"event": "done:work", "day": "dayWed"}, "once": true},
+  {"key": "mono.market", "when": {"area": "park", "day": "day4"}, "cooldownSec": 600}
 ]

@@ -198,6 +198,10 @@ export function crossCheck(cfg: GameConfig): string[] {
       }
     }
     if (!d.objectives.some((o) => o.endsDay)) errors.push(`${where}: endsDay 목표가 없습니다`);
+    for (const a of d.areaStimuli ?? []) {
+      if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
+      needStim(a.id, `${where} areaStimuli`);
+    }
     for (const p of d.phone) {
       if (!has(cfg.life.contacts, p.contact)) errors.push(`${where} phone: 연락처 없음 "${p.contact}"`);
       needText(p.textKey, `${where} phone`);

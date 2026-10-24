@@ -158,7 +158,7 @@ export class GameSession {
   readonly sim: Simulation;
   readonly phone: Phone;
   readonly monologue: MonologueDirector;
-  readonly crowd: Crowd;
+  crowd: Crowd;
   clock: GameClock;
   day!: DayDef;
   dayIndex = 0;
@@ -253,7 +253,9 @@ export class GameSession {
     this.objectives = new Objectives(this.day);
     this.phone.endDay();
     this.phone.drainEvents();
-    this.monologue.reset();
+    // 그날만 생기는 군중 동선까지 포함해 다시 만든다
+    this.crowd = new Crowd([...this.cfg.world.crowdLanes, ...(this.day.crowdLanes ?? [])], () => this.rng());
+    this.monologue.reset(this.day.id);
     this.firedPhone = new Set();
     this.pendingEscalations = [];
     this.homeLocked = true;
@@ -1564,7 +1566,7 @@ export class GameSession {
     const p = this.player;
     const bus = this.sim.bus;
     const b = this.cfg.balance;
-    const areaStim = this.area?.stimulus;
+    const areaStim = this.day.areaStimuli?.find((a) => a.area === this.area?.id) ?? this.area?.stimulus;
     // 환경 자극 구역 (ZONE)
     bus.clearContinuous('zone:');
     if (areaStim && !p.lockedSafe) bus.setContinuous(`zone:${this.area!.id}`, areaStim.id, areaStim.intensity);

@@ -132,6 +132,7 @@ export class Renderer {
       }
     }
 
+    this.drawStalls(s);
     this.drawLabels(s);
     this.drawInteractHints(s, ps);
     this.drawViewCones(s);
@@ -224,6 +225,32 @@ export class Renderer {
     if (d.id === 'road' && ty % 6 === 2 && tx % 4 < 2) {
       g.fillStyle = 'rgba(240,230,190,0.5)';
       g.fillRect(x, y + 0.45, 1, 0.08);
+    }
+  }
+
+  /** 그날만 서는 노점: 줄무늬 천막 + 앞쪽 좌판 */
+  private drawStalls(s: GameSession): void {
+    const ctx = this.wctx;
+    for (const st of s.day.stalls ?? []) {
+      const [x, y, w, h] = st.rect;
+      if (Math.abs(x - this.camera.x) > 45 || Math.abs(y - this.camera.y) > 35 || !this.visible({ x, y })) continue;
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(x + 0.15, y + 0.25, w, h);
+      // 좌판 (천막 아래로 살짝 보이는 앞단)
+      ctx.fillStyle = '#c9a27e';
+      ctx.fillRect(x + 0.1, y + h - 0.35, w - 0.2, 0.35);
+      for (let i = 0; i < w * 2 - 1; i++) {
+        ctx.fillStyle = ['#e05a5a', '#f2c94c', '#9fd38a', '#6fb3ff', '#f7f2e8'][(i * 7 + x) % 5]!;
+        ctx.fillRect(x + 0.25 + i * 0.5, y + h - 0.28, 0.3, 0.2);
+      }
+      // 천막: 흰 줄과 색 줄이 번갈아
+      const stripes = Math.max(2, Math.round(w * 2));
+      for (let i = 0; i < stripes; i++) {
+        ctx.fillStyle = i % 2 ? '#fbf5e6' : st.color;
+        ctx.fillRect(x + (i * w) / stripes, y, w / stripes + 0.01, h - 0.4);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.fillRect(x, y + h - 0.55, w, 0.15);
     }
   }
 

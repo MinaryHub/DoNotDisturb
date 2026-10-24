@@ -444,6 +444,8 @@ export const interactableKinds = [
 ] as const;
 export type InteractableKind = (typeof interactableKinds)[number];
 
+const crowdLaneSchema = z.object({ id: z.string(), from: vec2, to: vec2, width: positive, count: z.number().int().min(0), speed: positive, zone: z.string() });
+
 export const worldDefSchema = z.object({
   size: z.tuple([positive, positive]),
   base: z.string(),
@@ -492,9 +494,7 @@ export const worldDefSchema = z.object({
   elevator: z.object({ car: vec2, carArea: z.string(), fronts: z.record(z.string(), vec2) }),
   spawns: z.record(z.string(), vec2),
   paths: z.record(z.string(), z.object({ points: z.array(vec2).min(1), loop: z.boolean() })),
-  crowdLanes: z.array(
-    z.object({ id: z.string(), from: vec2, to: vec2, width: positive, count: z.number().int().min(0), speed: positive, zone: z.string() }),
-  ),
+  crowdLanes: z.array(crowdLaneSchema),
   /** color가 있으면 가게 간판처럼 그 색 바탕으로 그린다 */
   labels: z.array(z.object({ at: vec2, textKey: z.string(), color: z.string().optional() })),
 });
@@ -512,6 +512,12 @@ export const daySchema = z.object({
   start: hhmm,
   spawn: z.string(),
   flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean() }),
+  /** 그날만 생기는 군중 동선 (플리마켓 등) */
+  crowdLanes: z.array(crowdLaneSchema).optional(),
+  /** 그날만 영역 자극을 덮어쓴다 */
+  areaStimuli: z.array(z.object({ area: z.string(), id: z.string(), intensity: nonNegative })).optional(),
+  /** 그날만 서는 노점 천막 (충돌 없음, 그림만) */
+  stalls: z.array(z.object({ rect, color: z.string() })).optional(),
   objectives: z.array(
     z.object({
       id: z.string(),
@@ -592,6 +598,8 @@ export const monologueTriggersSchema = z.array(
       visible: z.boolean().optional(),
       noticed: z.boolean().optional(),
       returning: z.boolean().optional(),
+      /** 이 하루(id)에만 */
+      day: z.string().optional(),
     }),
     once: z.boolean().optional(),
     cooldownSec: nonNegative.optional(),

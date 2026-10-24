@@ -9,6 +9,119 @@
     "weeklyEval": false,
     "monthEnd": true
   },
+  "crowdLanes": [
+    {
+      "id": "market_S",
+      "from": [
+        64.6,
+        6
+      ],
+      "to": [
+        64.6,
+        56
+      ],
+      "width": 1.2,
+      "count": 7,
+      "speed": 0.8,
+      "zone": "park"
+    },
+    {
+      "id": "market_N",
+      "from": [
+        66.2,
+        56
+      ],
+      "to": [
+        66.2,
+        6
+      ],
+      "width": 1.2,
+      "count": 7,
+      "speed": 0.85,
+      "zone": "park"
+    }
+  ],
+  "areaStimuli": [
+    {
+      "area": "park",
+      "id": "marketChatter",
+      "intensity": 1
+    }
+  ],
+  "stalls": [
+    {
+      "rect": [
+        60,
+        9,
+        3,
+        2
+      ],
+      "color": "#e05a5a"
+    },
+    {
+      "rect": [
+        67,
+        9,
+        3,
+        2
+      ],
+      "color": "#3b6fb6"
+    },
+    {
+      "rect": [
+        60,
+        14,
+        3,
+        2
+      ],
+      "color": "#f29e4c"
+    },
+    {
+      "rect": [
+        67,
+        14,
+        3,
+        2
+      ],
+      "color": "#5b7d63"
+    },
+    {
+      "rect": [
+        60,
+        19,
+        3,
+        2
+      ],
+      "color": "#c49bd8"
+    },
+    {
+      "rect": [
+        67,
+        19,
+        3,
+        2
+      ],
+      "color": "#d0812c"
+    },
+    {
+      "rect": [
+        60,
+        24,
+        3,
+        2
+      ],
+      "color": "#2f4858"
+    },
+    {
+      "rect": [
+        67,
+        24,
+        3,
+        2
+      ],
+      "color": "#b56576"
+    }
+  ],
   "objectives": [
     {
       "id": "tryOn",
@@ -32,6 +145,13 @@
         "bond": -8
       },
       "marker": "cafe"
+    },
+    {
+      "id": "market",
+      "textKey": "obj.market",
+      "on": "enter:park",
+      "optional": true,
+      "marker": "park"
     },
     {
       "id": "home",
@@ -164,6 +284,14 @@
       "profile": "kid",
       "at": "eastWalker",
       "path": "eastLaneLoop"
+    },
+    {
+      "id": "classmate",
+      "profile": "acquaintance",
+      "at": "market",
+      "path": "parkLoop",
+      "from": "11:00",
+      "to": "15:00"
     }
   ]
 }

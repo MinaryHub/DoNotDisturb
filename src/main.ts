@@ -14,7 +14,8 @@ import { GameUI } from './presentation/ui/GameUI';
 
 // 진입점: 설정 로드 → 타이틀 → 고정 스텝(60Hz) 게임 루프 + 가변 프레임 렌더링
 
-const SAVE_KEY = 'dnd.save.v2';
+// 캠페인 구성(하루 목록)이 바뀌면 버전을 올려 이전 세이브를 버린다
+const SAVE_KEY = 'dnd.save.v3';
 /** 고정 시간 스텝 시뮬레이션 주파수 (CLAUDE.md 8) */
 const SIM_HZ = 60;
 

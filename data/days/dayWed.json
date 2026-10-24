@@ -1,0 +1,219 @@
+{
+  "id": "dayWed",
+  "weekdayKey": "weekday.wed",
+  "titleKey": "dayWed.title",
+  "introKey": "dayWed.intro",
+  "start": "07:50",
+  "spawn": "player",
+  "flags": {
+    "weeklyEval": false,
+    "monthEnd": false
+  },
+  "objectives": [
+    {
+      "id": "commute",
+      "textKey": "obj.commute",
+      "on": "enter:officeFloor",
+      "deadline": "09:00",
+      "late": {
+        "income": -8
+      },
+      "marker": "officeFloor"
+    },
+    {
+      "id": "work",
+      "textKey": "obj.workHalf",
+      "on": "done:work",
+      "requires": [
+        "commute"
+      ],
+      "marker": "officeDesk"
+    },
+    {
+      "id": "pharmacy",
+      "textKey": "obj.pharmacy",
+      "on": "done:pharmacy",
+      "mandatory": true,
+      "requires": [
+        "work"
+      ],
+      "marker": "pharmacyTalk"
+    },
+    {
+      "id": "laundry",
+      "textKey": "obj.laundry",
+      "on": "done:laundry",
+      "requires": [
+        "work"
+      ],
+      "marker": "washer"
+    },
+    {
+      "id": "parcel",
+      "textKey": "obj.parcel",
+      "on": "interact:parcelPickup",
+      "optional": true,
+      "skip": {
+        "essentials": -5
+      },
+      "requires": [
+        "work"
+      ],
+      "marker": "parcelPickup"
+    },
+    {
+      "id": "books",
+      "textKey": "obj.bookstore",
+      "on": "enter:bookstore",
+      "optional": true,
+      "requires": [
+        "work"
+      ],
+      "marker": "bookstore"
+    },
+    {
+      "id": "home",
+      "textKey": "obj.home",
+      "on": "interact:bed",
+      "requires": [
+        "pharmacy",
+        "laundry"
+      ],
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "08:20",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.halfday"
+    },
+    {
+      "on": "done:work",
+      "kind": "message",
+      "contact": "teamChat",
+      "textKey": "phone.team.halfday"
+    },
+    {
+      "at": "13:10",
+      "kind": "message",
+      "contact": "mgmtOffice",
+      "textKey": "phone.mgmt.parcel"
+    },
+    {
+      "at": "15:30",
+      "kind": "call",
+      "contact": "mom",
+      "textKey": "phone.mom.wed"
+    },
+    {
+      "at": "19:00",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.market"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "courier",
+      "profile": "courier",
+      "at": "courierHall",
+      "path": "aptHall",
+      "to": "08:40"
+    },
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "guard",
+      "profile": "staff",
+      "at": "guard"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer"
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "boss",
+      "profile": "boss",
+      "at": "boss",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "coworkerA",
+      "profile": "coworker",
+      "at": "coworkerA",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "coworkerB",
+      "profile": "coworker",
+      "at": "pantryA",
+      "path": "pantryIdle",
+      "from": "09:00",
+      "to": "18:30"
+    },
+    {
+      "id": "pharmacist",
+      "profile": "pharmacist",
+      "at": "pharmacist"
+    },
+    {
+      "id": "bookseller",
+      "profile": "bookseller",
+      "at": "bookseller",
+      "path": "bookAisle",
+      "from": "10:00"
+    },
+    {
+      "id": "laundryRegular",
+      "profile": "regular",
+      "at": "laundryRegular"
+    },
+    {
+      "id": "surveyor",
+      "profile": "surveyor",
+      "at": "surveyor",
+      "from": "13:00"
+    },
+    {
+      "id": "kid",
+      "profile": "kid",
+      "at": "eastWalker",
+      "path": "eastLaneLoop",
+      "from": "15:00"
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    }
+  ],
+  "work": {
+    "endTime": "12:40",
+    "tasks": 3,
+    "focusPerSec": 22,
+    "pingEverySec": [
+      4,
+      7
+    ],
+    "pingTimeoutSec": 4
+  }
+}
