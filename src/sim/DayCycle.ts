@@ -91,6 +91,8 @@ export function nightRecovery(cfg: NightConfig, input: NightInput): { nextMax: n
 export interface SettlementConfig {
   /** 하루가 지날 때마다 자연히 줄어드는 지표 (장보기·연락을 안 하면) */
   dailyDecay: LifeDelta;
+  /** 매일 밤 나가는 생활비(식비·교통비). 못 내면 생활 필수가 줄어든다 */
+  dailyCost: { money: number; unpaidEssentials: number };
   weekly: {
     /** 소득·업무 평판이 이 이상이면 좋은 평가 */
     goodIncome: number;
@@ -122,6 +124,13 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
     if (!delta) continue;
     life.apply({ [stat]: delta });
     lines.push({ key: `settle.decay.${stat}`, stat, delta });
+  }
+  if (cfg.dailyCost.money > 0) {
+    if (life.spend(cfg.dailyCost.money)) lines.push({ key: 'settle.daily.cost', money: -cfg.dailyCost.money });
+    else {
+      life.apply({ essentials: cfg.dailyCost.unpaidEssentials });
+      lines.push({ key: 'settle.daily.unpaid', stat: 'essentials', delta: cfg.dailyCost.unpaidEssentials });
+    }
   }
   if (flags.weeklyEval) {
     if (life.get('income') >= cfg.weekly.goodIncome) {

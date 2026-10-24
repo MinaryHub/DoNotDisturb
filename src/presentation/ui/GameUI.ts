@@ -206,7 +206,9 @@ export class GameUI {
     const done = s.objectives.list.filter((o) => o.done && !o.def.endsDay).map((o) => `<li class="memo__done">${escapeHtml(this.tx(o.def.textKey))}</li>`);
     setHtml(this.memoList, [...done, ...items].join(''));
     const inv = s.player.inventory;
-    const parts = [escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))];
+    // 오늘 밤 생활비도 못 낼 만큼이면 붉게
+    const poor = s.sim.life.money < this.cfg.life.settlement.dailyCost.money;
+    const parts = [`<span class="${poor ? 'memo__money--low' : ''}">${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span>`];
     this.cfg.items.consumables.forEach((d, i) => {
       const n = inv.consumables[d.id] ?? 0;
       if (n > 0) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);

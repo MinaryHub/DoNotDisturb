@@ -286,6 +286,19 @@ describe('LifeStats · Phone · 에스컬레이션', () => {
     expect(life.avoidCount('landlord')).toBe(0);
   });
 
+  it('매일 밤 생활비: 낼 수 있으면 돈이 줄고, 모자라면 생활 필수가 깎인다', () => {
+    const life = new LifeStats(game.life.stats);
+    const cost = game.life.settlement.dailyCost;
+    const money = life.money;
+    settleDay(game.life.settlement, life, {});
+    expect(life.money).toBe(money - cost.money);
+    life.addMoney(-life.money);
+    const before = life.get('essentials');
+    const lines = settleDay(game.life.settlement, life, {});
+    expect(lines.some((l) => l.key === 'settle.daily.unpaid')).toBe(true);
+    expect(life.get('essentials')).toBeLessThan(before + (game.life.settlement.dailyDecay.essentials ?? 0) + 1);
+  });
+
   it('전화는 울리다 끊기면 부재중, 문자로 대신하면 답장 대기 불안', () => {
     const phone = new Phone({ ringSec: 5, replyWaitSec: 10, maxVisible: 4 });
     phone.receiveCall('boss', 'k');

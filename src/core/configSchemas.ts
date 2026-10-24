@@ -221,6 +221,7 @@ export const lifeConfigSchema = z.object({
   contacts: z.record(z.string(), contactSchema),
   settlement: z.object({
     dailyDecay: lifeDelta,
+    dailyCost: z.object({ money: nonNegative, unpaidEssentials: z.number() }),
     weekly: z.object({ goodIncome: nonNegative, goodBonusMoney: nonNegative, badIncomeDelta: z.number() }),
     monthEnd: z.object({ rent: nonNegative, salaryBase: nonNegative, salaryPerIncome: nonNegative, unpaidHousingDelta: z.number() }),
   }),

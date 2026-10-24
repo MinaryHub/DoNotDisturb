@@ -2,7 +2,7 @@
   "stats": {
     "max": 100,
     "start": { "income": 60, "housing": 60, "essentials": 55, "bond": 60 },
-    "startMoney": 150000,
+    "startMoney": 60000,
     "escalateAfter": 3
   },
   "contacts": {
@@ -57,6 +57,7 @@
   },
   "settlement": {
     "dailyDecay": { "essentials": -8, "bond": -4 },
+    "dailyCost": { "money": 15000, "unpaidEssentials": -12 },
     "weekly": { "goodIncome": 55, "goodBonusMoney": 50000, "badIncomeDelta": -15 },
     "monthEnd": { "rent": 450000, "salaryBase": 300000, "salaryPerIncome": 4000, "unpaidHousingDelta": -30 }
   },

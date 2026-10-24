@@ -1383,3 +1383,8 @@ body.is-touch .hint {
 .lifeicon--low {
   animation: pending-hot 1.4s ease-in-out infinite;
 }
+
+.memo__money--low {
+  color: #b0402b;
+  font-weight: 700;
+}
