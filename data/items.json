@@ -5,7 +5,9 @@
     { "id": "coffee", "nameKey": "item.coffee", "useKey": "use.coffee", "icon": "tumbler", "effects": { "battery": 20 } },
     { "id": "energyDrink", "nameKey": "item.energyDrink", "useKey": "use.energyDrink", "icon": "can", "effects": { "stress": 35, "battery": 5 } },
     { "id": "water", "nameKey": "item.water", "useKey": "use.water", "icon": "bottle", "effects": { "stress": 12, "flush": 0.25 } },
-    { "id": "painkiller", "nameKey": "item.painkiller", "useKey": "use.painkiller", "icon": "pill", "effects": { "migraine": 1, "stress": 5 } }
+    { "id": "painkiller", "nameKey": "item.painkiller", "useKey": "use.painkiller", "icon": "pill", "effects": { "migraine": 1, "stress": 5 } },
+    { "id": "herbalTea", "nameKey": "item.herbalTea", "useKey": "use.herbalTea", "icon": "tea", "effects": { "stress": 20, "battery": 5 } },
+    { "id": "coolPatch", "nameKey": "item.coolPatch", "useKey": "use.coolPatch", "icon": "patch", "effects": { "flush": 0.6, "migraine": 0.3 } }
   ],
   "shops": {
     "convStore": {
@@ -16,6 +18,15 @@
         { "item": "snack", "price": 2000 },
         { "item": "energyDrink", "price": 2500 },
         { "item": "painkiller", "price": 4000 }
+      ]
+    },
+    "pharmacy": {
+      "titleKey": "shop.pharmacy",
+      "stock": [
+        { "item": "painkiller", "price": 3500 },
+        { "item": "coolPatch", "price": 3000 },
+        { "item": "herbalTea", "price": 2500 },
+        { "item": "water", "price": 800 }
       ]
     }
   }

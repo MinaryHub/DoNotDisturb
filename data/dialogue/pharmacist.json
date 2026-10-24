@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "어서 오세요. 어디가 불편하세요?",
+    "kind": "opening",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "두통이 얼마나 자주 있으세요?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "이 약은 식후에 드시고, 하루 세 번 넘기지 마세요.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "잠은 잘 주무시고요?",
+      "kind": "question",
+      "durationSec": 1.8
+    },
+    {
+      "text": "물 많이 드시고, 화면 너무 오래 보지 마시고요.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "열이 좀 있으신 것 같은데, 체온 한번 재 볼까요?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "네, 몸조리 잘하세요.",
+    "parried": "네, 그럼 이거 드시면 돼요.",
+    "endured": "혹시 계속 아프면 병원 꼭 가 보세요.",
+    "sos": "네, 통화하세요~",
+    "awkward": "…네, 안녕히 가세요."
+  }
+}

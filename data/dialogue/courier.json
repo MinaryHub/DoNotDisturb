@@ -1,0 +1,31 @@
+{
+  "greeting": {
+    "text": "택배요! 여기 사인 하나만 부탁드려요.",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "303호 맞으시죠? 상자가 좀 무거워요.",
+      "kind": "question",
+      "durationSec": 2.0
+    },
+    {
+      "text": "다음엔 문 앞에 두고 갈까요? 앱에서 설정하시면 돼요.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "아이고, 급하게 나오셨나 봐요.",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "감사합니다! 수고하세요!",
+    "parried": "네, 여기요!",
+    "endured": "네네, 그럼 갑니다!",
+    "sos": "네, 받으세요!",
+    "awkward": "…감사합니다."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "greeting": {
+    "text": "안녕하세요!!",
+    "kind": "opening",
+    "durationSec": 1.2
+  },
+  "lines": [
+    {
+      "text": "저 오늘 학교에서 칭찬 스티커 받았어요!",
+      "kind": "story",
+      "durationSec": 2.0
+    },
+    {
+      "text": "고양이 키우세요? 창문에서 봤어요!",
+      "kind": "question",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "얼굴 빨개요! 더워요?",
+    "kind": "remark",
+    "durationSec": 1.4
+  },
+  "closers": {
+    "satisfied": "안녕히 가세요!!",
+    "parried": "안녕히 가세요!",
+    "endured": "바이바이!",
+    "sos": "전화 받아요!",
+    "awkward": "…안녕히 가세요."
+  }
+}

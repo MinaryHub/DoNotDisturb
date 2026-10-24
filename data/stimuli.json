@@ -25,6 +25,10 @@
   "toastSpeech": { "kind": "encounter", "channel": "social", "damage": 22 },
   "returnSpeech": { "kind": "encounter", "channel": "social", "damage": 10 },
   "checkoutTalk": { "kind": "encounter", "channel": "social", "damage": 4 },
+  "pharmacyTalk": { "kind": "encounter", "channel": "social", "damage": 6 },
+  "courierTalk": { "kind": "encounter", "channel": "social", "damage": 4 },
+  "kidGreeting": { "kind": "encounter", "channel": "social", "damage": 2 },
+  "bookTalk": { "kind": "encounter", "channel": "social", "damage": 5 },
   "workPing": { "kind": "ambush", "channel": "auditory", "damage": 0.5 },
   "workReply": { "kind": "ambush", "channel": "social", "damage": 0.5 },
 
@@ -41,5 +45,6 @@
   "selfCheckoutBeep": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.25 },
   "storeMusic": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.08 },
   "subwayNoise": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.12 },
+  "laundryHum": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.02 },
   "rumination": { "kind": "rumination", "channel": "social", "ratePerSec": 0.5, "durationSec": 20 }
 }

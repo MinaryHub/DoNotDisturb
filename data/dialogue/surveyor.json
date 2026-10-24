@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "잠깐 1분만요! 동네 설문 조사 중인데요.",
+    "kind": "opening",
+    "durationSec": 2.0
+  },
+  "lines": [
+    {
+      "text": "해오름동에 사신 지는 얼마나 되셨어요?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "동네에 생겼으면 하는 시설이 있으세요?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "다 하시면 쿠폰도 드려요. 이제 세 문항 남았어요!",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 부담 가지실 필요 없어요~",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "협조해 주셔서 감사합니다!",
+    "parried": "아 네, 다음에 부탁드려요!",
+    "endured": "여기 쿠폰이요, 감사합니다!",
+    "sos": "네, 통화하세요~",
+    "awkward": "…네, 좋은 하루 되세요."
+  }
+}

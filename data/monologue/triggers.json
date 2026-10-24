@@ -61,5 +61,12 @@
   {"key": "mono.conv.enter", "when": {"area": "convStore"}, "cooldownSec": 600},
   {"key": "mono.park.enter", "when": {"area": "park"}, "cooldownSec": 400},
   {"key": "mono.home.enter", "when": {"area": "home", "returning": true}, "cooldownSec": 600},
-  {"key": "mono.lobby.morning", "when": {"area": "aptLobby"}, "once": true}
+  {"key": "mono.lobby.morning", "when": {"area": "aptLobby"}, "once": true},
+  {"key": "mono.east.enter", "when": {"area": "eastLane"}, "cooldownSec": 600},
+  {"key": "mono.pharmacy.enter", "when": {"area": "pharmacy"}, "cooldownSec": 600},
+  {"key": "mono.laundry.enter", "when": {"area": "laundromat"}, "cooldownSec": 600},
+  {"key": "mono.bookstore.enter", "when": {"area": "bookstore"}, "cooldownSec": 600},
+  {"key": "mono.kid", "when": {"npcProfile": "kid", "distMax": 10, "visible": true}, "cooldownSec": 120},
+  {"key": "mono.courier", "when": {"npcProfile": "courier", "distMax": 10, "visible": true}, "cooldownSec": 120},
+  {"key": "mono.surveyor", "when": {"npcProfile": "surveyor", "distMax": 10, "visible": true}, "cooldownSec": 120}
 ]

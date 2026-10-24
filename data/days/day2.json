@@ -182,6 +182,29 @@
       "id": "cat",
       "profile": "cat",
       "at": "cat"
+    },
+    {
+      "id": "pharmacist",
+      "profile": "pharmacist",
+      "at": "pharmacist"
+    },
+    {
+      "id": "bookseller",
+      "profile": "bookseller",
+      "at": "bookseller",
+      "path": "bookAisle",
+      "from": "10:00"
+    },
+    {
+      "id": "laundryRegular",
+      "profile": "regular",
+      "at": "laundryRegular"
+    },
+    {
+      "id": "surveyor",
+      "profile": "surveyor",
+      "at": "surveyor",
+      "from": "17:00"
     }
   ],
   "work": {

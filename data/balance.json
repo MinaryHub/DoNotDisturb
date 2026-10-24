@@ -30,6 +30,8 @@
     "plansCancelled": 50,
     "benchPerSec": 0.3,
     "windowPerSec": 0.5,
+    "booksPerSec": 0.4,
+    "booksStressPerSec": 0.6,
     "petStressRelief": 40,
     "washStressRelief": 25,
     "hobbyStressRelief": 30,
@@ -53,6 +55,7 @@
     "knockRepeatSec": 15,
     "fittingAnswerSec": 3
   },
+  "laundry": { "waitSec": 25, "minutes": 40, "essentials": 12 },
   "rehearsal": {
     "damageScale": 0.7,
     "flushScale": 0.5

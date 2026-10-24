@@ -135,7 +135,7 @@ function boot(): void {
     let slot: number | null = null;
     if (mode === 'seated') ['Digit1', 'Digit2', 'Digit3'].forEach((code, i) => input.codePressed(code) && (slot = i));
     let useItem: number | null = null;
-    if (!keyed) (['useItem1', 'useItem2', 'useItem3', 'useItem4', 'useItem5', 'useItem6'] as const).forEach((a, i) => input.wasPressed(a) && (useItem = i));
+    if (!keyed) (['useItem1', 'useItem2', 'useItem3', 'useItem4', 'useItem5', 'useItem6', 'useItem7', 'useItem8'] as const).forEach((a, i) => input.wasPressed(a) && (useItem = i));
     const phoneOpen = s.phoneOpen;
     const menuOpen = phoneOpen || mode === 'shop';
     const qte = s.qte;

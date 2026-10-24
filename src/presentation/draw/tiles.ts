@@ -22,7 +22,9 @@ export type TileDeco =
   | 'grill'
   | 'partition'
   | 'grass'
-  | 'bench';
+  | 'bench'
+  | 'books'
+  | 'washer';
 
 export interface TileNeighbors {
   up: TileDef;
@@ -32,6 +34,7 @@ export interface TileNeighbors {
 }
 
 const PRODUCT = ['#e05a5a', '#f2c94c', '#6fb3ff', '#9fd38a', '#f29e4c', '#c49bd8', '#f7f2e8', '#5bc0be'];
+const BOOKS = ['#8b3a3a', '#2f4858', '#d9cbb4', '#355e3b', '#c9824a', '#4b5563', '#e8d5c4', '#6c5b7b'];
 const CLOTHES = ['#e8d5c4', '#6c8fb2', '#b56576', '#2f3e46', '#e0a26a', '#84a98c', '#f2e8cf'];
 
 function hash2(x: number, y: number, salt = 0): number {
@@ -296,6 +299,46 @@ export function paintDeco(g: CanvasRenderingContext2D, d: TileDef, n: TileNeighb
       g.fillStyle = '#5a5f66';
       g.fillRect(x + 0.08, y + 0.1, 0.08, 0.8);
       g.fillRect(x + 0.84, y + 0.1, 0.08, 0.8);
+      break;
+    }
+    case 'books': {
+      // 책장: 세 단, 책등 색과 높이가 제각각
+      g.fillStyle = shade(d.color, 0.12);
+      g.fillRect(x + 0.04, y + 0.04, 0.92, 0.92);
+      for (let row = 0; row < 3; row++) {
+        let bx = x + 0.08;
+        let i = 0;
+        while (bx < x + 0.9) {
+          const k = hash2(tx, ty, row * 16 + i++);
+          const bw = 0.06 + (k % 4) * 0.02;
+          if (bx + bw > x + 0.92) break;
+          const bh = 0.2 - (k % 3) * 0.03;
+          g.fillStyle = BOOKS[k % BOOKS.length]!;
+          g.fillRect(bx, y + 0.08 + row * 0.29 + (0.22 - bh), bw, bh);
+          bx += bw + 0.012;
+        }
+      }
+      break;
+    }
+    case 'washer': {
+      // 세탁기: 몸체 + 동그란 유리문 + 조작부
+      g.fillStyle = shade(d.color, 0.1);
+      g.fillRect(x + 0.05, y + 0.05, 0.9, 0.9);
+      g.fillStyle = '#9aa3ad';
+      g.fillRect(x + 0.05, y + 0.05, 0.9, 0.16);
+      g.fillStyle = h % 3 === 0 ? '#9fd38a' : '#e05a5a';
+      circle(g, x + 0.8, y + 0.13, 0.035);
+      g.fillStyle = '#5d6b78';
+      circle(g, x + 0.5, y + 0.58, 0.3);
+      g.fillStyle = h % 2 ? '#a3c9d8' : '#c9dbe6';
+      circle(g, x + 0.5, y + 0.58, 0.22);
+      if (h % 2) {
+        // 돌아가는 빨래
+        g.fillStyle = CLOTHES[h % CLOTHES.length]!;
+        circle(g, x + 0.44, y + 0.62, 0.08);
+        g.fillStyle = CLOTHES[(h >> 3) % CLOTHES.length]!;
+        circle(g, x + 0.56, y + 0.55, 0.07);
+      }
       break;
     }
     default:

@@ -34,6 +34,8 @@ export const inputActions = [
   'useItem4',
   'useItem5',
   'useItem6',
+  'useItem7',
+  'useItem8',
   'mask',
   'reply1',
   'reply2',
@@ -86,6 +88,9 @@ export const balanceConfigSchema = z.object({
     plansCancelled: nonNegative,
     benchPerSec: nonNegative,
     windowPerSec: nonNegative,
+    /** 서점에서 책 구경 (배터리/초, 스트레스 감소/초) */
+    booksPerSec: nonNegative,
+    booksStressPerSec: nonNegative,
     petStressRelief: nonNegative,
     washStressRelief: nonNegative,
     hobbyStressRelief: nonNegative,
@@ -98,6 +103,8 @@ export const balanceConfigSchema = z.object({
     rushCrowdMultiplier: positive,
   }),
   safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive }),
+  /** 코인세탁방: 기다리는 시간(실제 초), 게임 시계 진행(분), 생활 필수 보상 */
+  laundry: z.object({ waitSec: positive, minutes: nonNegative, essentials: nonNegative }),
   rehearsal: z.object({ damageScale: unit, flushScale: unit }),
   personalSpace: z.object({ radius: positive, freezeSec: nonNegative, cooldownSec: nonNegative }),
   bumpQte: z.object({ lookAheadSec: positive, windowSec: positive, sideStep: positive }),
@@ -110,7 +117,7 @@ export const balanceConfigSchema = z.object({
 });
 export type BalanceConfig = z.infer<typeof balanceConfigSchema>;
 
-/** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~6 */
+/** 소모품과 상점 (data/items.json). consumables 순서가 단축키 1~8 */
 export const itemsConfigSchema = z.object({
   consumables: z
     .array(
@@ -118,7 +125,7 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
-        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill']).optional(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch']).optional(),
         effects: z.object({
           /** 배터리 회복량 */
           battery: nonNegative.optional(),
@@ -132,7 +139,7 @@ export const itemsConfigSchema = z.object({
         cornerOnly: z.boolean().optional(),
       }),
     )
-    .max(6),
+    .max(8),
   shops: z.record(z.string(), z.object({ titleKey: z.string(), stock: z.array(z.object({ item: z.string(), price: nonNegative })).min(1) })),
 });
 export type ItemsConfig = z.infer<typeof itemsConfigSchema>;
@@ -375,6 +382,10 @@ export const speechesSchema = z.record(
     audience: nonNegative,
     objectiveEvent: z.string(),
     introKey: z.string(),
+    /** 그날 목표가 아니어도 할 수 있는 발화 (약국 등) */
+    anytime: z.boolean().optional(),
+    /** 끝나면 이 소모품을 값을 치르고 받는다 */
+    grant: z.object({ item: z.string(), price: nonNegative }).optional(),
   }),
 );
 export type SpeechDefs = z.infer<typeof speechesSchema>;
@@ -393,7 +404,7 @@ export const tileDefsSchema = z
       accent: z.string().optional(),
       /** 장식 (src/presentation/draw/tiles.ts) */
       deco: z
-        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench'])
+        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench', 'books', 'washer'])
         .optional(),
     }),
   )
@@ -421,6 +432,8 @@ export const interactableKinds = [
   'speech',
   'coldDrink',
   'shop',
+  'laundry',
+  'browse',
   'soloMeal',
   'bench',
   'martItem',

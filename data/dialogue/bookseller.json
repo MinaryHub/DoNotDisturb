@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "…찾으시는 책 있으세요?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "그 작가 신간이 이번 주에 들어왔어요.",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "에세이 좋아하시면 저쪽 창가 쪽도 한번 보세요.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "혹시 포인트 적립 하세요?",
+      "kind": "question",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "아, 제가 방해했나 봐요. 천천히 보세요.",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "천천히 둘러보세요.",
+    "parried": "네, 편하게 보세요.",
+    "endured": "필요하시면 불러 주세요.",
+    "sos": "아, 네.",
+    "awkward": "…네."
+  }
+}

@@ -11,6 +11,11 @@
     "chunks": ["저기…", "이거", "반품하고 싶은데요.", "아,", "다음에 올게요."],
     "stimulus": "returnSpeech", "audience": 1, "objectiveEvent": "done:return", "introKey": "speech.return.intro"
   },
+  "pharmacy": {
+    "chunks": ["저…", "요즘 머리가", "자주 아파서요.", "두통약", "하나만", "주세요."],
+    "stimulus": "pharmacyTalk", "audience": 1, "objectiveEvent": "done:pharmacy", "introKey": "speech.pharmacy.intro",
+    "anytime": true, "grant": { "item": "painkiller", "price": 3500 }
+  },
   "checkoutNormal": {
     "chunks": ["봉투는", "괜찮아요.", "적립도", "괜찮습니다."],
     "stimulus": "checkoutTalk", "audience": 1, "objectiveEvent": "done:checkout", "introKey": "speech.checkout.intro"

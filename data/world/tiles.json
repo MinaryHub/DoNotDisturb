@@ -35,5 +35,7 @@
   { "id": "sofa", "color": "#a9876d", "walk": false, "sight": false, "deco": "sofa" },
   { "id": "bench", "color": "#8d6d4c", "walk": false, "sight": false, "pattern": "plank", "accent": "#7d5d3c", "deco": "bench" },
   { "id": "plant", "color": "#5f8b56", "walk": false, "sight": true, "tall": true, "deco": "plant" },
+  { "id": "bookshelf", "color": "#7a5a40", "walk": false, "sight": true, "tall": true, "deco": "books" },
+  { "id": "washer", "color": "#dfe3e8", "walk": false, "sight": false, "tall": true, "deco": "washer" },
   { "id": "appliance", "color": "#cbced4", "walk": false, "sight": true, "tall": true, "deco": "appliance" }
 ]

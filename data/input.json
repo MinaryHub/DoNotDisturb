@@ -17,6 +17,8 @@
   "useItem4": ["Digit4"],
   "useItem5": ["Digit5"],
   "useItem6": ["Digit6"],
+  "useItem7": ["Digit7"],
+  "useItem8": ["Digit8"],
   "mask": ["KeyV"],
   "reply1": ["Digit1", "KeyJ"],
   "reply2": ["Digit2", "KeyK"],

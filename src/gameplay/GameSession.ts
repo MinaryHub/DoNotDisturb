@@ -120,7 +120,8 @@ export type Mode =
   | { kind: 'travel'; portal: PortalDef; target: PortalDef; timer: number; total: number }
   | { kind: 'elevator'; phase: 'waiting' | 'closing' | 'riding'; timer: number; from: string; to: string; companion: Npc | null; presses: number }
   | { kind: 'selfCheckout'; timer: number; total: number }
-  | { kind: 'rest'; what: 'bench' | 'window'; time: number }
+  | { kind: 'rest'; what: 'bench' | 'window' | 'books'; time: number }
+  | { kind: 'laundry'; time: number }
   | { kind: 'peephole' }
   | { kind: 'priceTag'; progress: number }
   | { kind: 'shop'; shopId: string; cursor: number }
@@ -503,7 +504,8 @@ export class GameSession {
       case 'rest': {
         m.time += dt;
         const r = this.cfg.balance.recovery;
-        this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : r.windowPerSec) * dt);
+        this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : m.what === 'books' ? r.booksPerSec : r.windowPerSec) * dt);
+        if (m.what === 'books') this.sim.energy.relieveStress(r.booksStressPerSec * dt);
         if (m.what === 'window' && m.time > 4) this.calmBuff = true;
         if (c.interactPressed || c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
         break;
@@ -529,6 +531,22 @@ export class GameSession {
       case 'shop':
         this.updateShop(c, m);
         break;
+      case 'laundry': {
+        // 세탁이 끝날 때까지 기다린다. 자리를 뜨면 처음부터
+        m.time += dt;
+        const l = this.cfg.balance.laundry;
+        if (m.time >= l.waitSec) {
+          this.sim.life.apply({ essentials: l.essentials });
+          this.clock.advance(l.minutes, 1);
+          this.toast('laundry.done');
+          this.gameEvent('done:laundry');
+          this.mode = { kind: 'free' };
+        } else if (c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) {
+          this.toast('laundry.cancel');
+          this.mode = { kind: 'free' };
+        }
+        break;
+      }
     }
   }
 
@@ -702,7 +720,7 @@ export class GameSession {
         break;
       case 'speech': {
         const sp = this.cfg.speeches[it.speech!]!;
-        if (this.objectiveAvailable(sp.objectiveEvent)) this.startSpeech(it.speech!);
+        if (this.objectiveAvailable(sp.objectiveEvent) || sp.anytime) this.startSpeech(it.speech!);
         else this.toast('interact.bed.notYet');
         break;
       }
@@ -716,6 +734,14 @@ export class GameSession {
         break;
       case 'shop':
         this.mode = { kind: 'shop', shopId: it.shop!, cursor: 0 };
+        break;
+      case 'laundry':
+        this.mode = { kind: 'laundry', time: 0 };
+        this.toast('laundry.start');
+        break;
+      case 'browse':
+        this.mode = { kind: 'rest', what: 'books', time: 0 };
+        this.toast('browse.start');
         break;
       case 'soloMeal':
         if (this.pay(it.price ?? 0)) {
@@ -1041,8 +1067,13 @@ export class GameSession {
     }
     if (m.speechId === 'checkoutNormal') this.completeCheckout();
     else {
-      this.sim.report.mandatoryDone.push(m.speechId);
+      // 엔딩 리포트의 '감수한 필수 상호작용'에는 그날 필수 목표였던 것만 센다
+      if (this.objectives.list.some((o) => o.def.on === sp.objectiveEvent && o.def.mandatory)) this.sim.report.mandatoryDone.push(m.speechId);
       this.gameEvent(sp.objectiveEvent);
+    }
+    if (sp.grant && this.pay(sp.grant.price)) {
+      this.addItem(sp.grant.item);
+      this.toast('shop.bought', { item: this.cfg.text[this.consumable(sp.grant.item)!.nameKey] ?? sp.grant.item });
     }
     this.mode = this.resumeMode();
     // 일반 계산대: 스몰토크 확률

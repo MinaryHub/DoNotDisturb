@@ -523,7 +523,11 @@ export class GameUI {
     else if (m.kind === 'selfCheckout') text = `${this.tx('checkout.self.waiting')} ${Math.round((m.timer / m.total) * 100)}%`;
     else if (m.kind === 'priceTag') text = `${this.tx('priceTag.hint')}  ${'▮'.repeat(Math.round(m.progress * 10))}${'▯'.repeat(10 - Math.round(m.progress * 10))}`;
     else if (m.kind === 'peephole') text = this.tx('peephole.view');
-    else if (m.kind === 'rest') text = this.tx(m.what === 'bench' ? 'bench.done' : 'window.done');
+    else if (m.kind === 'rest') text = this.tx(m.what === 'bench' ? 'bench.done' : m.what === 'books' ? 'browse.start' : 'window.done');
+    else if (m.kind === 'laundry') {
+      const k = Math.min(1, m.time / this.cfg.balance.laundry.waitSec);
+      text = `${this.tx('laundry.waiting')}  ${'▮'.repeat(Math.round(k * 10))}${'▯'.repeat(10 - Math.round(k * 10))}`;
+    }
     else if (s.player.lockedSafe) text = this.tx('safe.locked');
     show(this.status, text !== '');
     setText(this.status, text);
