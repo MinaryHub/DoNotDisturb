@@ -167,6 +167,7 @@ export class Renderer {
     this.pigeons.update(dt, s.player.pos, s.player.running, others);
     if (onGround) this.pigeons.draw(ctx, viewRect, ps.time, false);
     this.drawCrowd(s, ps);
+    this.drawDodgeHint(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
     // 지붕: 바깥에서는 건물 안이 보이지 않는다. 들어서는 순간 그 건물만 걷힌다
@@ -696,6 +697,45 @@ export class Renderer {
           : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
       drawPerson(ctx, a.pos.x, a.pos.y, look, { r, facing: Math.atan2(a.dir.y, a.dir.x), walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3 });
     }
+  }
+
+  /** 보행 충돌: 마주 오는 행인을 표시하고, 그 사람이 비키는 쪽을 노란 화살표로 */
+  private drawDodgeHint(s: GameSession, ps: PresentationState): void {
+    const q = s.qte;
+    if (q?.kind !== 'dodge' || !q.agent || !q.lean) return;
+    const ctx = this.wctx;
+    const a = q.agent.pos;
+    const pulse = 0.5 + 0.5 * Math.sin(ps.time * 14);
+    ctx.save();
+    ctx.lineWidth = 0.08;
+    ctx.strokeStyle = `rgba(255, 207, 74, ${0.6 + pulse * 0.4})`;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+    // 화살표: 행인 옆으로 비키는 방향
+    const dx = q.axis === 'x' ? q.lean : 0;
+    const dy = q.axis === 'y' ? q.lean : 0;
+    const sx = a.x + dx * 0.7;
+    const sy = a.y + dy * 0.7;
+    const ex = a.x + dx * 1.6;
+    const ey = a.y + dy * 1.6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const [w, c] of [
+      [0.32, 'rgba(25, 22, 30, 0.75)'],
+      [0.16, '#ffcf4a'],
+    ] as const) {
+      ctx.lineWidth = w;
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.moveTo(ex - dx * 0.45 - dy * 0.4, ey - dy * 0.45 - dx * 0.4);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(ex - dx * 0.45 + dy * 0.4, ey - dy * 0.45 + dx * 0.4);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private drawNpc(s: GameSession, n: Npc, ps: PresentationState): void {

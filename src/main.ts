@@ -184,7 +184,12 @@ function boot(): void {
       accept: input.wasPressed('accept'),
       decline: input.wasPressed('decline'),
       textInstead: input.wasPressed('textInstead'),
-      dodge: qte?.kind === 'dodge' ? (input.wasPressed('dodgeLeft') ? -1 : input.wasPressed('dodgeRight') ? 1 : 0) : 0,
+      dodge:
+        qte?.kind !== 'dodge'
+          ? 0
+          : qte.axis === 'y'
+            ? input.wasPressed('moveUp') ? -1 : input.wasPressed('moveDown') ? 1 : 0
+            : input.wasPressed('dodgeLeft') ? -1 : input.wasPressed('dodgeRight') ? 1 : 0,
       phoneToggle: input.wasPressed('phone'),
       menuNav: menuOpen ? (input.codePressed('ArrowUp') || input.codePressed('KeyW') ? -1 : input.codePressed('ArrowDown') || input.codePressed('KeyS') ? 1 : 0) : 0,
       phoneReply: menuOpen && input.codePressed('Enter'),

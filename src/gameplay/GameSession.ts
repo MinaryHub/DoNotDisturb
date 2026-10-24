@@ -137,6 +137,12 @@ export interface Qte {
   timer: number;
   window: number;
   agent?: CrowdAgent;
+  /** 보행 충돌: 비켜설 축 (행인이 가로로 걸어오면 위아래로, 세로로 오면 좌우로) */
+  axis?: 'x' | 'y';
+  /** 보행 충돌: 행인이 기우는 쪽 (축 방향 -1/+1). 플레이어는 반대쪽으로 비켜야 한다 */
+  lean?: number;
+  /** 보행 충돌: 같은 쪽으로 비켜 버린 횟수 (2번이면 부딪힌다) */
+  clashes?: number;
 }
 
 export type FxEvent =
@@ -1326,17 +1332,23 @@ export class GameSession {
     let resolved = false;
     if (q.kind === 'dodge') {
       if (c.dodge !== 0 && q.agent) {
-        const agentSide = this.rng() < 0.5 ? -1 : 1;
-        // 플레이어와 행인이 같은 방향(서로 마주 보며 같은 쪽)으로 비키면 부딪힌다
-        q.agent.dodge = agentSide;
         q.agent.qteCooldown = 3;
-        if (agentSide === -c.dodge) {
-          this.bump();
+        if (c.dodge === q.lean) {
+          // 서로 같은 쪽으로 비켰다 (인도 위의 어색한 춤). 두 번째면 부딪힌다
+          q.clashes = (q.clashes ?? 0) + 1;
+          if (q.clashes >= 2) {
+            this.bump();
+            resolved = true;
+          } else {
+            this.toast('qte.dance');
+            q.timer = 0;
+            this.leanAgent(q);
+          }
         } else {
-          const side = { x: -q.agent.dir.y * c.dodge * this.cfg.balance.bumpQte.sideStep, y: q.agent.dir.x * c.dodge * this.cfg.balance.bumpQte.sideStep };
-          this.world.map.moveCircle(this.player.pos, side.x, side.y, this.cfg.player.radius);
+          const step = this.cfg.balance.bumpQte.sideStep * c.dodge;
+          this.world.map.moveCircle(this.player.pos, q.axis === 'x' ? step : 0, q.axis === 'y' ? step : 0, this.cfg.player.radius);
+          resolved = true;
         }
-        resolved = true;
       } else if (q.timer >= q.window) {
         if (q.agent) {
           q.agent.qteCooldown = 3;
@@ -1363,6 +1375,15 @@ export class GameSession {
       }
     }
     if (resolved) this.qte = null;
+  }
+
+  /** 보행 충돌: 행인이 한쪽으로 기운다 (화면에 화살표로 보인다) */
+  private leanAgent(q: Qte): void {
+    const a = q.agent!;
+    q.lean = this.rng() < 0.5 ? -1 : 1;
+    // 행인의 옆 방향(-dir.y, dir.x)에서 축 성분의 부호로 바꿔 행인 기준 비켜서기 값으로
+    const lateral = q.axis === 'x' ? -a.dir.y : a.dir.x;
+    a.dodge = q.lean * (lateral >= 0 ? 1 : -1);
   }
 
   private bump(): void {
@@ -1590,7 +1611,11 @@ export class GameSession {
           agent.qteCooldown = 3;
           agent.dodge = 1;
           this.bump();
-        } else this.qte = { kind: 'dodge', timer: 0, window: b.bumpQte.windowSec, agent };
+        } else {
+          const axis = Math.abs(agent.dir.x) >= Math.abs(agent.dir.y) ? 'y' : 'x';
+          this.qte = { kind: 'dodge', timer: 0, window: b.bumpQte.windowSec, agent, axis, lean: 0, clashes: 0 };
+          this.leanAgent(this.qte);
+        }
       }
     }
     // 개인 공간 침범

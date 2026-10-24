@@ -192,3 +192,34 @@ describe('조급함', () => {
     expect(s.hurry).toBeGreaterThan(0.4);
   });
 });
+
+describe('보행 충돌', () => {
+  function withDodge(lean: number) {
+    const s = newDay();
+    const agent = s.crowd.agents.find((a) => a.active)!;
+    agent.dir = { x: 0, y: 1 };
+    s.qte = { kind: 'dodge', timer: 0, window: 1, agent, axis: 'x', lean, clashes: 0 };
+    return s;
+  }
+
+  it('상대가 기우는 반대쪽으로 비키면 부딪히지 않는다', () => {
+    const s = withDodge(1);
+    const x0 = s.player.pos.x;
+    const b0 = s.snapshot.battery;
+    press(s, { dodge: -1 });
+    expect(s.qte).toBeNull();
+    expect(s.player.pos.x).toBeLessThan(x0);
+    expect(b0 - s.snapshot.battery).toBeLessThan(1);
+  });
+
+  it('같은 쪽으로 한 번이면 다시 기회, 두 번이면 부딪힌다', () => {
+    const s = withDodge(1);
+    const b0 = s.snapshot.battery;
+    press(s, { dodge: 1 });
+    expect(s.qte).not.toBeNull();
+    expect(s.qte!.clashes).toBe(1);
+    press(s, { dodge: s.qte!.lean as -1 | 1 });
+    expect(s.qte).toBeNull();
+    expect(b0 - s.snapshot.battery).toBeGreaterThan(5);
+  });
+});

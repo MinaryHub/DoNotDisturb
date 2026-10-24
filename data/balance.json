@@ -71,8 +71,8 @@
     "cooldownSec": 1.2
   },
   "bumpQte": {
-    "lookAheadSec": 1.1,
-    "windowSec": 0.5,
+    "lookAheadSec": 1.4,
+    "windowSec": 1.0,
     "sideStep": 0.9
   },
   "slipstream": {
