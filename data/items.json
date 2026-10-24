@@ -17,9 +17,10 @@
       "useKey": "use.snack",
       "icon": "snack",
       "effects": {
-        "battery": 12
+        "battery": 8
       },
-      "cornerOnly": true
+      "breakSec": 8,
+      "quiet": true
     },
     {
       "id": "coffee",
@@ -27,17 +28,11 @@
       "useKey": "use.coffee",
       "icon": "tumbler",
       "effects": {
-        "battery": 12
-      }
-    },
-    {
-      "id": "energyDrink",
-      "nameKey": "item.energyDrink",
-      "useKey": "use.energyDrink",
-      "icon": "can",
-      "effects": {
-        "battery": 20
-      }
+        "battery": 8,
+        "stress": 6
+      },
+      "breakSec": 15,
+      "quiet": true
     },
     {
       "id": "water",
@@ -66,8 +61,10 @@
       "icon": "tea",
       "effects": {
         "stress": 20,
-        "battery": 5
-      }
+        "battery": 4
+      },
+      "breakSec": 12,
+      "quiet": true
     },
     {
       "id": "coolPatch",
@@ -85,8 +82,10 @@
       "useKey": "use.gimbap",
       "icon": "rice",
       "effects": {
-        "battery": 15
-      }
+        "battery": 10
+      },
+      "breakSec": 12,
+      "quiet": true
     },
     {
       "id": "sandwich",
@@ -94,8 +93,10 @@
       "useKey": "use.sandwich",
       "icon": "sandwich",
       "effects": {
-        "battery": 18
-      }
+        "battery": 12
+      },
+      "breakSec": 15,
+      "quiet": true
     },
     {
       "id": "bread",
@@ -103,8 +104,10 @@
       "useKey": "use.bread",
       "icon": "bread",
       "effects": {
-        "battery": 12
-      }
+        "battery": 8
+      },
+      "breakSec": 10,
+      "quiet": true
     },
     {
       "id": "banana",
@@ -112,8 +115,10 @@
       "useKey": "use.banana",
       "icon": "banana",
       "effects": {
-        "battery": 8
-      }
+        "battery": 5
+      },
+      "breakSec": 6,
+      "quiet": true
     },
     {
       "id": "lunchbox",
@@ -121,9 +126,46 @@
       "useKey": "use.lunchbox",
       "icon": "box",
       "effects": {
-        "battery": 25
+        "battery": 18
       },
-      "cornerOnly": true
+      "breakSec": 25,
+      "quiet": true
+    },
+    {
+      "id": "book",
+      "nameKey": "item.book",
+      "useKey": "use.book",
+      "icon": "book",
+      "effects": {
+        "stress": 25,
+        "battery": 6
+      },
+      "breakSec": 20,
+      "quiet": true,
+      "usesPerDay": 2
+    },
+    {
+      "id": "fidget",
+      "nameKey": "item.fidget",
+      "useKey": "use.fidget",
+      "icon": "fidget",
+      "effects": {
+        "stress": 10
+      },
+      "breakSec": 6,
+      "usesPerDay": 4
+    },
+    {
+      "id": "handCream",
+      "nameKey": "item.handCream",
+      "useKey": "use.handCream",
+      "icon": "cream",
+      "effects": {
+        "stress": 6,
+        "flush": 0.3
+      },
+      "breakSec": 5,
+      "usesPerDay": 3
     }
   ],
   "gear": [
@@ -144,10 +186,6 @@
         {
           "item": "sandwich",
           "price": 2800
-        },
-        {
-          "item": "energyDrink",
-          "price": 2500
         },
         {
           "item": "water",
@@ -202,10 +240,6 @@
         {
           "item": "coldDrink",
           "price": 1500
-        },
-        {
-          "item": "energyDrink",
-          "price": 2000
         },
         {
           "item": "herbalTea",
@@ -294,6 +328,23 @@
           "item": "banana",
           "price": 0,
           "perDay": 1
+        }
+      ]
+    },
+    "homeDrawer": {
+      "titleKey": "shop.homeDrawer",
+      "stock": [
+        {
+          "item": "book",
+          "price": 0
+        },
+        {
+          "item": "fidget",
+          "price": 0
+        },
+        {
+          "item": "handCream",
+          "price": 0
         }
       ]
     }

@@ -330,6 +330,47 @@ describe('에너지 보충 음식', () => {
     s.sim.energy.debugSet({ battery: 40 });
     press(s, { useItem: 1 });
     expect(s.player.inventory.consumables['gimbap'] ?? 0).toBe(0);
-    expect(s.snapshot.battery).toBeGreaterThan(50);
+    // 혼자만의 틈: 바로 차지 않고 먹는 동안 천천히
+    expect(s.snapshot.battery).toBeLessThan(42);
+    expect(s.itemBreak?.id).toBe('gimbap');
+    step(s, 13);
+    expect(s.itemBreak).toBeNull();
+    expect(s.snapshot.battery).toBeGreaterThan(47);
+  });
+
+  it('먹다가 움직이면 그만둔다: 먹은 만큼만 찬다', () => {
+    // 집은 저절로도 회복되니, 아무것도 안 먹은 날과 견준다
+    const base = newDay();
+    base.sim.energy.debugSet({ battery: 40 });
+    step(base, 5.1);
+    const s = newDay();
+    s.player.inventory.consumables['lunchbox'] = 1;
+    s.sim.energy.debugSet({ battery: 40 });
+    press(s, { useItem: 0 });
+    step(s, 5);
+    press(s, { move: { x: 1, y: 0 } });
+    expect(s.itemBreak).toBeNull();
+    expect(s.player.inventory.consumables['lunchbox']).toBe(0);
+    const gained = s.snapshot.battery - base.snapshot.battery;
+    expect(gained).toBeGreaterThan(2);
+    expect(gained).toBeLessThan(18 / 2);
+  });
+
+  it('위안 물건(서랍): 써도 남고, 하루 횟수까지만', () => {
+    const s = newDay();
+    openShop(s, 'homeDrawer', 'fidget');
+    press(s, { interactPressed: true });
+    s.mode = { kind: 'free' };
+    const def = cfg.items.consumables.find((c) => c.id === 'fidget')!;
+    for (let i = 0; i < def.usesPerDay!; i++) {
+      s.sim.energy.debugSet({ tension: 50 });
+      press(s, { useItem: 0 });
+      step(s, def.breakSec! + 0.5);
+      expect(s.snapshot.tension).toBeLessThan(50 - def.effects.stress! * 0.8);
+    }
+    expect(s.player.inventory.consumables['fidget']).toBe(1);
+    expect(s.usesLeft('fidget')).toBe(0);
+    press(s, { useItem: 0 });
+    expect(s.itemBreak).toBeNull();
   });
 });

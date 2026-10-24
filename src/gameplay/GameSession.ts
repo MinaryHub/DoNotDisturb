@@ -203,6 +203,10 @@ export class GameSession {
   private ownedGear = new Set<string>();
   /** 오늘 상점별로 챙긴 개수 (탕비실 perDay) */
   private readonly shopTaken = new Map<string, number>();
+  /** 위안 물건을 오늘 쓴 횟수 */
+  private readonly itemUses = new Map<string, number>();
+  /** 혼자만의 틈: 멈춰 서서 천천히 먹거나 쓰는 중. paused면 누가 보고 있어 손이 멈췄다 */
+  itemBreak: { id: string; time: number; dur: number; paused: boolean } | null = null;
   /** 첫 대화는 연습 (규칙을 하나씩 알려 준다) */
   private practiced = false;
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
@@ -293,6 +297,8 @@ export class GameSession {
     this.rehearsed = false;
     this.choresDone.clear();
     this.shopTaken.clear();
+    this.itemUses.clear();
+    this.itemBreak = null;
     this.soakedToday = false;
     this.hurry = 0;
     this.hurryNoted = false;
@@ -456,6 +462,7 @@ export class GameSession {
     this.updatePlayerToggles(c);
     this.updateMode(dt, c);
     if (this.stopped()) return;
+    this.updateItemBreak(dt, c);
     this.updatePhone(dt, c);
     this.updateWorld(dt);
     this.updateSim(dt);
@@ -943,14 +950,51 @@ export class GameSession {
       this.toast('use.none');
       return;
     }
-    // 구석에서만: 나를 보는 사람이 없고 군중 속이 아닐 때
-    if (def.cornerOnly && (this.gazeCount() > 0 || this.crowd.countNear(this.player.pos, 3) > 0)) {
-      this.toast('snack.notHere');
+    if (this.itemBreak) return;
+    if (def.usesPerDay && this.usesLeft(def.id) <= 0) {
+      this.toast('use.enoughToday');
       return;
     }
-    this.applyEffects(def.effects);
-    inv[def.id]!--;
-    this.toast(def.useKey);
+    if (def.usesPerDay) this.itemUses.set(def.id, (this.itemUses.get(def.id) ?? 0) + 1);
+    else inv[def.id]!--;
+    if (!def.breakSec) {
+      this.applyEffects(def.effects);
+      this.toast(def.useKey);
+      return;
+    }
+    // 혼자만의 틈: 멈춰 서서 천천히. 효과는 그동안 나눠 찬다
+    this.itemBreak = { id: def.id, time: 0, dur: def.breakSec, paused: false };
+    this.toast(def.usesPerDay ? 'break.startComfort' : 'break.startFood', { item: this.cfg.text[def.nameKey] ?? def.id });
+  }
+
+  /** 위안 물건을 오늘 몇 번 더 쓸 수 있는지 (소모품은 Infinity) */
+  usesLeft(id: string): number {
+    const per = this.consumable(id)?.usesPerDay;
+    return per ? per - (this.itemUses.get(id) ?? 0) : Infinity;
+  }
+
+  private updateItemBreak(dt: number, c: Controls): void {
+    const b = this.itemBreak;
+    if (!b) return;
+    const def = this.consumable(b.id)!;
+    // 움직이거나, 말을 걸려 오거나, 폰을 열면 그만둔다 (먹던 만큼만 남는다)
+    if (this.mode.kind !== 'free' || this.phoneOpen || Math.hypot(c.move.x, c.move.y) > 0.1) {
+      this.itemBreak = null;
+      this.toast(this.mode.kind === 'dialogue' ? 'break.interrupted' : 'break.stopped');
+      return;
+    }
+    const watched = !!def.quiet && (this.gazeCount() > 0 || this.crowd.countNear(this.player.pos, 3) > 0);
+    if (watched && !b.paused) this.toast('break.watched');
+    b.paused = watched;
+    if (watched) return;
+    const k = Math.min(dt, b.dur - b.time) / b.dur;
+    b.time += dt;
+    const e = def.effects;
+    this.applyEffects({ battery: (e.battery ?? 0) * k, stress: (e.stress ?? 0) * k, flush: (e.flush ?? 0) * k, migraine: (e.migraine ?? 0) * k });
+    if (b.time >= b.dur) {
+      this.itemBreak = null;
+      this.toast(def.useKey);
+    }
   }
 
   get raining(): boolean {

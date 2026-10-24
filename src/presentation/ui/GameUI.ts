@@ -222,8 +222,9 @@ export class GameUI {
     // 가방 칸 순서 = 단축키 1~8
     s.bagSlots().forEach((id, i) => {
       const d = this.cfg.items.consumables.find((c) => c.id === id);
-      const n = inv.consumables[id] ?? 0;
-      if (d) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}×${n}</span>`);
+      // 위안 물건은 오늘 남은 횟수, 소모품은 개수
+      const count = d?.usesPerDay ? `${s.usesLeft(id)}/${d.usesPerDay}` : `×${inv.consumables[id] ?? 0}`;
+      if (d) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}${count}</span>`);
     });
     const bag = s.bagCount();
     if (bag > 0) parts.push(`<span class="memo__bag${bag >= this.cfg.items.bagMax ? ' memo__bag--full' : ''}">🎒${bag}/${this.cfg.items.bagMax}</span>`);

@@ -338,6 +338,7 @@
     { "id": "convShop", "kind": "shop", "at": [119.6, 47.5], "labelKey": "interact.convShop", "shop": "convStore" },
     { "id": "soloSeat", "kind": "soloMeal", "at": [124.6, 20], "labelKey": "interact.soloMeal", "price": 9000 },
     { "id": "cafeCounter", "kind": "shop", "at": [120, 9.6], "labelKey": "interact.cafeOrder", "shop": "cafe" },
+    { "id": "homeDrawer", "kind": "shop", "at": [137.5, 144.4], "labelKey": "interact.homeDrawer", "shop": "homeDrawer" },
     { "id": "homePantry", "kind": "shop", "at": [143.4, 151.5], "labelKey": "interact.homePantry", "shop": "homePantry" },
     { "id": "pantrySnacks", "kind": "shop", "at": [163.9, 30.6], "labelKey": "interact.pantrySnacks", "shop": "officePantry" },
     { "id": "restaurantTakeout", "kind": "shop", "at": [39.5, 82.4], "labelKey": "interact.takeout", "shop": "takeout" },

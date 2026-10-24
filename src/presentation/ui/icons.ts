@@ -1,6 +1,6 @@
 // 소모품 아이콘 (인라인 SVG, 도형 조합). items.json의 icon 이름으로 고른다.
 
-export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box';
+export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box' | 'book' | 'fidget' | 'cream';
 
 const SVG: Record<ItemIcon, string> = {
   // 찬 음료: 얼음 든 플라스틱 컵 + 빨대
@@ -29,6 +29,12 @@ const SVG: Record<ItemIcon, string> = {
   banana: '<path d="M4 8c2 8 9 12 16 9-1 2-4 4-8 4-5 0-9-5-9-12z" fill="#f2d24c"/><path d="M4 8l-.5-2.5L5 6z" fill="#6b5a2a"/><path d="M6 11c2 4 6 6 10 6" stroke="#d9b23a" stroke-width="1" fill="none"/>',
   // 도시락: 칸 나뉜 상자
   box: '<rect x="3" y="6" width="18" height="13" rx="2" fill="#4a6b8a"/><rect x="4.5" y="7.5" width="9" height="10" rx="1" fill="#f6f2e8"/><rect x="14.5" y="7.5" width="5" height="4.5" rx="1" fill="#e06a6a"/><rect x="14.5" y="13" width="5" height="4.5" rx="1" fill="#7fbf6a"/><circle cx="9" cy="12.5" r="1" fill="#2f3e33"/>',
+  // 읽던 책: 펼친 책 + 책갈피
+  book: '<path d="M2 6c3-1.5 7-1.5 10 .5V20c-3-2-7-2-10-.5z" fill="#f6f2e8"/><path d="M22 6c-3-1.5-7-1.5-10 .5V20c3-2 7-2 10-.5z" fill="#ece4d2"/><path d="M12 6.5V20" stroke="#b9ad96" stroke-width=".8"/><path d="M4 9.5c2-.6 4-.6 6 .2M4 12.5c2-.6 4-.6 6 .2M14 9.7c2-.8 4-.8 6-.2M14 12.7c2-.8 4-.8 6-.2" stroke="#b9ad96" stroke-width=".7" fill="none"/><path d="M17 5.6V11l1.3-1 1.3 1V5.4" fill="#e05a5a"/>',
+  // 말랑이: 손에 쥐는 동그란 장난감
+  fidget: '<circle cx="12" cy="12.5" r="8.5" fill="#9fd3c7"/><circle cx="9" cy="10" r="1.8" fill="#7cbcae"/><circle cx="14.5" cy="9.5" r="1.8" fill="#7cbcae"/><circle cx="8.5" cy="15" r="1.8" fill="#7cbcae"/><circle cx="14" cy="15.5" r="1.8" fill="#7cbcae"/><circle cx="11.5" cy="12.5" r="1.8" fill="#7cbcae"/><ellipse cx="9" cy="7" rx="2.5" ry="1.2" fill="#fff" opacity=".5"/>',
+  // 핸드크림: 짜는 튜브
+  cream: '<path d="M7 3h10l-1.5 15h-7z" fill="#f3c1c6"/><rect x="9" y="18" width="6" height="3.5" rx="1" fill="#f6f2e8"/><rect x="8.2" y="7" width="7.6" height="5" rx="1" fill="#fff" opacity=".7"/><path d="M10 9.5h4" stroke="#d98c96" stroke-width="1" stroke-linecap="round"/><rect x="7" y="3" width="10" height="1.6" fill="#e3a3ab"/>',
   // 두통약: 알약 + 포장
   pill: '<rect x="4" y="6" width="16" height="12" rx="2" fill="#eef0f3"/><rect x="4" y="6" width="16" height="3.5" rx="1.5" fill="#6fb3ff"/><g transform="rotate(-35 12 13.5)"><rect x="7.5" y="11.5" width="9" height="4" rx="2" fill="#fff" stroke="#c9cdd2" stroke-width=".6"/><rect x="12" y="11.5" width="4.5" height="4" rx="2" fill="#e05a5a"/></g>',
 };

@@ -210,7 +210,7 @@ export class TouchControls {
   private updateTray(ctx: TouchContext, available: boolean): void {
     if (!available) this.bagOpen = false;
     const s = ctx.session;
-    const slots = s && this.bagOpen ? s.bagSlots().map((id) => [id, s.player.inventory.consumables[id] ?? 0] as const) : [];
+    const slots = s && this.bagOpen ? s.bagSlots().map((id) => [id, this.countOf(s, id)] as const) : [];
     show(this.tray, slots.length > 0, 'flex');
     // 버튼 묶음 바로 위에 뜬다
     if (slots.length) this.tray.style.bottom = `${window.innerHeight - this.pad.getBoundingClientRect().top + 8}px`;
@@ -223,13 +223,19 @@ export class TouchControls {
       if (!d) return;
       const b = el('button', 'touch__item', this.tray);
       b.type = 'button';
-      b.innerHTML = `${itemIcon(d.icon, 30)}<span>${this.tx(d.nameKey)}</span><b>×${n}</b>`;
+      b.innerHTML = `${itemIcon(d.icon, 30)}<span>${this.tx(d.nameKey)}</span><b>${n}</b>`;
       b.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
         this.tap(`Digit${i + 1}`);
         this.bagOpen = false;
       });
     });
+  }
+
+  /** 위안 물건은 오늘 남은 횟수, 소모품은 개수 */
+  private countOf(s: GameSession, id: string): string {
+    const per = this.cfg.items.consumables.find((c) => c.id === id)?.usesPerDay;
+    return per ? `${s.usesLeft(id)}/${per}` : `×${s.player.inventory.consumables[id] ?? 0}`;
   }
 
   /** 한 번 톡 (아이템 아이콘 등) */

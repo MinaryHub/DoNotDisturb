@@ -169,6 +169,7 @@ export class Renderer {
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
+    this.drawItemBreak(s, ps);
     // 지붕: 바깥에서는 건물 안이 보이지 않는다. 들어서는 순간 그 건물만 걷힌다
     this.roofs.update(dt, s.player.pos);
     if (onGround) {
@@ -755,6 +756,34 @@ export class Renderer {
     ctx.moveTo(x - fx * 0.28, y - fy * 0.28);
     ctx.quadraticCurveTo(x - fx * 0.5 + Math.sin(ps.time * 3) * 0.15, y - fy * 0.5, x - fx * 0.55, y - fy * 0.55 - 0.15);
     ctx.stroke();
+  }
+
+  /** 혼자만의 틈: 플레이어를 감싸는 따뜻한 진행 고리. 누가 보고 있으면 회색으로 멈춘다 */
+  private drawItemBreak(s: GameSession, ps: PresentationState): void {
+    const b = s.itemBreak;
+    if (!b) return;
+    const ctx = this.wctx;
+    const { x, y } = s.player.pos;
+    const k = Math.min(1, b.time / b.dur);
+    const r = 0.62 + (b.paused ? 0 : Math.sin(ps.time * 2) * 0.02);
+    ctx.lineWidth = 0.07;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = b.paused ? 'rgba(170,170,180,0.7)' : 'rgba(255, 196, 120, 0.9)';
+    ctx.beginPath();
+    ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+    if (!b.paused) {
+      const g = ctx.createRadialGradient(x, y, 0.2, x, y, 1.1);
+      g.addColorStop(0, 'rgba(255, 200, 130, 0.12)');
+      g.addColorStop(1, 'rgba(255, 200, 130, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 1.1, y - 1.1, 2.2, 2.2);
+    }
   }
 
   private drawPlayer(s: GameSession, ps: PresentationState): void {

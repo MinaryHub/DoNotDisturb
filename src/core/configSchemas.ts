@@ -155,10 +155,14 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
-        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box']).optional(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box', 'book', 'fidget', 'cream']).optional(),
         effects: recoveryEffects,
-        /** 나를 보는 사람이 없고 군중 속이 아닐 때만 */
-        cornerOnly: z.boolean().optional(),
+        /** 혼자만의 틈: 이만큼(초) 멈춰 서서 천천히 먹거나 쓰고, 효과도 그동안 나눠 찬다. 움직이거나 말을 걸려 오면 그만둔다 */
+        breakSec: positive.optional(),
+        /** 나를 보는 사람이 없고 군중 속이 아닐 때만 효과가 찬다 (보이면 손이 멈춘다) */
+        quiet: z.boolean().optional(),
+        /** 위안 물건: 쓰고도 없어지지 않고 하루에 이만큼 쓸 수 있다 */
+        usesPerDay: z.number().int().min(1).optional(),
       }),
     ),
   /** 쓰면 없어지지 않는 물건 (우산 등). 상점 품목 item에 소모품 대신 이 id를 쓸 수 있다 */
