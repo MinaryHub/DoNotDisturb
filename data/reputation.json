@@ -1,0 +1,41 @@
+{
+  "start": 50,
+  "people": {
+    "boss": { "nameKey": "contact.boss", "npcs": ["boss", "restBoss"], "contacts": ["boss"] },
+    "team": { "nameKey": "rep.team", "npcs": ["coworkerA", "coworkerB", "coworkerC", "restCoworkerA", "restCoworkerB", "restCoworkerC", "restCoworkerD", "snackRushA"], "contacts": ["teamChat"] },
+    "seoyun": { "nameKey": "contact.seoyun", "npcs": ["seoyun"], "contacts": ["seoyun"] },
+    "jiu": { "nameKey": "contact.friend", "npcs": ["friend"], "contacts": ["friend"], "start": 70 },
+    "mom": { "nameKey": "contact.mom", "contacts": ["mom"], "start": 70 },
+    "neighbor": { "nameKey": "rep.neighbor", "npcs": ["neighbor"] },
+    "upstairs": { "nameKey": "rep.upstairs", "npcs": ["upstairs"] },
+    "barista": { "nameKey": "rep.barista", "npcs": ["barista"] },
+    "mgmt": { "nameKey": "contact.mgmtOffice", "npcs": ["manager"], "contacts": ["mgmtOffice"] },
+    "landlord": { "nameKey": "contact.landlord", "contacts": ["landlord"] }
+  },
+  "dialogue": { "satisfied": 6, "parried": 1, "endured": 3, "awkward": -3, "sos": 0, "avoided": -2 },
+  "phone": { "answered": 4, "replied": 3, "texted": 1, "declined": -3, "missed": -2, "readIgnored": -3, "unread": -2 },
+  "events": {
+    "done:meeting": { "boss": 5, "team": 2 },
+    "done:work": { "boss": 3 },
+    "done:pitch": { "boss": 8, "team": 4 },
+    "done:toast": { "team": 5, "boss": 3 },
+    "late:commute": { "boss": -5 },
+    "missed:work": { "boss": -8 },
+    "missed:pitch": { "boss": -12, "team": -4 },
+    "leave": { "boss": -3, "team": -2 },
+    "escalation:bossVisit": { "boss": -5 },
+    "escalation:doorbell": { "mgmt": -4, "landlord": -4 },
+    "nod:seoyun": { "seoyun": 5 },
+    "interact:homeMemo": { "upstairs": 6 },
+    "bought:cafe": { "barista": 3 },
+    "met:friend": { "jiu": 8 }
+  },
+  "warmth": { "min": 0.6, "max": 1.5 },
+  "tiers": [
+    { "min": 75, "key": "rep.tier.warm" },
+    { "min": 58, "key": "rep.tier.good" },
+    { "min": 42, "key": "rep.tier.neutral" },
+    { "min": 25, "key": "rep.tier.distant" },
+    { "min": 0, "key": "rep.tier.hurt" }
+  ]
+}

@@ -795,5 +795,17 @@
   "tip.income": "💼 업무 평판이 낮다 → 9시 전 출근 · 내 자리에서 업무 마치기 · 업무 중 메신저에 답하기 · 팀장님 메시지 답장",
   "tip.housing": "🏠 주거가 불안하다 → 관리사무소·집주인 전화 받기 (피하면 초인종이 울린다)",
   "tip.essentials": "🛒 생활 필수가 바닥이다 → 마트 장보기 · 빨래 · 편의점 생필품 · 식비 낼 돈 남기기",
-  "tip.bond": "💛 관계가 멀어진다 → 지우·엄마 연락에 답하기 · 지우 만나기"
+  "tip.bond": "💛 관계가 멀어진다 → 지우·엄마 연락에 답하기 · 지우 만나기",
+  "rep.title": "사람들이 본 나",
+  "rep.overall": "사회적 평판",
+  "rep.today": "오늘 나를 다르게 보게 된 사람",
+  "rep.team": "팀 동료들",
+  "rep.neighbor": "옆집 아주머니",
+  "rep.upstairs": "402호",
+  "rep.barista": "카페 바리스타",
+  "rep.tier.warm": "편하게 여긴다",
+  "rep.tier.good": "좋게 본다",
+  "rep.tier.neutral": "아직 잘 모른다",
+  "rep.tier.distant": "조금 서운해한다",
+  "rep.tier.hurt": "멀게 느낀다"
 }

@@ -829,6 +829,18 @@ export const storyConfigSchema = z.object({
 });
 export type StoryConfig = z.infer<typeof storyConfigSchema>;
 
+/** 사람들의 인상과 사회적 평판 (data/reputation.json, src/sim/Reputation.ts) */
+const outcomeTable = <K extends string>(keys: readonly K[]) => z.object(Object.fromEntries(keys.map((k) => [k, z.number()])) as Record<K, z.ZodNumber>);
+export const reputationConfigSchema = z.object({
+  start: z.number().min(0).max(100),
+  people: z.record(z.string(), z.object({ nameKey: z.string(), npcs: z.array(z.string()).optional(), contacts: z.array(z.string()).optional(), start: z.number().min(0).max(100).optional() })),
+  dialogue: outcomeTable(['satisfied', 'parried', 'endured', 'awkward', 'sos', 'avoided'] as const),
+  phone: outcomeTable(['answered', 'replied', 'texted', 'declined', 'missed', 'readIgnored', 'unread'] as const),
+  events: z.record(z.string(), z.record(z.string(), z.number())),
+  warmth: z.object({ min: positive, max: positive }),
+  tiers: z.array(z.object({ min: z.number(), key: z.string() })).min(1),
+});
+
 export const monologueTriggersSchema = z.array(
   z.object({
     key: z.string(),

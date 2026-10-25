@@ -793,11 +793,38 @@ export class GameUI {
       <h3>${escapeHtml(this.tx('report.life'))}</h3>
       ${this.lifeBars(m.lifeEnd, r.lifeStart)}
       ${this.whyHtml(s)}
+      ${this.peopleTodayHtml(s)}
       ${settle ? `<ul class="settle">${settle}</ul>` : ''}
       <ul class="settle">${night}<li><span>${escapeHtml(this.tx('night.nextMax'))}</span> <b class="nextmax"><span style="width:${m.nextMax}%"></span></b></li></ul>
       <p class="screen__comfort">${escapeHtml(comfort)}</p>
       <p class="screen__cta">${escapeHtml(this.tx('night.next'))}</p>
     </div>`;
+  }
+
+  /** 오늘 나에 대한 인상이 바뀐 사람: 화살표와 말로 (숫자 없이) */
+  private peopleTodayHtml(s: GameSession): string {
+    const rep = s.reputation;
+    const rows = Object.entries(rep.changedToday())
+      .filter(([, d]) => Math.abs(d) >= 1)
+      .sort((a, b) => a[1] - b[1])
+      .map(([id, d]) => {
+        const arrows = (d > 0 ? '▲' : '▼').repeat(Math.min(3, Math.ceil(Math.abs(d) / 5)));
+        const name = this.tx(this.cfg.reputation.people[id]!.nameKey);
+        return `<li class="${d < 0 ? 'why--down' : 'why--up'}">${escapeHtml(name)} <span class="rep__tier">${escapeHtml(this.tx(rep.tierKey(rep.get(id))))}</span> <b>${arrows}</b></li>`;
+      });
+    return rows.length ? `<h3>${escapeHtml(this.tx('rep.today'))}</h3><ul class="settle why">${rows.join('')}</ul>` : '';
+  }
+
+  /** 주간 리포트: 사람들이 본 나 (막대와 말) + 사회적 평판 */
+  private peopleHtml(s: GameSession): string {
+    const rep = s.reputation;
+    const bar = (v: number) => `<b class="rep__bar"><span style="width:${v.toFixed(0)}%"></span></b>`;
+    const rows = Object.entries(this.cfg.reputation.people).map(
+      ([id, p]) => `<li><span class="rep__name">${escapeHtml(this.tx(p.nameKey))}</span>${bar(rep.get(id))}<span class="rep__tier">${escapeHtml(this.tx(rep.tierKey(rep.get(id))))}</span></li>`,
+    );
+    return `<h3>${escapeHtml(this.tx('rep.title'))}</h3>
+      <p class="rep__overall">${escapeHtml(this.tx('rep.overall'))} ${bar(rep.overall)} <span class="rep__tier">${escapeHtml(this.tx(rep.tierKey(rep.overall)))}</span></p>
+      <ul class="rep">${rows.join('')}</ul>`;
   }
 
   /** 오늘 생활 지표가 바뀐 이유: 지표마다 이유별로 모아서 (밤 정산의 하루 소모는 아래 정산 목록에) */
@@ -829,6 +856,7 @@ export class GameUI {
       <table class="report">${this.reportRows(total)}</table>
       <h3>${escapeHtml(this.tx('report.life'))}</h3>
       ${this.lifeBars(s.sim.life.all())}
+      ${this.peopleHtml(s)}
       ${this.epilogueHtml(s)}
       <p class="screen__comfort">${escapeHtml(this.tx('report.comfort.2'))}</p>
       <p class="screen__cta">${escapeHtml(this.tx('final.restart'))}</p>

@@ -795,5 +795,17 @@
   "tip.income": "💼 Work standing is low → arrive before 9 · finish work at your desk · reply to messages while working · reply to the team lead",
   "tip.housing": "🏠 Housing is shaky → answer the management office and landlord (avoiding them brings the doorbell)",
   "tip.essentials": "🛒 Essentials are running out → grocery run · laundry · convenience-store basics · keep money for food",
-  "tip.bond": "💛 Relationships are drifting → reply to Jiu and Mom · meet Jiu"
+  "tip.bond": "💛 Relationships are drifting → reply to Jiu and Mom · meet Jiu",
+  "rep.title": "How people see you",
+  "rep.overall": "Social standing",
+  "rep.today": "People who see you differently today",
+  "rep.team": "Teammates",
+  "rep.neighbor": "Neighbor next door",
+  "rep.upstairs": "Unit 402",
+  "rep.barista": "Cafe barista",
+  "rep.tier.warm": "feels at ease with you",
+  "rep.tier.good": "thinks well of you",
+  "rep.tier.neutral": "doesn't know you yet",
+  "rep.tier.distant": "is a little hurt",
+  "rep.tier.hurt": "feels distant"
 }

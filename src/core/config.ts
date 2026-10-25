@@ -20,6 +20,7 @@ import {
   speechesSchema,
   stimulusTableSchema,
   storyConfigSchema,
+  reputationConfigSchema,
   textTableSchema,
   tileDefsSchema,
   worldDefSchema,
@@ -47,6 +48,7 @@ import type { TileDef } from '../world/TileMap';
 import type { DialoguePool } from '../sim/DialogueBattle';
 import type { SimConfig } from '../sim/Simulation';
 import { unknownStoryFlags } from '../gameplay/Story';
+import type { ReputationConfig } from '../sim/Reputation';
 
 export interface GameConfig {
   input: InputConfig;
@@ -55,6 +57,7 @@ export interface GameConfig {
   chores: ChoresConfig;
   happenings: HappeningsConfig;
   story: StoryConfig;
+  reputation: ReputationConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -116,6 +119,7 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     chores: parseConfig(choresConfigSchema, j('chores.json'), 'data/chores.json'),
     happenings: parseConfig(happeningsConfigSchema, j('happenings.json'), 'data/happenings.json'),
     story: parseConfig(storyConfigSchema, j('story.json'), 'data/story.json'),
+    reputation: parseConfig(reputationConfigSchema, j('reputation.json'), 'data/reputation.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -294,6 +298,14 @@ export function crossCheck(cfg: GameConfig): string[] {
     if (!st.threads.some((th) => th.id === e.thread)) errors.push(`story epilogue ${e.textKey}: 줄기 없음 "${e.thread}"`);
   }
   needText(st.closingKey, 'story closingKey');
+  // 사람들의 인상
+  const rep = cfg.reputation;
+  for (const [id, p] of Object.entries(rep.people)) {
+    needText(p.nameKey, `reputation ${id}`);
+    for (const c of p.contacts ?? []) if (!has(cfg.life.contacts, c)) errors.push(`reputation ${id}: 연락처 없음 "${c}"`);
+  }
+  for (const t of rep.tiers) needText(t.key, 'reputation tier');
+  for (const [ev, d] of Object.entries(rep.events)) for (const id of Object.keys(d)) if (!has(rep.people, id)) errors.push(`reputation event ${ev}: 사람 없음 "${id}"`);
   const conds = [
     ...cfg.days.flatMap((d) => [...d.objectives, ...d.phone, ...d.npcs, ...(d.areaStimuli ?? []), ...(d.notes ?? [])].map((x) => x.if)),
     ...cfg.happenings.list.flatMap((h) => [...(h.phone ?? []), ...(h.npcs ?? [])].map((x) => x.if)),

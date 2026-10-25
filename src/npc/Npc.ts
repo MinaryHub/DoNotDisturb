@@ -51,6 +51,8 @@ export class Npc {
   /** 몸짓 애니메이션용 (끄덕임, 손 내밀기) */
   gesture: 'none' | 'reach' | 'wave' | 'laugh' = 'none';
   cooldown = 0;
+  /** 나에 대한 인상이 좋을수록 잘 알아보고 말을 건다 (알아챔 배율, Reputation.warmth) */
+  warmth = 1;
   /** 플레이어가 이 NPC를 응시한 누적 시간 (Stalker) */
   staredAt = 0;
 
@@ -103,7 +105,7 @@ export class Npc {
       // 가까울수록 빨리 알아챈다
       const near = 1.2 - Math.min(1, this.percept.dist / p.viewDistance) * 0.8;
       const mul = (inView ? near : 0.5) * (eyeContact ? p.eyeContactMultiplier : 1) * (player.hidden ? 0.25 : 1);
-      this.notice = Math.min(1, this.notice + p.noticeFillPerSec * mul * dt);
+      this.notice = Math.min(1, this.notice + p.noticeFillPerSec * mul * this.warmth * dt);
     } else {
       this.notice = Math.max(0, this.notice - p.noticeDecayPerSec * dt);
     }

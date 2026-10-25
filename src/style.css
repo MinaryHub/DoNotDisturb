@@ -1008,6 +1008,47 @@ kbd {
   line-height: 1.4;
 }
 
+.rep {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rep li {
+  display: grid;
+  grid-template-columns: 7.5em 1fr 9em;
+  gap: 8px;
+  align-items: center;
+  margin: 3px 0;
+  font-size: 13px;
+}
+
+.rep__bar {
+  display: inline-block;
+  width: 100%;
+  min-width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.rep__bar span {
+  display: block;
+  height: 100%;
+  background: #e8c37a;
+}
+
+.rep__overall .rep__bar {
+  width: 160px;
+}
+
+.rep__tier {
+  color: #cfc6b4;
+  font-size: 12px;
+}
+
 .screen__epilogue {
   margin: 4px 0 0;
   padding: 0;

@@ -8,6 +8,7 @@ import { NO_MODIFIERS, type ChannelModifiers } from '../sim/EnergyModel';
 import type { LifeChange, LifeSnapshot, LifeStatId } from '../sim/LifeStats';
 import { Phone, applyContactOutcome, type CallHow, type MessageHow } from '../sim/Phone';
 import { Simulation, type SimSnapshot } from '../sim/Simulation';
+import { Reputation } from '../sim/Reputation';
 import { SpeechChallenge } from '../sim/SpeechChallenge';
 import { Crowd } from '../npc/Crowd';
 import { Npc } from '../npc/Npc';
@@ -164,6 +165,8 @@ export interface SaveState {
   story?: Record<string, number> | string[];
   /** 이번 주에 쓴 연차 (그날 아침 기준) */
   leaveUsed?: number;
+  /** 사람들의 인상 (그날 아침 기준) */
+  reputation?: Record<string, number>;
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -173,6 +176,8 @@ export class GameSession {
   readonly sim: Simulation;
   readonly phone: Phone;
   readonly monologue: MonologueDirector;
+  /** 사람들이 나를 보는 인상과 사회적 평판 */
+  readonly reputation: Reputation;
   /** 마을버스 시간표 (city.json에 노선이 없으면 null) */
   readonly busRoute: BusRoute | null;
   crowd: Crowd;
@@ -226,7 +231,7 @@ export class GameSession {
   private readonly regularGreeted = new Set<string>();
 
   private nextMax: number;
-  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number>; leaveUsed: number };
+  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number>; leaveUsed: number; reputation: Record<string, number> };
   private rngState = 12345;
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
@@ -268,6 +273,7 @@ export class GameSession {
     this.monologue = new MonologueDirector(cfg.monologueTriggers, cfg.monologue, () => this.rng());
     this.crowd = new Crowd(cfg.world.crowdLanes, () => this.rng());
     this.busRoute = cfg.world.bus ? new BusRoute(cfg.world.bus, cfg.balance.bus) : null;
+    this.reputation = new Reputation(cfg.reputation);
     this.clock = new GameClock(0);
     this.nextMax = cfg.balance.battery.start;
     if (save) {
@@ -279,6 +285,7 @@ export class GameSession {
       this.practiced = save.practiced ?? save.dayIndex > 0;
       this.story = storyFromSave(save.story);
       this.leaveUsed = save.leaveUsed ?? 0;
+      this.reputation.restore(save.reputation);
     }
     this.startDay(this.dayIndex);
   }
@@ -306,7 +313,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -320,7 +327,8 @@ export class GameSession {
     this.sim.life.clearLedger();
     this.ledgerSeen = 0;
     this.lastWhyToast.clear();
-    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed };
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed, reputation: this.reputation.snapshot() };
+    this.reputation.newDay();
     this.onLeave = false;
     this.sim.startDay(this.nextMax);
     this.clock = new GameClock(parseTime(this.day.start));
@@ -447,6 +455,7 @@ export class GameSession {
     this.nextMax = this.dayStart.max;
     this.story = storyFromSave(this.dayStart.story);
     this.leaveUsed = this.dayStart.leaveUsed;
+    this.reputation.restore(this.dayStart.reputation);
     this.startDay(this.dayIndex);
   }
 
@@ -472,6 +481,7 @@ export class GameSession {
           areaId: this.world.map.areaAt(pos.x, pos.y)?.id ?? null,
         }),
       );
+      this.npcs.at(-1)!.warmth = this.reputation.warmth(this.reputation.personOfNpc(n.id));
     }
   }
 
@@ -510,6 +520,7 @@ export class GameSession {
           this.reports = [];
           this.story.clear();
           this.leaveUsed = 0;
+          this.reputation.reset();
           this.nextMax = this.cfg.balance.battery.start;
           this.startDay(0);
         }
@@ -1460,6 +1471,9 @@ export class GameSession {
       this.practiced = true;
       this.toast('coach.done');
     }
+    // 대화가 어떻게 끝났는지가 그 사람의 인상으로 남는다
+    const ending = b.outcome === 'endured' && b.wrongCount > 0 ? 'awkward' : b.outcome;
+    if (ending) this.reputation.change(this.reputation.personOfNpc(npc.id), this.cfg.reputation.dialogue[ending]);
     if (npc.type === 'ally') {
       this.sim.life.apply(this.cfg.life.rewards.allyMeet, 'allyMeet');
       this.gameEvent(`met:${npc.id}`);
@@ -1847,6 +1861,7 @@ export class GameSession {
   private resolveContact(contactId: string, how: CallHow | MessageHow, textKey: string): void {
     const contact = this.cfg.life.contacts[contactId];
     if (!contact || contact.muted) return;
+    this.reputation.change(this.reputation.personOfContact(contactId), this.cfg.reputation.phone[how]);
     const report = this.sim.report;
     if (how === 'answered') report.callsAnswered++;
     if (how === 'declined' || how === 'missed') report.callsAvoided++;
@@ -1957,7 +1972,10 @@ export class GameSession {
         else e.npc.endDialogue(5);
       }
       // 다가오던 사람이 말을 걸지 못하고 돌아섬 = 피한 스몰토크
-      if (wasPursuing && npc.state === 'giveUp') this.sim.report.smalltalkAvoided++;
+      if (wasPursuing && npc.state === 'giveUp') {
+        this.sim.report.smalltalkAvoided++;
+        this.reputation.change(this.reputation.personOfNpc(npc.id), this.cfg.reputation.dialogue.avoided);
+      }
     }
 
     // 군중
@@ -2156,6 +2174,7 @@ export class GameSession {
       if (m.give && this.addItem(m.give)) this.toast(m.toastKey ?? 'shop.taken', { item: this.cfg.text[this.consumable(m.give)?.nameKey ?? ''] ?? m.give });
     }
     this.objectives.fire(event);
+    this.reputation.onEvent(event);
     this.monologue.onEvent(event);
     this.day.phone.forEach((ev, i) => {
       if (ev.on === event && !this.firedPhone.has(i)) {
