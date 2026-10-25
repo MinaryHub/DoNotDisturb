@@ -776,6 +776,7 @@ export class GameUI {
       text = `${this.tx('laundry.waiting')}  ${'▮'.repeat(Math.round(k * 10))}${'▯'.repeat(10 - Math.round(k * 10))}`;
     }
     else if (s.player.lockedSafe) text = this.tx('safe.locked');
+    else if (s.player.biking && s.mode.kind === 'free') text = this.tx('bike.riding');
     show(this.status, text !== '');
     setText(this.status, text);
   }

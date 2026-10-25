@@ -1038,5 +1038,7 @@
   "vacation.obj.home": "Head home and lie down when you're tired",
   "vacation.phone.mom": "Heard you're on vacation? Eat well and rest. No need to reply.",
   "vacation.phone.friend": "Happy vacation 🎉 The riverside kiosk ice cream is supposedly good. A nice place to go alone.",
-  "touch.vacation": "Vacation"
+  "touch.vacation": "Vacation",
+  "interact.bikeOff": "Get off the bike",
+  "bike.riding": "🚲 Riding · [F] get off (return it at a dock)"
 }

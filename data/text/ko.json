@@ -1038,5 +1038,7 @@
   "vacation.obj.home": "지치면 집에 돌아가 눕기",
   "vacation.phone.mom": "휴가라며? 밥 잘 챙겨 먹고, 푹 쉬어. 연락 안 해도 돼.",
   "vacation.phone.friend": "휴가 축하해 🎉 강변 매점 아이스크림 맛있대. 혼자 가도 좋은 데야.",
-  "touch.vacation": "휴가 모드"
+  "touch.vacation": "휴가 모드",
+  "interact.bikeOff": "자전거에서 내리기",
+  "bike.riding": "🚲 자전거 타는 중 · [F] 내리기 (대여소에 대면 반납)"
 }

@@ -820,7 +820,13 @@ export class GameSession {
     const target = this.nearestInteractable();
     this.prompt = target ? { labelKey: target.labelKey, at: target.at } : null;
     if (safe && !p.lockedSafe && !target) this.prompt = { labelKey: 'interact.lockStall', at: p.pos };
+    // 자전거: 주변에 할 게 없으면 [F]로 그 자리에서 내린다
+    if (p.biking && !target) this.prompt = { labelKey: 'interact.bikeOff', at: p.pos };
     if (!c.interactPressed) return;
+    if (p.biking && !target) {
+      this.parkBike('bike.parked');
+      return;
+    }
     if (this.sim.somatic.slips(this.rng())) {
       this.toast('slip');
       return;

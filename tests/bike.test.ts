@@ -53,4 +53,14 @@ describe('공유 자전거', () => {
     step(s, 0.1);
     expect(s.player.biking).toBe(false);
   });
+
+  it('주변에 아무것도 없으면 [F]로 그 자리에서 내린다', () => {
+    const s = atDock('bikeOffice');
+    s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+    expect(s.player.biking).toBe(true);
+    step(s, 1, { move: { x: -1, y: 0 } });
+    expect(s.prompt?.labelKey).toBe('interact.bikeOff');
+    s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+    expect(s.player.biking).toBe(false);
+  });
 });
