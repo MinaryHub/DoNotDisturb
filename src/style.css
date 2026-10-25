@@ -132,17 +132,133 @@ kbd {
   font-size: 14px;
 }
 
-.toast {
+/* 알림: 여러 개를 쌓아 모든 창(업무·대화·상점) 위에 */
+.toasts {
   position: absolute;
   left: 50%;
-  top: 22%;
+  top: 14%;
+  z-index: 70;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 560px;
   padding: 6px 16px;
   border-radius: 18px;
-  background: rgba(20, 20, 26, 0.55);
-  font-size: 17px;
-  transition: opacity 0.5s;
-  opacity: 0;
+  background: rgba(20, 20, 26, 0.82);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 16px;
+  text-align: center;
+  transition: opacity 0.3s;
+}
+
+/* 아이템 막대: 화면 아래 가운데, 칸마다 번호·그림·이름·효과 */
+.hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  z-index: 12;
+  transform: translateX(-50%);
+  display: none;
+  gap: 8px;
+  align-items: stretch;
+  pointer-events: auto;
+}
+
+.hotbar__slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+  max-width: 220px;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(24, 24, 30, 0.82);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.hotbar__slot:hover {
+  border-color: rgba(255, 209, 102, 0.8);
+  background: rgba(40, 38, 44, 0.9);
+}
+
+.hotbar__slot kbd {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd166;
+}
+
+.hotbar__slot .icon {
+  flex: none;
+  margin-left: 8px;
+}
+
+.hotbar__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hotbar__text b {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hotbar__text em {
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.hotbar__text small {
+  font-size: 11px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotbar__slot--using {
+  border-color: #a8d99a;
+}
+
+.hotbar__slot--off {
+  opacity: 0.5;
+}
+
+.hotbar__fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: #a8d99a;
+}
+
+.hotbar__bag {
+  align-self: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(24, 24, 30, 0.7);
+  font-size: 12px;
+}
+
+body.is-touch .hotbar {
+  display: none !important;
 }
 
 .hint {

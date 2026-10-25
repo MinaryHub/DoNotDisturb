@@ -818,5 +818,18 @@
   "work.cost.team": "Just chatter, fine to leave unread",
   "work.cost.hr": "Miss it: work standing ▼",
   "work.nudge": "Work has stopped. Hold [Space] to keep going.",
-  "work.from.hr": "HR"
+  "work.from.hr": "HR",
+  "item.fx.battery": "Energy ▲",
+  "item.fx.calm": "Calms the mind",
+  "item.fx.symptom": "Eases flush/headache",
+  "item.fx.soothe": "Calm for {sec}s",
+  "item.fx.resist": "Half stimulus for {sec}s",
+  "item.fx.warp": "Warp home",
+  "item.fx.quiet": "When alone",
+  "item.usesLeft": "Today {n}/{max}",
+  "item.state.biking": "Can't use while biking",
+  "item.state.watched": "Someone's watching, hands paused",
+  "item.state.using": "Using… (moving stops it)",
+  "item.state.busy": "Using something else",
+  "item.state.done": "Used up today"
 }

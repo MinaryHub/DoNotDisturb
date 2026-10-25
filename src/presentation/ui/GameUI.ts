@@ -1,4 +1,5 @@
 import { t, type GameConfig } from '../../core/config';
+import type { ConsumableDef } from '../../core/configSchemas';
 import type { GameSession, Mode } from '../../gameplay/GameSession';
 import { replies } from '../../sim/DialogueBattle';
 import { formatTime } from '../../sim/DayCycle';
@@ -28,7 +29,11 @@ export class GameUI {
   private readonly arrow = el('div', 'objective-arrow', this.root, '➤');
   private readonly skills = el('div', 'skills', this.root);
   private readonly prompt = el('div', 'prompt', this.root);
-  private readonly toastEl = el('div', 'toast', this.root);
+  /** 알림 쌓기: 여러 개가 겹쳐 와도 하나씩 사라지지 않게 (모든 창 위) */
+  private readonly toastsEl = el('div', 'toasts', this.root);
+  private readonly toastItems: { el: HTMLElement; text: string; left: number }[] = [];
+  /** 가방 단축 막대: 칸마다 번호·그림·이름·효과·개수 (클릭하거나 숫자 키) */
+  private readonly hotbar = el('div', 'hotbar', this.root);
   private readonly hint = el('div', 'hint', this.root);
   private readonly mono = el('div', 'monologue', this.root);
   private readonly tagLayer = el('div', 'tags', this.root);
@@ -54,7 +59,6 @@ export class GameUI {
   private readonly mapEl = el('div', 'map', document.body);
   private readonly mapCanvas = el('canvas', 'map__canvas', this.mapEl);
   private readonly optionsEl = el('div', 'options', document.body);
-  private toastTimer = 0;
   private mapOpen = false;
   private minimap: HTMLCanvasElement | null = null;
 
@@ -111,9 +115,70 @@ export class GameUI {
   }
 
   toast(key: string, vars?: Record<string, string | number>): void {
-    setText(this.toastEl, this.tx(key, vars));
-    this.toastEl.style.opacity = '1';
-    this.toastTimer = 2.6;
+    const text = this.tx(key, vars);
+    // 같은 말이 다시 오면 새로 쌓지 않고 시간만 늘린다
+    const same = this.toastItems.find((t) => t.text === text);
+    if (same) {
+      same.left = 3.6;
+      return;
+    }
+    const item = el('div', 'toast', this.toastsEl);
+    setText(item, text);
+    this.toastItems.push({ el: item, text, left: 3.6 });
+    while (this.toastItems.length > 4) this.toastItems.shift()!.el.remove();
+  }
+
+  private updateToasts(dt: number): void {
+    for (let i = this.toastItems.length - 1; i >= 0; i--) {
+      const t = this.toastItems[i]!;
+      t.left -= dt;
+      t.el.style.opacity = t.left < 0.6 ? String(Math.max(0, t.left / 0.6)) : '1';
+      if (t.left <= 0) {
+        t.el.remove();
+        this.toastItems.splice(i, 1);
+      }
+    }
+  }
+
+  /** 아이템 효과를 짧은 말로 */
+  private effectText(d: ConsumableDef): string {
+    const e = d.effects;
+    const parts: string[] = [];
+    if (e.battery) parts.push(this.tx('item.fx.battery'));
+    if (e.stress) parts.push(this.tx('item.fx.calm'));
+    if (e.flush || e.migraine) parts.push(this.tx('item.fx.symptom'));
+    if (e.soothe) parts.push(this.tx('item.fx.soothe', { sec: e.soothe.sec }));
+    if (e.resist) parts.push(this.tx('item.fx.resist', { sec: e.resist.sec }));
+    if (e.warpHome) parts.push(this.tx('item.fx.warp'));
+    if (d.quiet) parts.push(this.tx('item.fx.quiet'));
+    return parts.join(' · ');
+  }
+
+  private updateHotbar(s: GameSession, playing: boolean): void {
+    const slots = s.bagSlots();
+    const free = s.mode.kind === 'free' || s.mode.kind === 'peephole';
+    const visible = playing && free && slots.length > 0;
+    show(this.hotbar, visible, 'flex');
+    if (!visible) return;
+    const inv = s.player.inventory;
+    const brk = s.itemBreak;
+    const html = slots
+      .map((id, i) => {
+        const d = this.cfg.items.consumables.find((c) => c.id === id);
+        if (!d) return '';
+        const count = d.usesPerDay ? this.tx('item.usesLeft', { n: s.usesLeft(id), max: d.usesPerDay }) : `×${inv.consumables[id] ?? 0}`;
+        const using = !!brk && brk.id === id;
+        let state = '';
+        if (s.player.biking) state = this.tx('item.state.biking');
+        else if (using) state = brk.paused ? this.tx('item.state.watched') : this.tx('item.state.using');
+        else if (brk) state = this.tx('item.state.busy');
+        else if (d.usesPerDay && s.usesLeft(id) <= 0) state = this.tx('item.state.done');
+        const fill = using ? `<i class="hotbar__fill" style="width:${((brk.time / brk.dur) * 100).toFixed(0)}%"></i>` : '';
+        const cls = ['hotbar__slot', using ? 'hotbar__slot--using' : '', state && !using ? 'hotbar__slot--off' : ''].join(' ');
+        return `<button class="${cls}" data-code="Digit${i + 1}">${fill}<kbd>${i + 1}</kbd>${itemIcon(d.icon, 30)}<span class="hotbar__text"><b>${escapeHtml(this.tx(d.nameKey))} <em>${escapeHtml(count)}</em></b><small>${escapeHtml(state || this.effectText(d))}</small></span></button>`;
+      })
+      .join('');
+    setHtml(this.hotbar, `${html}<span class="hotbar__bag">🎒 ${s.bagCount()}/${this.cfg.items.bagMax}</span>`);
   }
 
   // ───────────────────────── 타이틀 ─────────────────────────
@@ -138,8 +203,7 @@ export class GameUI {
 
   update(dt: number, s: GameSession, ps: PresentationState, cam: Camera2D): void {
     show(this.root, true);
-    this.toastTimer -= dt;
-    if (this.toastTimer <= 0) this.toastEl.style.opacity = '0';
+    this.updateToasts(dt);
 
     const mode = s.mode;
     const playing = !['dayIntro', 'night', 'final', 'burnout', 'collapse'].includes(mode.kind);
@@ -147,6 +211,7 @@ export class GameUI {
     show(this.memo, playing);
     show(this.skills, playing);
     this.updateMemo(s);
+    this.updateHotbar(s, playing);
     this.updateArrow(s, cam, playing);
     this.updateSkills(s);
     this.updatePrompt(s, cam, playing);
@@ -242,15 +307,7 @@ export class GameUI {
     // 오늘 밤 생활비도 못 낼 만큼이면 붉게
     const poor = s.sim.life.money < this.cfg.life.settlement.dailyCost.money;
     const parts = [`<span class="${poor ? 'memo__money--low' : ''}">${escapeHtml(this.money(s.sim.life.money))}</span>`];
-    // 가방 칸 순서 = 단축키 1~8
-    s.bagSlots().forEach((id, i) => {
-      const d = this.cfg.items.consumables.find((c) => c.id === id);
-      // 위안 물건은 오늘 남은 횟수, 소모품은 개수
-      const count = d?.usesPerDay ? `${s.usesLeft(id)}/${d.usesPerDay}` : `×${inv.consumables[id] ?? 0}`;
-      if (d) parts.push(`<span class="memo__item" data-code="Digit${i + 1}" title="${escapeHtml(this.tx(d.nameKey))}"><kbd>${i + 1}</kbd>${itemIcon(d.icon, 16)}${count}</span>`);
-    });
-    const bag = s.bagCount();
-    if (bag > 0) parts.push(`<span class="memo__bag${bag >= this.cfg.items.bagMax ? ' memo__bag--full' : ''}">🎒${bag}/${this.cfg.items.bagMax}</span>`);
+    // 가방 아이템은 화면 아래 단축 막대(hotbar)에
     for (const g of this.cfg.items.gear) if (inv.gear.includes(g.id)) parts.push(`<span class="memo__item" title="${escapeHtml(this.tx(g.nameKey))}">${itemIcon(g.icon, 16)}</span>`);
     setHtml(this.memoFoot, parts.join(' ') + this.pendingHtml(s));
   }

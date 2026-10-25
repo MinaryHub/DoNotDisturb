@@ -74,6 +74,16 @@ function boot(): void {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const input = new Input(cfg.input);
   const touch = isTouchDevice() ? new TouchControls(cfg, input) : null;
+  // 마우스: 아이템 막대의 칸을 누르면 그 단축키를 누른 것처럼 (터치는 TouchControls가 맡는다)
+  if (!touch) {
+    document.addEventListener('pointerdown', (e) => {
+      const slot = (e.target as HTMLElement | null)?.closest<HTMLElement>('.hotbar [data-code]');
+      if (!slot) return;
+      const code = slot.dataset['code']!;
+      input.touchDown(code);
+      setTimeout(() => input.touchUp(code), 80);
+    });
+  }
   // 터치 기기는 키보드 단축키 안내를 처음부터 끈다 (설정에서 다시 켤 수 있음)
   if (touch && !localStorage.getItem('dnd.touchInit')) {
     settings.controlsHint = false;

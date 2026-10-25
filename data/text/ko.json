@@ -818,5 +818,18 @@
   "work.cost.team": "잡담이라 안 읽어도 괜찮다",
   "work.cost.hr": "놓치면 업무 평판 ▼",
   "work.nudge": "일이 멈춰 있다. [Space]를 누르고 있어야 진행된다.",
-  "work.from.hr": "인사팀"
+  "work.from.hr": "인사팀",
+  "item.fx.battery": "기운 ▲",
+  "item.fx.calm": "마음 가라앉힘",
+  "item.fx.symptom": "홍조·두통 완화",
+  "item.fx.soothe": "{sec}초 동안 차분",
+  "item.fx.resist": "{sec}초 동안 자극 반감",
+  "item.fx.warp": "집으로 순간 이동",
+  "item.fx.quiet": "혼자 있을 때",
+  "item.usesLeft": "오늘 {n}/{max}",
+  "item.state.biking": "자전거 위에선 못 쓴다",
+  "item.state.watched": "보는 눈이 있어 손이 멈췄다",
+  "item.state.using": "쓰는 중… (움직이면 그만둔다)",
+  "item.state.busy": "다른 걸 쓰는 중",
+  "item.state.done": "오늘은 다 썼다"
 }
