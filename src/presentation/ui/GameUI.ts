@@ -486,7 +486,7 @@ export class GameUI {
         html = this.speechHtml(s, m);
         break;
       case 'work':
-        html = this.workHtml(m);
+        html = this.workHtml(s, m);
         break;
       case 'piano':
         html = this.pianoHtml(m);
@@ -604,15 +604,31 @@ export class GameUI {
     </div>`;
   }
 
-  private workHtml(m: Extract<Mode, { kind: 'work' }>): string {
+  /** 업무 화면: 진행, 메신저(놓치면 어떻게 되는지), 업무 평판 막대와 방금 바뀐 이유, 집중 안내 */
+  private workHtml(s: GameSession, m: Extract<Mode, { kind: 'work' }>): string {
     const g = m.game;
+    const timeout = s.day.work?.pingTimeoutSec ?? 4;
     const pings = g.pings
-      .map((p) => `<div class="ping" style="--age:${(p.age / 4).toFixed(2)}"><b>${escapeHtml(this.tx('work.ping'))}</b> ${escapeHtml(this.tx(`work.ping.${p.from}`))}</div>`)
+      .map(
+        (p) =>
+          `<div class="ping ping--${p.from}" style="--age:${(p.age / timeout).toFixed(2)}"><b>${escapeHtml(this.tx('work.ping'))}</b> ${escapeHtml(this.tx(`work.ping.${p.from}`))}<em>${escapeHtml(this.tx(`work.cost.${p.from}`))}</em></div>`,
+      )
+      .join('');
+    const income = s.sim.life.get('income');
+    const log = s.sim.life.ledger
+      .slice(m.ledgerFrom)
+      .filter((c) => c.stat === 'income')
+      .slice(-3)
+      .reverse()
+      .map((c) => `<li class="${c.delta < 0 ? 'why--down' : 'why--up'}">${c.delta < 0 ? '▼' : '▲'} ${escapeHtml(s.lifeWhyText(c))}</li>`)
       .join('');
     return `<div class="work">
       <div class="work__title">${escapeHtml(this.tx('work.title'))} · ${g.tasksDone}/${g.tasks}</div>
       <div class="work__bar"><div style="width:${g.progress.toFixed(1)}%"></div></div>
       <div class="work__pings">${pings}</div>
+      <div class="work__standing"><span>💼 ${escapeHtml(this.tx('life.income'))}</span><b class="rep__bar${income < 40 ? ' rep__bar--low' : ''}"><span style="width:${income.toFixed(0)}%"></span></b></div>
+      ${log ? `<ul class="work__log why">${log}</ul>` : ''}
+      ${m.idle > 2.5 ? `<div class="work__nudge">${escapeHtml(this.tx('work.nudge'))}</div>` : ''}
       <div class="work__hint">${escapeHtml(this.tx('work.hint'))}</div>
     </div>`;
   }

@@ -233,7 +233,7 @@
   "dialogue.wrong": "…that was an awkward answer",
   "dialogue.waitBoss": "There's no gap to cut in",
   "work.title": "Working",
-  "work.hint": "Hold [Space]: focus  ·  When a message comes: [1] reply / ignore  ·  [Esc] short break",
+  "work.hint": "Hold [Space]: focus (work stops when you let go)  ·  When a message comes, [1] reply  ·  [Esc] take a break",
   "work.ping": "Messenger",
   "work.ping.boss": "Team Lead: Can you check this?",
   "work.ping.team": "Group chat: lol look at this",
@@ -775,8 +775,8 @@
   "why.allyMeet": "Met Jiu",
   "why.bossTalk": "The talk with the team lead went well",
   "why.groceries": "Did the grocery shopping",
-  "why.workPingReplied": "Replied to a work message",
-  "why.workPingIgnored": "Missed a work message",
+  "why.workPingReplied": "Replied to {who}'s work message",
+  "why.workPingIgnored": "Missed {who}'s work message",
   "why.workDone": "Finished work",
   "why.missed": "Ran out of time for '{who}'",
   "why.late": "Late for '{who}'",
@@ -813,5 +813,10 @@
   "bike.returned": "Returned the bike.",
   "bike.parked": "Parked the bike.",
   "bike.parkedDoor": "Parked the bike by the door.",
-  "bike.noPhone": "Can't look at your phone while riding."
+  "bike.noPhone": "Can't look at your phone while riding.",
+  "work.cost.boss": "Miss it: work standing ▼▼",
+  "work.cost.team": "Just chatter, fine to leave unread",
+  "work.cost.hr": "Miss it: work standing ▼",
+  "work.nudge": "Work has stopped. Hold [Space] to keep going.",
+  "work.from.hr": "HR"
 }

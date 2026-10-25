@@ -99,8 +99,11 @@
   "rewards": {
     "workDone": { "income": 8 },
     "workPerTask": 6000,
-    "workPingIgnored": { "income": -3 },
-    "workPingReplied": { "income": 1 },
+    "workPing": {
+      "boss": { "replied": { "income": 2 }, "ignored": { "income": -4 } },
+      "team": { "replied": {}, "ignored": {} },
+      "hr": { "replied": { "income": 1 }, "ignored": { "income": -1 } }
+    },
     "late": { "income": -8 },
     "groceries": { "essentials": 20 },
     "homeMealEssentials": -3,

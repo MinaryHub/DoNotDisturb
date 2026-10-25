@@ -42,3 +42,36 @@ describe('생활 지표 변화의 이유', () => {
     expect(s.sim.life.ledger).toEqual([]);
   });
 });
+
+describe('업무 중 메신저', () => {
+  function atDesk(): GameSession {
+    const s = new GameSession(cfg);
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    s.objectives.get('mgmtCall')!.done = true;
+    s.objectives.get('commute')!.done = true;
+    s.objectives.get('meeting')!.done = true;
+    const desk = cfg.world.interactables.find((i) => i.id === 'officeDesk')!;
+    s.player.pos.x = desk.at[0];
+    s.player.pos.y = desk.at[1];
+    s.step(dt, NO_CONTROLS);
+    s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+    expect(s.mode.kind).toBe('work');
+    return s;
+  }
+
+  it('보낸 사람마다 다르다: 팀장님을 놓치면 깎이고(이유에 누구인지), 단톡 잡담은 괜찮다', () => {
+    const s = atDesk();
+    for (let i = 0; i < 60 * 40; i++) s.step(dt, { ...NO_CONTROLS, smile: true });
+    const missed = s.sim.life.ledger.filter((c) => c.why === 'workPingIgnored');
+    expect(missed.length).toBeGreaterThan(0);
+    for (const c of missed) expect(['boss', 'work.from.hr']).toContain(c.who);
+    const boss = missed.find((c) => c.who === 'boss');
+    if (boss) expect(s.lifeWhyText(boss)).toContain(cfg.text['contact.boss']!);
+  });
+
+  it('Space를 누르지 않으면 일이 멈춰 있다고 알려 준다', () => {
+    const s = atDesk();
+    for (let i = 0; i < 60 * 3; i++) s.step(dt, NO_CONTROLS);
+    expect(s.mode.kind === 'work' && s.mode.idle).toBeGreaterThan(2.5);
+  });
+});

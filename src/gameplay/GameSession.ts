@@ -122,7 +122,8 @@ export type Mode =
   | { kind: 'free' }
   | { kind: 'dialogue'; battle: DialogueBattle; npc: Npc; pool: string; closer: string | null; closerTime: number; myLine: string | null; myLineTime: number; practice: boolean; smiling: boolean; wrongAge: number }
   | { kind: 'speech'; challenge: SpeechChallenge; speechId: string; time: number }
-  | { kind: 'work'; game: WorkGame }
+  /** idle: Space를 누르지 않은 시간 (안내), ledgerFrom: 업무를 시작할 때의 생활 지표 기록 위치 (업무 화면의 '왜 깎였나') */
+  | { kind: 'work'; game: WorkGame; idle: number; ledgerFrom: number }
   | { kind: 'piano'; game: PianoGame; doneTime: number }
   | { kind: 'travel'; portal: PortalDef; target: PortalDef; timer: number; total: number }
   | { kind: 'elevator'; phase: 'waiting' | 'closing' | 'riding'; timer: number; from: string; to: string; companion: Npc | null; presses: number }
@@ -944,7 +945,7 @@ export class GameSession {
       case 'desk':
         if (this.objectiveAvailable('done:work') && this.day.work) {
           const w = this.day.work;
-          this.mode = { kind: 'work', game: new WorkGame(w.tasks, w.focusPerSec, w.pingEverySec, w.pingTimeoutSec, () => this.rng()) };
+          this.mode = { kind: 'work', game: new WorkGame(w.tasks, w.focusPerSec, w.pingEverySec, w.pingTimeoutSec, () => this.rng()), idle: 0, ledgerFrom: this.sim.life.ledger.length };
         } else this.toast('interact.bed.notYet');
         break;
       case 'speech': {
@@ -1594,13 +1595,16 @@ export class GameSession {
   private updateWork(dt: number, c: Controls, m: Extract<Mode, { kind: 'work' }>): void {
     const g = m.game;
     const rw = this.cfg.life.rewards;
+    const sender: Record<string, string> = { boss: 'boss', team: 'teamChat', hr: 'work.from.hr' };
     if (c.reply === 'nod' || c.note === 0) {
       const ping = g.reply();
       if (ping) {
         this.sim.bus.emit('workReply');
-        this.sim.life.apply(rw.workPingReplied, 'workPingReplied');
+        this.sim.life.apply(rw.workPing[ping.from]!.replied, 'workPingReplied', sender[ping.from]);
+        this.reputation.onEvent(`workPing:replied:${ping.from}`);
       }
     }
+    m.idle = c.smile ? 0 : m.idle + dt;
     g.update(dt, c.smile);
     // 업무 스트레스: 일하는 동안 긴장이 쌓이고, 답 못 한 메신저(팀장은 더)가 짓누른다
     const wc = this.cfg.balance.work;
@@ -1611,9 +1615,11 @@ export class GameSession {
         this.sim.bus.emit('workPing');
         this.fx.push({ type: 'sound', id: 'vibrate' });
       } else if (e.type === 'pingIgnored') {
-        this.sim.life.apply(rw.workPingIgnored, 'workPingIgnored');
+        const cost = rw.workPing[e.ping.from]!.ignored;
+        this.sim.life.apply(cost, 'workPingIgnored', sender[e.ping.from]);
+        this.reputation.onEvent(`workPing:ignored:${e.ping.from}`);
         this.sim.bus.emit('workPingMissed');
-        this.gameEvent('avoided:income');
+        if ((cost.income ?? 0) < 0) this.gameEvent('avoided:income');
       }
       else if (e.type === 'task') this.sim.life.addMoney(rw.workPerTask);
       else if (e.type === 'done') {

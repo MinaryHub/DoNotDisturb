@@ -299,8 +299,8 @@ export const lifeConfigSchema = z.object({
   rewards: z.object({
     workDone: lifeDelta,
     workPerTask: nonNegative,
-    workPingIgnored: lifeDelta,
-    workPingReplied: lifeDelta,
+    /** 업무 중 메신저: 보낸 사람마다 답했을 때·놓쳤을 때 (팀장님은 크게, 단톡 잡담은 안 읽어도 괜찮다) */
+    workPing: z.record(z.enum(['boss', 'team', 'hr']), z.object({ replied: lifeDelta, ignored: lifeDelta })),
     late: lifeDelta,
     groceries: lifeDelta,
     homeMealEssentials: z.number(),

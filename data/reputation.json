@@ -28,7 +28,10 @@
     "nod:seoyun": { "seoyun": 5 },
     "interact:homeMemo": { "upstairs": 6 },
     "bought:cafe": { "barista": 3 },
-    "met:friend": { "jiu": 8 }
+    "met:friend": { "jiu": 8 },
+    "workPing:replied:boss": { "boss": 1 },
+    "workPing:ignored:boss": { "boss": -2 },
+    "workPing:replied:team": { "team": 1 }
   },
   "warmth": { "min": 0.6, "max": 1.5 },
   "tiers": [

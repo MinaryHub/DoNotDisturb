@@ -1008,6 +1008,65 @@ kbd {
   line-height: 1.4;
 }
 
+.ping em {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-style: normal;
+  opacity: 0.8;
+}
+
+.ping--boss em {
+  color: #f0a29a;
+}
+
+.ping--team em {
+  color: #a8d99a;
+}
+
+.work__standing {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.work__standing .rep__bar {
+  width: 160px;
+}
+
+.rep__bar--low span {
+  background: #e07a6a;
+}
+
+.work__log {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.work__log .why--down {
+  color: #f0a29a;
+}
+
+.work__log .why--up {
+  color: #a8d99a;
+}
+
+.work__nudge {
+  margin-top: 8px;
+  color: #ffd166;
+  font-weight: 600;
+  animation: nudge 1s ease-in-out infinite alternate;
+}
+
+@keyframes nudge {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
 .rep {
   margin: 4px 0 0;
   padding: 0;
