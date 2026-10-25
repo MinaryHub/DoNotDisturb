@@ -1,4 +1,5 @@
 {
+  "meta.locale": "ko-KR",
   "area.yard": "아파트 단지",
   "area.park": "공원",
   "area.alley": "골목",
@@ -569,5 +570,10 @@
   "break.stopped": "하던 걸 멈췄다. 먹은 만큼만.",
   "break.interrupted": "말을 걸어와서 하던 걸 멈췄다.",
   "use.enoughToday": "오늘은 이걸로 충분히 했다.",
-  "obj.missed": "'{obj}' — 시간이 지나 버렸다. 오늘은 여기까지. 내일 다시."
+  "obj.missed": "'{obj}' — 시간이 지나 버렸다. 오늘은 여기까지. 내일 다시.",
+  "martItem.tofu": "두부",
+  "martItem.egg": "계란",
+  "martItem.onion": "파",
+  "martItem.ramen": "라면",
+  "options.language": "언어 · Language"
 }

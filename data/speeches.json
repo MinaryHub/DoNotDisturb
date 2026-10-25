@@ -1,23 +1,28 @@
 {
   "meeting": {
     "chunks": ["이번 주는", "지난주 이슈", "마무리하고,", "새 기능", "테스트까지", "진행하겠습니다."],
+    "chunksEn": ["This week,", "we'll wrap up", "last week's issues,", "and move on", "to testing", "the new feature."],
     "stimulus": "meetingSpeech", "audience": 6, "objectiveEvent": "done:meeting", "introKey": "speech.meeting.intro"
   },
   "toast": {
     "chunks": ["다들", "한 주", "고생 많으셨습니다.", "앞으로도", "잘 부탁드립니다.", "건배!"],
+    "chunksEn": ["Everyone,", "thank you", "for this week.", "Let's keep", "it up together.", "Cheers!"],
     "stimulus": "toastSpeech", "audience": 8, "objectiveEvent": "done:toast", "introKey": "speech.toast.intro"
   },
   "returnClothes": {
     "chunks": ["저기…", "이거", "반품하고 싶은데요.", "아,", "다음에 올게요."],
+    "chunksEn": ["Um…", "I'd like", "to return this.", "Oh,", "I'll come back another time."],
     "stimulus": "returnSpeech", "audience": 1, "objectiveEvent": "done:return", "introKey": "speech.return.intro"
   },
   "pharmacy": {
     "chunks": ["저…", "요즘 머리가", "자주 아파서요.", "두통약", "하나만", "주세요."],
+    "chunksEn": ["Um…", "I've been getting", "headaches lately.", "Just one", "box of painkillers,", "please."],
     "stimulus": "pharmacyTalk", "audience": 1, "objectiveEvent": "done:pharmacy", "introKey": "speech.pharmacy.intro",
     "anytime": true, "grant": { "item": "painkiller", "price": 3500 }
   },
   "checkoutNormal": {
     "chunks": ["봉투는", "괜찮아요.", "적립도", "괜찮습니다."],
+    "chunksEn": ["No bag,", "thanks.", "No points", "either, thanks."],
     "stimulus": "checkoutTalk", "audience": 1, "objectiveEvent": "done:checkout", "introKey": "speech.checkout.intro"
   }
 }

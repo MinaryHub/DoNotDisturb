@@ -872,7 +872,7 @@ export class GameSession {
           break;
         }
         inv.items.push(it.item!);
-        this.toast('martItem.done', { item: this.cfg.text[`interact.item.${it.item}`]?.replace(' 담기', '') ?? it.item!, n: inv.items.length });
+        this.toast('martItem.done', { item: this.cfg.text[`martItem.${it.item}`] ?? it.item!, n: inv.items.length });
         this.gameEvent('pick:martItem');
         break;
       }
@@ -1253,7 +1253,7 @@ export class GameSession {
     const scale = this.rehearsed ? this.cfg.balance.rehearsal.damageScale : 1;
     this.sim.bus.emit(sp.stimulus, speechId, scale);
     this.phoneOpen = false;
-    this.mode = { kind: 'speech', challenge: new SpeechChallenge(this.cfg.dialogueRules.speech, sp.chunks), speechId, time: 0 };
+    this.mode = { kind: 'speech', challenge: new SpeechChallenge(this.cfg.dialogueRules.speech, this.cfg.lang === 'en' && sp.chunksEn ? sp.chunksEn : sp.chunks), speechId, time: 0 };
   }
 
   private updateSpeech(dt: number, c: Controls, m: Extract<Mode, { kind: 'speech' }>): void {

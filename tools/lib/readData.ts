@@ -14,7 +14,7 @@ function walk(dir: string): string[] {
 }
 
 export function readRawConfig(dataDir = DATA_DIR): RawConfig {
-  const raw: RawConfig = { json: {}, dialogue: {}, days: {}, monologueCsv: fs.readFileSync(path.join(dataDir, 'monologue/ko.csv'), 'utf8') };
+  const raw: RawConfig = { json: {}, dialogue: {}, days: {}, monologueCsv: fs.readFileSync(path.join(dataDir, 'monologue/ko.csv'), 'utf8'), monologueCsvEn: fs.readFileSync(path.join(dataDir, 'monologue/en.csv'), 'utf8') };
   for (const file of walk(dataDir)) {
     if (!file.endsWith('.json')) continue;
     const rel = path.relative(dataDir, file).split(path.sep).join('/');

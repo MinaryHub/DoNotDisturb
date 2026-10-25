@@ -67,7 +67,12 @@ export interface GameConfig {
   monologueTriggers: MonologueTrigger[];
   monologue: Record<string, string>;
   text: TextTable;
+  /** 화면 언어. 영어 표에 없는 키는 한국어로 보인다 */
+  lang: Lang;
 }
+
+export type Lang = 'ko' | 'en';
+export const LANGS: readonly Lang[] = ['ko', 'en'];
 
 /** 파일 경로(data/ 기준) → 파싱 전 원본. 브라우저는 Vite import, 도구는 fs로 채운다 */
 export interface RawConfig {
@@ -77,10 +82,12 @@ export interface RawConfig {
   /** data/days/<id>.json */
   days: Record<string, unknown>;
   monologueCsv: string;
+  /** data/monologue/en.csv (없으면 한국어 독백만) */
+  monologueCsvEn?: string;
 }
 
 /** 원본을 zod로 검증해 GameConfig로 만든다. 값이 틀리면 어떤 파일의 어디가 틀렸는지 바로 실패한다. */
-export function parseGameConfig(raw: RawConfig): GameConfig {
+export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
   const j = (name: string) => {
     if (!(name in raw.json)) throw new Error(`설정 파일이 없습니다: data/${name}`);
     return raw.json[name];
@@ -113,8 +120,12 @@ export function parseGameConfig(raw: RawConfig): GameConfig {
     world: parseConfig(worldDefSchema, j('world/city.json'), 'data/world/city.json'),
     days,
     monologueTriggers: parseConfig(monologueTriggersSchema, j('monologue/triggers.json'), 'data/monologue/triggers.json'),
-    monologue: parseKeyTextCsv(raw.monologueCsv),
-    text: parseConfig(textTableSchema, j('text/ko.json'), 'data/text/ko.json'),
+    monologue: { ...parseKeyTextCsv(raw.monologueCsv), ...(lang === 'en' && raw.monologueCsvEn ? parseKeyTextCsv(raw.monologueCsvEn) : {}) },
+    text: {
+      ...parseConfig(textTableSchema, j('text/ko.json'), 'data/text/ko.json'),
+      ...(lang === 'en' ? parseConfig(textTableSchema, j('text/en.json'), 'data/text/en.json') : {}),
+    },
+    lang,
   };
 }
 

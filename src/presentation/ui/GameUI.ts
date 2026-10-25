@@ -84,6 +84,11 @@ export class GameUI {
     return t(this.cfg.text, key, vars);
   }
 
+  /** 돈 표시 (₩, 언어별 자릿수 구분) */
+  private money(n: number): string {
+    return this.tx('hud.money', { money: n.toLocaleString(this.cfg.text['meta.locale'] ?? 'ko-KR') });
+  }
+
   setMinimap(c: HTMLCanvasElement): void {
     this.minimap = c;
   }
@@ -222,7 +227,7 @@ export class GameUI {
     const inv = s.player.inventory;
     // 오늘 밤 생활비도 못 낼 만큼이면 붉게
     const poor = s.sim.life.money < this.cfg.life.settlement.dailyCost.money;
-    const parts = [`<span class="${poor ? 'memo__money--low' : ''}">${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span>`];
+    const parts = [`<span class="${poor ? 'memo__money--low' : ''}">${escapeHtml(this.money(s.sim.life.money))}</span>`];
     // 가방 칸 순서 = 단축키 1~8
     s.bagSlots().forEach((id, i) => {
       const d = this.cfg.items.consumables.find((c) => c.id === id);
@@ -550,13 +555,13 @@ export class GameUI {
         const lifeCost = Object.entries(e.life ?? {})
           .map(([k, v]) => `${({ income: '💼', housing: '🏠', essentials: '🛒', bond: '💛' } as Record<string, string>)[k] ?? k}${v}`)
           .join(' ');
-        const price = e.price > 0 ? `${e.price.toLocaleString('ko-KR')}원` : lifeCost || this.tx('shop.free');
+        const price = e.price > 0 ? this.money(e.price) : lifeCost || this.tx('shop.free');
         const note = Number.isFinite(left) ? `<span class="shop__left">${escapeHtml(left > 0 ? this.tx('shop.left', { n: left }) : this.tx('shop.soldOut'))}</span>` : '';
         return `<li class="${i === m.cursor ? 'sel' : ''}${left <= 0 ? ' shop__out' : ''}"><span class="shop__name">${itemIcon(def.icon, 22)}${escapeHtml(this.tx(def.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx(`${def.nameKey}.desc`))}${note}</span><span class="shop__have">${have}</span><span class="shop__price">${escapeHtml(price)}</span></li>`;
       })
       .join('');
     return `<div class="shop">
-      <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>🎒${s.bagCount()}/${this.cfg.items.bagMax} · ${escapeHtml(this.tx('hud.money', { money: s.sim.life.money.toLocaleString('ko-KR') }))}</span></div>
+      <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>🎒${s.bagCount()}/${this.cfg.items.bagMax} · ${escapeHtml(this.money(s.sim.life.money))}</span></div>
       <ul class="shop__list">${rows}</ul>
       <div class="shop__hint">${escapeHtml(this.tx('shop.hint'))}</div>
     </div>`;
@@ -597,7 +602,7 @@ export class GameUI {
   private pianoHtml(m: Extract<Mode, { kind: 'piano' }>): string {
     const g = m.game;
     const keys = ['A', 'S', 'D', 'F', 'G', 'H', 'J'];
-    const names = ['도', '레', '미', '파', '솔', '라', '시'];
+    const names = [1, 2, 3, 4, 5, 6, 7].map((i) => this.tx(`touch.note${i}`));
     const k = keys.map((key, i) => `<div class="key ${g.expected === i ? 'next' : ''} ${g.lastNote === i ? (g.lastCorrect ? 'ok' : 'miss') : ''}"><span>${names[i]}</span><kbd>${key}</kbd></div>`).join('');
     return `<div class="piano">
       <div class="piano__title">${escapeHtml(this.tx('piano.title'))} · ${g.index}/${g.melody.length}</div>
@@ -752,7 +757,7 @@ export class GameUI {
     const r = m.report;
     const settle = m.settlement
       .map((l) => {
-        const v = l.money !== undefined ? `${l.money > 0 ? '+' : ''}${l.money.toLocaleString('ko-KR')}원` : `${(l.delta ?? 0) > 0 ? '+' : ''}${l.delta}`;
+        const v = l.money !== undefined ? `${l.money > 0 ? '+' : l.money < 0 ? '−' : ''}${this.money(Math.abs(l.money))}` : `${(l.delta ?? 0) > 0 ? '+' : ''}${l.delta}`;
         return `<li>${escapeHtml(this.tx(l.key))} <b>${escapeHtml(v)}</b></li>`;
       })
       .join('');
@@ -827,6 +832,22 @@ export class GameUI {
     toggle('stressGauge', 'options.stressGauge');
     toggle('symptomGauge', 'options.symptomGauge');
     toggle('controlsHint', 'options.controlsHint');
+    // 언어: 바꾸면 저장하고 다시 불러온다 (주소의 ?lang=은 지운다)
+    const langRow = el('label', 'options__row', box);
+    el('span', '', langRow, this.tx('options.language'));
+    const select = el('select', 'options__select', langRow);
+    for (const [code, name] of [['ko', '한국어'], ['en', 'English']] as const) {
+      const opt = el('option', '', select, name);
+      opt.value = code;
+      opt.selected = s.lang === code;
+    }
+    select.addEventListener('change', () => {
+      s.lang = select.value === 'en' ? 'en' : 'ko';
+      this.onSettings(s);
+      const url = new URL(location.href);
+      url.searchParams.delete('lang');
+      location.replace(url.toString());
+    });
     el('p', 'options__warn', box, this.tx('screen.photosensitive'));
     el('p', 'options__close', box, this.tx('options.close'));
   }

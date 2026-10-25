@@ -1,12 +1,13 @@
 import monologueCsv from '../../data/monologue/ko.csv?raw';
-import { parseGameConfig, type GameConfig, type RawConfig } from './config';
+import monologueCsvEn from '../../data/monologue/en.csv?raw';
+import { parseGameConfig, type GameConfig, type Lang, type RawConfig } from './config';
 
 // 브라우저(Vite)용 설정 로더. /data의 JSON을 번들에 포함하고 zod로 검증한다.
 
 const files = import.meta.glob('../../data/**/*.json', { eager: true, import: 'default' });
 
-export function loadConfig(): GameConfig {
-  return parseGameConfig(rawFromModules(files, monologueCsv));
+export function loadConfig(lang: Lang = 'ko'): GameConfig {
+  return parseGameConfig({ ...rawFromModules(files, monologueCsv), monologueCsvEn }, lang);
 }
 
 export function rawFromModules(modules: Record<string, unknown>, csv: string): RawConfig {

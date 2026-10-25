@@ -55,8 +55,14 @@ function mergePressed(prev: Controls, next: Controls): Controls {
 
 function boot(): void {
   let cfg: GameConfig;
+  const params = new URLSearchParams(location.search);
+  const settings = loadSettings();
+  // ?lang=en|ko 가 설정보다 먼저
+  const langParam = params.get('lang');
+  if (langParam === 'ko' || langParam === 'en') settings.lang = langParam;
+  document.documentElement.lang = settings.lang;
   try {
-    cfg = loadConfig();
+    cfg = loadConfig(settings.lang);
   } catch (e) {
     const pre = document.createElement('pre');
     pre.className = 'fatal';
@@ -66,8 +72,6 @@ function boot(): void {
   }
 
   const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const params = new URLSearchParams(location.search);
-  const settings = loadSettings();
   const input = new Input(cfg.input);
   const touch = isTouchDevice() ? new TouchControls(cfg, input) : null;
   // 터치 기기는 키보드 단축키 안내를 처음부터 끈다 (설정에서 다시 켤 수 있음)

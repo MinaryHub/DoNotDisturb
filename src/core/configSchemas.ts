@@ -436,6 +436,8 @@ export const speechesSchema = z.record(
   z.string(),
   z.object({
     chunks: z.array(z.string()).min(1),
+    /** 영어 화면일 때 (없으면 chunks) */
+    chunksEn: z.array(z.string()).min(1).optional(),
     stimulus: z.string(),
     audience: nonNegative,
     objectiveEvent: z.string(),
