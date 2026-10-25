@@ -11,12 +11,21 @@ export interface LifeStatsConfig {
   startMoney: number;
   /** 같은 대상을 이 횟수만큼 회피하면 상위 자극으로 에스컬레이션 */
   escalateAfter: number;
+  lowTipBelow?: number;
 }
 
 export interface AvoidResult {
   count: number;
   /** 이번 회피로 에스컬레이션 문턱에 도달했는지 */
   escalate: boolean;
+}
+
+/** 생활 지표가 왜 바뀌었는지 (하루 동안 쌓는다). why = 텍스트 키 'why.<why>', who = 대상(연락처·목표 id) */
+export interface LifeChange {
+  stat: LifeStatId;
+  delta: number;
+  why: string;
+  who?: string;
 }
 
 export interface LifeSnapshot {
@@ -29,6 +38,8 @@ export class LifeStats {
   private values: Record<LifeStatId, number>;
   private _money: number;
   private readonly avoidCounts = new Map<string, number>();
+  /** 오늘 생활 지표가 바뀐 기록 (이유와 함께) */
+  readonly ledger: LifeChange[] = [];
 
   constructor(private readonly cfg: LifeStatsConfig) {
     this.values = { ...cfg.start };
@@ -47,12 +58,20 @@ export class LifeStats {
     return this.values;
   }
 
-  apply(delta: LifeDelta): void {
+  /** why: 왜 바뀌었는지 (화면에 보여 줄 이유), who: 대상 */
+  apply(delta: LifeDelta, why = 'other', who?: string): void {
     for (const id of lifeStatIds) {
       const d = delta[id];
       if (d === undefined || d === 0) continue;
-      this.values[id] = Math.min(this.cfg.max, Math.max(0, this.values[id] + d));
+      const before = this.values[id];
+      this.values[id] = Math.min(this.cfg.max, Math.max(0, before + d));
+      const real = this.values[id] - before;
+      if (real !== 0) this.ledger.push({ stat: id, delta: real, why, who });
     }
+  }
+
+  clearLedger(): void {
+    this.ledger.length = 0;
   }
 
   addMoney(amount: number): void {

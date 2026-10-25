@@ -122,13 +122,13 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
   const lines: SettlementLine[] = [];
   for (const [stat, delta] of Object.entries(cfg.dailyDecay) as [LifeStatId, number][]) {
     if (!delta) continue;
-    life.apply({ [stat]: delta });
+    life.apply({ [stat]: delta }, 'settle.decay');
     lines.push({ key: `settle.decay.${stat}`, stat, delta });
   }
   if (cfg.dailyCost.money > 0) {
     if (life.spend(cfg.dailyCost.money)) lines.push({ key: 'settle.daily.cost', money: -cfg.dailyCost.money });
     else {
-      life.apply({ essentials: cfg.dailyCost.unpaidEssentials });
+      life.apply({ essentials: cfg.dailyCost.unpaidEssentials }, 'settle.unpaid');
       lines.push({ key: 'settle.daily.unpaid', stat: 'essentials', delta: cfg.dailyCost.unpaidEssentials });
     }
   }
@@ -137,7 +137,7 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
       life.addMoney(cfg.weekly.goodBonusMoney);
       lines.push({ key: 'settle.weekly.good', money: cfg.weekly.goodBonusMoney });
     } else {
-      life.apply({ income: cfg.weekly.badIncomeDelta });
+      life.apply({ income: cfg.weekly.badIncomeDelta }, 'settle.weeklyBad');
       lines.push({ key: 'settle.weekly.bad', stat: 'income', delta: cfg.weekly.badIncomeDelta });
     }
   }
@@ -148,7 +148,7 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
     if (life.spend(cfg.monthEnd.rent)) {
       lines.push({ key: 'settle.month.rent', money: -cfg.monthEnd.rent });
     } else {
-      life.apply({ housing: cfg.monthEnd.unpaidHousingDelta });
+      life.apply({ housing: cfg.monthEnd.unpaidHousingDelta }, 'settle.unpaidRent');
       lines.push({ key: 'settle.month.unpaid', stat: 'housing', delta: cfg.monthEnd.unpaidHousingDelta });
     }
   }

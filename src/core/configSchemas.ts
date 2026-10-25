@@ -268,6 +268,8 @@ export const lifeConfigSchema = z.object({
     start: z.object(Object.fromEntries(lifeStatIds.map((id) => [id, nonNegative])) as Record<(typeof lifeStatIds)[number], typeof nonNegative>),
     startMoney: nonNegative,
     escalateAfter: positive,
+    /** 생활 지표가 이 값보다 낮으면 메모에 '이렇게 하면 오른다' 안내 */
+    lowTipBelow: nonNegative,
   }),
   contacts: z.record(z.string(), contactSchema),
   settlement: z.object({

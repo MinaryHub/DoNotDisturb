@@ -993,6 +993,21 @@ kbd {
   margin-top: 28px;
 }
 
+.why .why--down b {
+  color: #f0a29a;
+}
+
+.why .why--up b {
+  color: #a8d99a;
+}
+
+.memo__tip {
+  margin-top: 4px;
+  color: #b4573f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .screen__epilogue {
   margin: 4px 0 0;
   padding: 0;

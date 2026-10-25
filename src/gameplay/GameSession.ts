@@ -5,7 +5,7 @@ import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
 import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
 import { NO_MODIFIERS, type ChannelModifiers } from '../sim/EnergyModel';
-import type { LifeSnapshot, LifeStatId } from '../sim/LifeStats';
+import type { LifeChange, LifeSnapshot, LifeStatId } from '../sim/LifeStats';
 import { Phone, applyContactOutcome, type CallHow, type MessageHow } from '../sim/Phone';
 import { Simulation, type SimSnapshot } from '../sim/Simulation';
 import { SpeechChallenge } from '../sim/SpeechChallenge';
@@ -215,6 +215,9 @@ export class GameSession {
   leaveUsed = 0;
   /** 오늘 연차를 냈는지 */
   onLeave = false;
+  /** 생활 지표 변화 중 이미 알린 것 (알림 토스트) */
+  private ledgerSeen = 0;
+  private readonly lastWhyToast = new Map<string, number>();
   /** 오늘 이미 적용한 하루 한 번 규칙 (story.json marks의 순번) */
   private readonly marksToday = new Set<number>();
   /** 오늘 눈인사를 나눈 사람 */
@@ -314,6 +317,9 @@ export class GameSession {
     const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
     this.day = composed.day;
     this.happenings = composed.happenings;
+    this.sim.life.clearLedger();
+    this.ledgerSeen = 0;
+    this.lastWhyToast.clear();
     this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed };
     this.onLeave = false;
     this.sim.startDay(this.nextMax);
@@ -391,7 +397,7 @@ export class GameSession {
     const leave = this.day.leave!;
     this.onLeave = true;
     this.leaveUsed++;
-    if (leave.cost) this.sim.life.apply(leave.cost);
+    if (leave.cost) this.sim.life.apply(leave.cost, 'leave');
     const objectives = this.day.objectives.filter((o) => !o.workday);
     const ids = new Set(objectives.map((o) => o.id));
     this.day = { ...this.day, objectives: objectives.map((o) => (o.requires ? { ...o, requires: o.requires.filter((r) => ids.has(r)) } : o)) };
@@ -425,7 +431,7 @@ export class GameSession {
     const latest = parseTime(r.latestTime);
     if (wake >= latest) {
       this.clock.skipTo(latest);
-      for (const o of this.objectives.list) if (o.def.mandatory && !o.done && !o.missed) this.sim.life.apply(this.cfg.life.rewards.mandatorySkipped);
+      for (const o of this.objectives.list) if (o.def.mandatory && !o.done && !o.missed) this.sim.life.apply(this.cfg.life.rewards.mandatorySkipped, 'mandatorySkipped', o.def.textKey);
       this.toast('respawn.late');
       this.endDay();
       return;
@@ -533,6 +539,28 @@ export class GameSession {
     this.updateWorld(dt);
     this.updateSim(dt);
     this.updateMonologue(dt);
+    this.announceLifeChanges();
+  }
+
+  /** 생활 지표가 바뀐 이유 한 줄 (화면·밤 정산에서 쓴다) */
+  lifeWhyText(c: LifeChange): string {
+    const who = c.who ? (this.cfg.life.contacts[c.who] ? this.cfg.text[this.cfg.life.contacts[c.who]!.nameKey] : this.cfg.text[c.who]) ?? c.who : '';
+    const t = this.cfg.text[`why.${c.why}`] ?? this.cfg.text['why.other'] ?? c.why;
+    return t.replaceAll('{who}', who);
+  }
+
+  /** 생활 지표가 바뀌면 그 자리에서 이유를 알린다: 깎이면 늘, 오르면 크게 오를 때만. 같은 이유는 잠깐 묶는다 */
+  private announceLifeChanges(): void {
+    const ledger = this.sim.life.ledger;
+    const now = this.sim.snapshot().time;
+    for (; this.ledgerSeen < ledger.length; this.ledgerSeen++) {
+      const c = ledger[this.ledgerSeen]!;
+      if (c.delta > -1 && c.delta < 4) continue;
+      const key = `${c.stat}:${c.why}:${c.who ?? ''}`;
+      if (now - (this.lastWhyToast.get(key) ?? -99) < 3) continue;
+      this.lastWhyToast.set(key, now);
+      this.toast(c.delta < 0 ? 'why.toast.down' : 'why.toast.up', { stat: this.cfg.text[`life.${c.stat}`] ?? c.stat, why: this.lifeWhyText(c) });
+    }
   }
 
   /** 실패·밤 화면으로 넘어가 하루 진행이 멈췄는지 (updateMode 안에서 모드가 바뀔 수 있다) */
@@ -701,7 +729,7 @@ export class GameSession {
         m.time += dt;
         const l = this.cfg.balance.laundry;
         if (m.time >= l.waitSec) {
-          this.sim.life.apply({ essentials: l.essentials });
+          this.sim.life.apply({ essentials: l.essentials }, 'laundry');
           this.clock.advance(l.minutes, 1);
           this.toast('laundry.done');
           this.gameEvent('done:laundry');
@@ -849,7 +877,7 @@ export class GameSession {
       case 'fridge':
         if (life.get('essentials') > 10) {
           this.sim.energy.recover(r.homeMeal);
-          life.apply({ essentials: this.cfg.life.rewards.homeMealEssentials });
+          life.apply({ essentials: this.cfg.life.rewards.homeMealEssentials }, 'homeMeal');
           this.toast('fridge.done');
         } else this.toast('fridge.empty');
         break;
@@ -919,7 +947,7 @@ export class GameSession {
         }
         this.choresDone.add(it.chore!);
         this.applyEffects(ch.effects);
-        if (ch.life) this.sim.life.apply(ch.life);
+        if (ch.life) this.sim.life.apply(ch.life, 'chore', ch.toastKey);
         this.clock.advance(ch.minutes, 1);
         this.toast(ch.toastKey);
         this.gameEvent(`chore:${it.chore!}`);
@@ -1166,7 +1194,7 @@ export class GameSession {
       return;
     }
     if (entry.price > 0 && !this.pay(entry.price)) return;
-    if (entry.life) this.sim.life.apply(entry.life);
+    if (entry.life) this.sim.life.apply(entry.life, 'shop');
     this.addItem(entry.item);
     this.orderAt(m.shopId);
     const key = `${m.shopId}:${entry.item}`;
@@ -1433,7 +1461,7 @@ export class GameSession {
       this.toast('coach.done');
     }
     if (npc.type === 'ally') {
-      this.sim.life.apply(this.cfg.life.rewards.allyMeet);
+      this.sim.life.apply(this.cfg.life.rewards.allyMeet, 'allyMeet');
       this.gameEvent(`met:${npc.id}`);
     } else {
       this.sim.report.smalltalkEndured++;
@@ -1442,7 +1470,7 @@ export class GameSession {
         this.sim.bus.emit('rumination');
         this.gameEvent('rumination');
       }
-      if (npc.type === 'boss' && b.outcome === 'satisfied') this.sim.life.apply({ income: 4 });
+      if (npc.type === 'boss' && b.outcome === 'satisfied') this.sim.life.apply({ income: 4 }, 'bossTalk');
     }
     npc.endDialogue(b.outcome === 'parried' ? npc.profile.graceAfterParrySec : undefined);
     this.fx.push({ type: 'sound', id: 'sigh' });
@@ -1513,7 +1541,7 @@ export class GameSession {
       return s + (it?.price ?? 0);
     }, 0);
     this.sim.life.addMoney(-Math.min(total, this.sim.life.money));
-    this.sim.life.apply(this.cfg.life.rewards.groceries);
+    this.sim.life.apply(this.cfg.life.rewards.groceries, 'groceries');
     this.toast('checkout.done');
     this.gameEvent('done:checkout');
     if (!this.sim.report.mandatoryDone.includes('checkout')) this.sim.report.mandatoryDone.push('checkout');
@@ -1532,7 +1560,7 @@ export class GameSession {
       const ping = g.reply();
       if (ping) {
         this.sim.bus.emit('workReply');
-        this.sim.life.apply(rw.workPingReplied);
+        this.sim.life.apply(rw.workPingReplied, 'workPingReplied');
       }
     }
     g.update(dt, c.smile);
@@ -1545,13 +1573,13 @@ export class GameSession {
         this.sim.bus.emit('workPing');
         this.fx.push({ type: 'sound', id: 'vibrate' });
       } else if (e.type === 'pingIgnored') {
-        this.sim.life.apply(rw.workPingIgnored);
+        this.sim.life.apply(rw.workPingIgnored, 'workPingIgnored');
         this.sim.bus.emit('workPingMissed');
         this.gameEvent('avoided:income');
       }
       else if (e.type === 'task') this.sim.life.addMoney(rw.workPerTask);
       else if (e.type === 'done') {
-        this.sim.life.apply(rw.workDone);
+        this.sim.life.apply(rw.workDone, 'workDone');
         this.clock.skipTo(parseTime(this.day.work!.endTime));
         this.sim.energy.recover(this.cfg.balance.recovery.workAfternoon);
         // 오후 업무를 마친 피로: 긴장을 안고 퇴근한다
@@ -2082,13 +2110,13 @@ export class GameSession {
       if (e.type === 'missed') {
         const d = e.objective.def;
         const delta = d.missed ?? (d.mandatory ? this.cfg.life.rewards.mandatorySkipped : null);
-        if (delta) this.sim.life.apply(delta);
+        if (delta) this.sim.life.apply(delta, 'missed', d.textKey);
         this.toast('obj.missed', { obj: this.cfg.text[d.textKey] ?? d.id });
         this.gameEvent(`missed:${d.id}`);
         continue;
       }
       if (e.type === 'late') {
-        if (e.objective.def.late) this.sim.life.apply(e.objective.def.late);
+        if (e.objective.def.late) this.sim.life.apply(e.objective.def.late, 'late', e.objective.def.textKey);
         if (e.objective.def.lateStimulus) {
           this.sim.bus.emit(e.objective.def.lateStimulus);
           this.toast(e.objective.def.lateStimulus);
@@ -2151,7 +2179,7 @@ export class GameSession {
     const life = this.sim.life;
     this.phone.endDay();
     for (const e of this.phone.drainEvents()) if (e.type === 'messageResolved') this.resolveContact(e.message.contactId, e.how, e.message.textKey);
-    for (const o of this.objectives.skippedOptional()) if (o.def.skip) life.apply(o.def.skip);
+    for (const o of this.objectives.skippedOptional()) if (o.def.skip) life.apply(o.def.skip, 'skipped', o.def.textKey);
     const settlement = settleDay(this.cfg.life.settlement, life, this.day.flags);
     const night = nightRecovery(this.cfg.life.night, {
       stressAtBed: this.sim.energy.load,

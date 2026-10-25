@@ -3,7 +3,8 @@
     "max": 100,
     "start": { "income": 60, "housing": 60, "essentials": 55, "bond": 60 },
     "startMoney": 60000,
-    "escalateAfter": 3
+    "escalateAfter": 3,
+    "lowTipBelow": 40
   },
   "contacts": {
     "mgmtOffice": {

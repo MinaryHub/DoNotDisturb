@@ -278,6 +278,10 @@ export class GameUI {
       const dots = c.escalation ? `${'●'.repeat(k)}${'○'.repeat(max - k)}` : '●'.repeat(k);
       rows.push(`<li class="${c.escalation && k >= max - 1 ? 'memo__pending--hot' : ''}">${escapeHtml(this.tx(c.nameKey))} <span class="memo__dots">${dots}</span></li>`);
     }
+    // 낮은 생활 지표: 무엇을 하면 오르는지 바로 보이게
+    for (const id of lifeStatIds) {
+      if (life.get(id) < this.cfg.life.stats.lowTipBelow) rows.push(`<li class="memo__tip">${escapeHtml(this.tx(`tip.${id}`))}</li>`);
+    }
     const unread = s.loudUnread();
     if (unread > 0) rows.push(`<li>${escapeHtml(this.tx('memo.unread', { n: unread }))}</li>`);
     return rows.length ? `<div class="memo__pending"><b>${escapeHtml(this.tx('memo.pending'))}</b><ul>${rows.join('')}</ul></div>` : '';
@@ -788,11 +792,33 @@ export class GameUI {
       <table class="report">${this.reportRows(r)}</table>
       <h3>${escapeHtml(this.tx('report.life'))}</h3>
       ${this.lifeBars(m.lifeEnd, r.lifeStart)}
+      ${this.whyHtml(s)}
       ${settle ? `<ul class="settle">${settle}</ul>` : ''}
       <ul class="settle">${night}<li><span>${escapeHtml(this.tx('night.nextMax'))}</span> <b class="nextmax"><span style="width:${m.nextMax}%"></span></b></li></ul>
       <p class="screen__comfort">${escapeHtml(comfort)}</p>
       <p class="screen__cta">${escapeHtml(this.tx('night.next'))}</p>
     </div>`;
+  }
+
+  /** 오늘 생활 지표가 바뀐 이유: 지표마다 이유별로 모아서 (밤 정산의 하루 소모는 아래 정산 목록에) */
+  private whyHtml(s: GameSession): string {
+    const icons: Record<string, string> = { income: '💼', housing: '🏠', essentials: '🛒', bond: '💛' };
+    const groups = new Map<string, { stat: string; delta: number; text: string }>();
+    for (const c of s.sim.life.ledger) {
+      if (c.why.startsWith('settle.')) continue;
+      const k = `${c.stat}|${c.why}|${c.who ?? ''}`;
+      const g = groups.get(k) ?? { stat: c.stat, delta: 0, text: s.lifeWhyText(c) };
+      g.delta += c.delta;
+      groups.set(k, g);
+    }
+    const rows = lifeStatIds.flatMap((id) =>
+      [...groups.values()]
+        .filter((g) => g.stat === id && g.delta !== 0)
+        .sort((a, b) => a.delta - b.delta)
+        .map((g) => `<li class="${g.delta < 0 ? 'why--down' : 'why--up'}">${icons[id] ?? ''} ${escapeHtml(g.text)} <b>${g.delta > 0 ? '+' : '−'}${Math.abs(g.delta)}</b></li>`),
+    );
+    if (!rows.length) return '';
+    return `<h3>${escapeHtml(this.tx('night.why'))}</h3><ul class="settle why">${rows.join('')}</ul>`;
   }
 
   private finalHtml(s: GameSession, m: Extract<Mode, { kind: 'final' }>): string {

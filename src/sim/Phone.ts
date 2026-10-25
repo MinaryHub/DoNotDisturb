@@ -180,21 +180,21 @@ export interface ContactOutcome {
 export function applyContactOutcome(contactId: string, contact: ContactDef, how: CallHow | MessageHow, life: LifeStats): ContactOutcome {
   switch (how) {
     case 'answered':
-      life.apply(contact.answer);
+      life.apply(contact.answer, `phone.${how}`, contactId);
       life.recordAccept(contactId);
       return { stimulus: contact.ally ? undefined : contact.answerStimulus, avoided: false };
     case 'texted':
-      life.apply(contact.texted);
+      life.apply(contact.texted, `phone.${how}`, contactId);
       return { avoided: false };
     case 'replied':
-      life.apply(contact.reply);
+      life.apply(contact.reply, `phone.${how}`, contactId);
       life.recordAccept(contactId);
       return { avoided: false };
     case 'declined':
     case 'missed':
     case 'readIgnored':
     case 'unread': {
-      life.apply(how === 'readIgnored' ? contact.readIgnored : how === 'unread' ? contact.unread : contact.avoid);
+      life.apply(how === 'readIgnored' ? contact.readIgnored : how === 'unread' ? contact.unread : contact.avoid, `phone.${how}`, contactId);
       const r = life.recordAvoid(contactId);
       return { avoided: true, escalation: r.escalate ? contact.escalation : undefined };
     }
