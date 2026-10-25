@@ -2,7 +2,10 @@
   "threads": [
     { "id": "pitch", "nameKey": "story.pitch" },
     { "id": "upstairs", "nameKey": "story.upstairs" },
-    { "id": "jiu", "nameKey": "story.jiu" }
+    { "id": "jiu", "nameKey": "story.jiu" },
+    { "id": "neighbor", "nameKey": "story.neighbor" },
+    { "id": "cafe", "nameKey": "story.cafe" },
+    { "id": "seoyun", "nameKey": "story.seoyun" }
   ],
   "marks": [
     { "on": "replied:boss", "day": "day2", "flags": ["pitch.prepped"] },
@@ -15,7 +18,12 @@
     { "on": "replied:friend", "day": "day1", "flags": ["jiu.answered"] },
     { "on": "replied:friend", "day": "day2", "flags": ["jiu.answered"] },
     { "on": "answered:friend", "day": "dayWed", "flags": ["jiu.answered", "jiu.called"] },
-    { "on": "met:friend", "day": "day4", "flags": ["jiu.met"] }
+    { "on": "met:friend", "day": "day4", "flags": ["jiu.met"] },
+
+    { "on": "talked:neighbor", "day": "day1", "flags": ["neighbor.sidedish"], "give": "sidedish", "toastKey": "gift.sidedish" },
+    { "on": "talked:neighbor", "day": "dayWed", "flags": ["neighbor.thanked"] },
+    { "on": "bought:cafe", "add": ["cafe"], "oncePerDay": true },
+    { "on": "nod:seoyun", "add": ["seoyun"], "oncePerDay": true }
   ],
   "epilogue": [
     { "thread": "pitch", "if": ["pitch.prepped", "pitch.rehearsed"], "textKey": "epi.pitch.ready" },
@@ -30,7 +38,15 @@
     { "thread": "jiu", "if": ["jiu.met", "jiu.called"], "textKey": "epi.jiu.metCalled" },
     { "thread": "jiu", "if": ["jiu.met"], "textKey": "epi.jiu.met" },
     { "thread": "jiu", "if": ["jiu.answered"], "textKey": "epi.jiu.answered" },
-    { "thread": "jiu", "textKey": "epi.jiu.none" }
+    { "thread": "jiu", "textKey": "epi.jiu.none" },
+
+    { "thread": "neighbor", "if": ["neighbor.thanked"], "textKey": "epi.neighbor.thanked" },
+    { "thread": "neighbor", "if": ["neighbor.sidedish"], "textKey": "epi.neighbor.sidedish" },
+
+    { "thread": "cafe", "if": ["cafe>=3"], "textKey": "epi.cafe.regular" },
+
+    { "thread": "seoyun", "if": ["seoyun>=3"], "textKey": "epi.seoyun.often" },
+    { "thread": "seoyun", "if": ["seoyun>=1"], "textKey": "epi.seoyun.once" }
   ],
   "closingKey": "epi.closing"
 }

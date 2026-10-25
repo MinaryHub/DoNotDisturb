@@ -624,5 +624,21 @@
   "epi.jiu.met": "Sat with Jiu at the cafe for an hour, barely talking. It was nice.",
   "epi.jiu.answered": "Jiu said, \"Let's meet next time.\" It's good that there is a next time.",
   "epi.jiu.none": "Still haven't replied to Jiu. Sunday morning, you decide to write something short: \"I'm doing okay. You?\"",
-  "epi.closing": "Sunday morning. Bori is dozing on the windowsill. Next week will be loud too. Still, there was at least one good moment."
+  "epi.closing": "Sunday morning. Bori is dozing on the windowsill. Next week will be loud too. Still, there was at least one good moment.",
+  "tag.seoyun": "[Just nods hello]",
+  "contact.seoyun": "Seoyun",
+  "cafe.usual": "\"The usual?\" …They remember. Order done.",
+  "gift.sidedish": "Got braised beef from next door. (bag)",
+  "item.sidedish": "Neighbor's side dish",
+  "use.sidedish": "Quietly ate the neighbor's side dish. Tastes like home.",
+  "note.sat.sidedish": "The container came back to your door. Stir-fried anchovies this time. \"Made it less salty~\"",
+  "phone.seoyun.dinner": "(Seoyun) I'm leaving after the toast too. Back door. You don't have to come with me.",
+  "story.neighbor": "Next door",
+  "story.cafe": "Cafe Janjan",
+  "story.seoyun": "Seoyun",
+  "epi.neighbor.thanked": "Need to return the neighbor's container. A Sunday spent wondering what to put in it.",
+  "epi.neighbor.sidedish": "The neighbor's container is still by the sink. Next week, return it with just one line: \"It was delicious.\"",
+  "epi.cafe.regular": "There's a 'the usual' at Cafe Janjan now. No names, but we know each other.",
+  "epi.seoyun.often": "Not a single word exchanged, but the easiest person at work this week was Seoyun.",
+  "epi.seoyun.once": "Someone nodded hello in the break room. That was enough."
 }

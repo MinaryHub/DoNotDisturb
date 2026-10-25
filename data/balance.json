@@ -36,6 +36,10 @@
     "calmSec": 8,
     "stressPerSec": 5
   },
+  "nod": {
+    "range": 5,
+    "calm": 12
+  },
   "recovery": {
     "homeLockedPerSec": 0.6,
     "allyNearPerSec": 1,

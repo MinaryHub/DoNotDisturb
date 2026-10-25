@@ -22,7 +22,7 @@ describe('DayComposer', () => {
       const { day, happenings } = composeDay(d, cfg.happenings, null);
       expect(happenings).toEqual([]);
       expect(day.npcs.every((n) => n.alt === undefined && n.chance === undefined)).toBe(true);
-      expect(day.phone.map((p) => p.textKey)).toEqual(d.phone.filter((p) => storyAllows(p.if, new Set())).map((p) => p.textKey));
+      expect(day.phone.map((p) => p.textKey)).toEqual(d.phone.filter((p) => storyAllows(p.if, new Map())).map((p) => p.textKey));
     }
   });
 

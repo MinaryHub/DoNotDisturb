@@ -133,7 +133,8 @@
           "from": "08:05",
           "to": "09:10"
         }
-      ]
+      ],
+      "dialogue": "neighborSidedish"
     },
     {
       "id": "manager",
@@ -226,6 +227,13 @@
       "profile": "regular",
       "at": "laundryRegular",
       "chance": 0.6
+    },
+    {
+      "id": "seoyun",
+      "profile": "seoyun",
+      "at": "seoyunWindow",
+      "from": "09:00",
+      "to": "18:00"
     }
   ],
   "work": {

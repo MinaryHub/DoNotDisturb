@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "Oh, 302! Perfect timing. I made some braised beef, take some~",
+    "kind": "opening",
+    "durationSec": 2.8
+  },
+  "lines": [
+    {
+      "text": "Cooking side dishes alone is such a hassle, right?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "My kids don't even eat braised beef anymore. Hurts my feelings.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "Bring the container back whenever. No rush.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "It might be a bit salty. Have it with rice.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "You've looked a little tired lately. Are you eating properly?",
+      "kind": "question",
+      "durationSec": 2.8
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, you're blushing. Don't feel pressured~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Enjoy it~!",
+    "parried": "Oh, you're busy, go on! Take the food though!",
+    "endured": "Oh, I kept you. Don't forget the food~",
+    "sos": "Take your call, go! Here's the food.",
+    "awkward": "…Okay, well. Take the food."
+  }
+}

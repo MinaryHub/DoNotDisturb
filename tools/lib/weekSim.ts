@@ -3,7 +3,7 @@ import { nightRecovery, parseTime, settleDay } from '../../src/sim/DayCycle';
 import { NO_MODIFIERS } from '../../src/sim/EnergyModel';
 import { applyContactOutcome, type CallHow, type MessageHow } from '../../src/sim/Phone';
 import { Simulation } from '../../src/sim/Simulation';
-import { applyStory, marksFor } from '../../src/gameplay/Story';
+import { applyMark, applyStory, marksFor } from '../../src/gameplay/Story';
 
 // 한 주 밸런스 시뮬레이션 (sim 계층만). 실제 data로 세 가지 플레이 방식을 돌려 본다.
 //   avoid    전부 회피: 전화·문자 무시, 대화 피함, 선택 목표 건너뜀 → 생활 지표가 무너져야 한다
@@ -59,11 +59,11 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
   };
   const rows: DayRow[] = [];
   let nextMax = game.balance.battery.start;
-  const story = new Set<string>();
+  const story = new Map<string, number>();
   for (const def of game.days) {
     const day = applyStory(def, story);
     const mark = (event: string) => {
-      for (const f of marksFor(game.story, event, day.id)) story.add(f);
+      for (const m of marksFor(game.story, event, day.id)) applyMark(story, m);
     };
     sim.startDay(nextMax);
     let talks = 0;

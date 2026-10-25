@@ -9,8 +9,8 @@ const unit = z.number().min(0).max(1);
 const vec2 = z.tuple([z.number(), z.number()]);
 const rect = z.tuple([z.number(), z.number(), positive, positive]);
 const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/, 'HH:MM 형식이어야 합니다');
-/** 이야기 조건: 지난 날들에 생긴 이야기 표지. "flag"는 있어야, "!flag"는 없어야 한다 (data/story.json) */
-const storyIf = z.array(z.string().regex(/^!?[\w.]+$/, '이야기 표지는 영문·숫자·점, 없어야 하면 앞에 !'));
+/** 이야기 조건: 지난 날들에 생긴 이야기 표지. "flag"는 있어야, "!flag"는 없어야, "count>=N"은 N 이상 (data/story.json) */
+const storyIf = z.array(z.string().regex(/^(!?[\w.]+|[\w.]+>=\d+)$/, '이야기 표지는 영문·숫자·점, 없어야 하면 앞에 !, 셈은 이름>=N'));
 const lifeDelta = z.object(Object.fromEntries(lifeStatIds.map((id) => [id, z.number().optional()])) as Record<
   (typeof lifeStatIds)[number],
   z.ZodOptional<z.ZodNumber>
@@ -90,6 +90,8 @@ export const balanceConfigSchema = z.object({
   work: z.object({ pressureStressPerSec: nonNegative, pendingPingStressPerSec: nonNegative, bossPingMultiplier: positive, afternoonStress: nonNegative }),
   /** 조급함: 달리면 차오르고(fullAfterSec), 걸으면 천천히 가라앉는다(calmSec). 차 있는 만큼 스트레스가 오른다 */
   hurry: z.object({ fullAfterSec: positive, calmSec: positive, stressPerSec: nonNegative }),
+  /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
+  nod: z.object({ range: positive, calm: nonNegative }),
   recovery: z.object({
     homeLockedPerSec: nonNegative,
     allyNearPerSec: nonNegative,
@@ -175,6 +177,11 @@ export const itemsConfigSchema = z.object({
     z.object({
       titleKey: z.string(),
       stock: z.array(z.object({ item: z.string(), price: nonNegative, life: lifeDelta.optional(), perDay: z.number().int().min(1).optional() })).min(1),
+      /**
+       * 단골: 이야기 셈(counter)이 minVisits 이상이면 주문 대화 없이 "늘 드시던 걸로요?" (greetKey, 그날 처음 한 번).
+       * 그 전에는 살 때마다 주문 자극(orderStimulus). 들른 날은 story.json의 bought:<가게> 규칙이 센다
+       */
+      regular: z.object({ counter: z.string(), minVisits: z.number().int().min(1), orderStimulus: z.string(), greetKey: z.string() }).optional(),
     }),
   ),
 });
@@ -412,6 +419,8 @@ export const npcProfileSchema = z.object({
   cooldownSec: nonNegative,
   waypointWaitSec: nonNegative,
   approaches: z.boolean(),
+  /** 눈인사만 하는 사람: 말을 걸지 않고, 눈이 마주치면 서로 고개만 끄덕인다. 시선 자극이 없다 (balance.nod) */
+  nodOnly: z.boolean().optional(),
   dialogue: z.string(),
   encounterStimulus: z.string(),
   baseDurationSec: positive,
@@ -611,6 +620,8 @@ const dayNpcSchema = z.object({
   from: hhmm.optional(),
   to: hhmm.optional(),
   seated: z.boolean().optional(),
+  /** 그날만 다른 대사 풀 (옆집 아주머니의 후속 인사 등) */
+  dialogue: z.string().optional(),
   /** 나타날 확률 (기본 1) */
   chance: unit.optional(),
   /** 위치·경로·시간 대안: 하루를 시작할 때 기본값 또는 이 중 하나를 고른다 */
@@ -636,7 +647,7 @@ export const daySchema = z.object({
   /** 그날만 서는 노점 천막 (충돌 없음, 그림만) */
   stalls: z.array(z.object({ rect, color: z.string() })).optional(),
   /** 하루 시작 화면에 붙는 이야기 한 줄 (지난 날의 선택이 남긴 것) */
-  notes: z.array(z.object({ textKey: z.string(), if: storyIf.optional() })).optional(),
+  notes: z.array(z.object({ textKey: z.string(), if: storyIf.optional(), /** 하루 시작에 가방에 넣어 주는 소모품 */ give: z.string().optional() })).optional(),
   /** 그날만 상호작용의 안내·독백·발화를 바꾼다 (목요일 회의 자리 = 발표) */
   interactAt: z.record(z.string(), z.object({ labelKey: z.string().optional(), monologue: z.string().optional(), speech: z.string().optional() })).optional(),
   objectives: z.array(
@@ -748,7 +759,23 @@ export type HappeningDef = HappeningsConfig['list'][number];
  */
 export const storyConfigSchema = z.object({
   threads: z.array(z.object({ id: z.string(), nameKey: z.string() })),
-  marks: z.array(z.object({ on: z.string(), day: z.string().optional(), flags: z.array(z.string()).min(1) })),
+  marks: z.array(
+    z
+      .object({
+        on: z.string(),
+        day: z.string().optional(),
+        /** 남길 표지 */
+        flags: z.array(z.string()).optional(),
+        /** 하나씩 셀 이름 (카페에 들른 날 수 등) */
+        add: z.array(z.string()).optional(),
+        /** 하루에 한 번만 (같은 날 여러 번 들러도 하루로 센다) */
+        oncePerDay: z.boolean().optional(),
+        /** 그 자리에서 받는 소모품 (옆집 반찬). 가방이 가득이면 못 받는다 */
+        give: z.string().optional(),
+        toastKey: z.string().optional(),
+      })
+      .refine((m) => m.flags?.length || m.add?.length || m.give, 'flags·add·give 중 하나는 있어야 합니다'),
+  ),
   epilogue: z.array(z.object({ thread: z.string(), textKey: z.string(), if: storyIf.optional() })),
   closingKey: z.string(),
 });

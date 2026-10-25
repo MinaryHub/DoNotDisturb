@@ -24,6 +24,16 @@
       "reply": { "income": 4 }, "readIgnored": { "income": -7 }, "unread": { "income": -9 },
       "escalation": "bossVisit"
     },
+    "seoyun": {
+      "nameKey": "contact.seoyun",
+      "answerStimulus": "textMessage",
+      "answer": {},
+      "avoid": {},
+      "texted": {},
+      "reply": {},
+      "readIgnored": {},
+      "unread": {}
+    },
     "teamChat": {
       "nameKey": "contact.teamChat", "answerStimulus": "voiceCall",
       "answer": { "income": 3 }, "avoid": { "income": -4 }, "texted": { "income": 1 },

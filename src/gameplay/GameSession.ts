@@ -16,7 +16,7 @@ import { dist, inRect, type AreaDef, type Vec2 } from '../world/TileMap';
 import { buildWorld, inHide, safeAt, type World } from '../world/World';
 import { GrillGame, PIANO_MELODY, PianoGame, WorkGame } from './minigames';
 import { composeDay } from './DayComposer';
-import { marksFor } from './Story';
+import { applyMark, marksFor, storyFromSave } from './Story';
 import { MonologueDirector } from './Monologue';
 import { Objectives } from './Objectives';
 
@@ -152,8 +152,8 @@ export interface SaveState {
   gear?: string[];
   /** 첫 연습 대화를 마쳤는지 */
   practiced?: boolean;
-  /** 이야기 표지 (data/story.json). 그날 아침 기준 */
-  story?: string[];
+  /** 이야기 표지·셈 (data/story.json). 그날 아침 기준. 예전 저장은 이름 목록 */
+  story?: Record<string, number> | string[];
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -197,11 +197,17 @@ export class GameSession {
   sanctuaryBroken = 0;
   reports: DayReport[] = [];
   readonly fx: FxEvent[] = [];
-  /** 이야기 표지: 지난 날들의 선택이 남긴 것 (data/story.json) */
-  story = new Set<string>();
+  /** 이야기 표지·셈: 지난 날들의 선택이 남긴 것 (data/story.json) */
+  story = new Map<string, number>();
+  /** 오늘 이미 적용한 하루 한 번 규칙 (story.json marks의 순번) */
+  private readonly marksToday = new Set<number>();
+  /** 오늘 눈인사를 나눈 사람 */
+  private readonly nodded = new Set<string>();
+  /** 오늘 "늘 드시던 걸로요?"를 들은 가게 */
+  private readonly regularGreeted = new Set<string>();
 
   private nextMax: number;
-  private dayStart!: { life: LifeSnapshot; max: number; story: string[] };
+  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number> };
   private rngState = 12345;
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
@@ -249,7 +255,7 @@ export class GameSession {
       this.reports = save.reports;
       for (const g of save.gear ?? []) this.ownedGear.add(g);
       this.practiced = save.practiced ?? save.dayIndex > 0;
-      this.story = new Set(save.story ?? []);
+      this.story = storyFromSave(save.story);
     }
     this.startDay(this.dayIndex);
   }
@@ -288,7 +294,7 @@ export class GameSession {
     const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
     this.day = composed.day;
     this.happenings = composed.happenings;
-    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: [...this.story] };
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story) };
     this.sim.startDay(this.nextMax);
     this.clock = new GameClock(parseTime(this.day.start));
     this.objectives = new Objectives(this.day);
@@ -296,7 +302,10 @@ export class GameSession {
     this.phone.drainEvents();
     // 그날만 생기는 군중 동선까지 포함해 다시 만든다
     this.crowd = new Crowd([...this.cfg.world.crowdLanes, ...(this.day.crowdLanes ?? [])], () => this.rng());
-    this.monologue.reset(this.day.id, new Set(this.story));
+    this.monologue.reset(this.day.id, new Map(this.story));
+    this.marksToday.clear();
+    this.nodded.clear();
+    this.regularGreeted.clear();
     this.firedPhone = new Set();
     this.pendingEscalations = [];
     this.homeLocked = true;
@@ -342,6 +351,8 @@ export class GameSession {
       walkPhase: 0,
     };
     this.spawnNpcs();
+    // 지난 날의 일이 오늘 아침 가방에 남긴 것 (옆집 반찬 등)
+    for (const n of this.day.notes ?? []) if (n.give) this.addItem(n.give);
     this.area = this.world.map.areaAt(spawn.x, spawn.y);
     this.mode = { kind: 'dayIntro' };
     this.lastTier = 'stable';
@@ -386,7 +397,7 @@ export class GameSession {
   retryDay(): void {
     this.sim.life.restore(this.dayStart.life);
     this.nextMax = this.dayStart.max;
-    this.story = new Set(this.dayStart.story);
+    this.story = storyFromSave(this.dayStart.story);
     this.startDay(this.dayIndex);
   }
 
@@ -398,7 +409,8 @@ export class GameSession {
   private spawnNpcs(): void {
     this.npcs = [];
     for (const n of this.day.npcs) {
-      const profile = this.cfg.npcProfiles[n.profile]!;
+      const base = this.cfg.npcProfiles[n.profile]!;
+      const profile = n.dialogue ? { ...base, dialogue: n.dialogue } : base;
       const pos = this.world.spawns[n.at]!;
       this.npcs.push(
         new Npc({
@@ -1019,6 +1031,19 @@ export class GameSession {
     if (e.migraine) this.sim.somatic.relieve('migraine', e.migraine);
   }
 
+  /** 주문: 단골이 되기 전엔 짧은 주문 대화가 자극, 단골이면 "늘 드시던 걸로요?" (그날 처음 한 번) */
+  private orderAt(shopId: string): void {
+    const reg = this.cfg.items.shops[shopId]?.regular;
+    if (reg) {
+      if ((this.story.get(reg.counter) ?? 0) < reg.minVisits) this.sim.bus.emit(reg.orderStimulus, shopId);
+      else if (!this.regularGreeted.has(shopId)) {
+        this.regularGreeted.add(shopId);
+        this.toast(reg.greetKey);
+      }
+    }
+    this.gameEvent(`bought:${shopId}`);
+  }
+
   private updateShop(c: Controls, m: Extract<Mode, { kind: 'shop' }>): void {
     const stock = this.cfg.items.shops[m.shopId]!.stock;
     if (c.menuNav !== 0) m.cursor = (m.cursor + c.menuNav + stock.length) % stock.length;
@@ -1052,6 +1077,7 @@ export class GameSession {
     if (entry.price > 0 && !this.pay(entry.price)) return;
     if (entry.life) this.sim.life.apply(entry.life);
     this.addItem(entry.item);
+    this.orderAt(m.shopId);
     const key = `${m.shopId}:${entry.item}`;
     this.shopTaken.set(key, (this.shopTaken.get(key) ?? 0) + 1);
     const name = this.cfg.text[this.consumable(entry.item)!.nameKey] ?? entry.item;
@@ -1767,11 +1793,22 @@ export class GameSession {
     };
   }
 
+  /** 눈인사만 하는 사람과 눈이 마주치면: 서로 고개만 끄덕이고, 마음이 조금 가라앉는다 (하루 한 번) */
+  private updateNods(): void {
+    const nod = this.cfg.balance.nod;
+    for (const n of this.activeNpcs()) {
+      if (!n.profile.nodOnly || this.nodded.has(n.id) || !n.percept.eyeContact || n.percept.dist > nod.range) continue;
+      this.nodded.add(n.id);
+      this.sim.energy.calm(nod.calm);
+      this.gameEvent(`nod:${n.id}`);
+    }
+  }
+
   /** 지금 나를 보고 있는 시선 수 */
   gazeCount(): number {
     let n = 0;
     const range = this.cfg.balance.gaze.range;
-    for (const npc of this.activeNpcs()) if (npc.gazing && npc.percept.dist <= range && npc.type !== 'pet' && npc.type !== 'ally') n++;
+    for (const npc of this.activeNpcs()) if (npc.gazing && npc.percept.dist <= range && npc.type !== 'pet' && npc.type !== 'ally' && !npc.profile.nodOnly) n++;
     if (this.mode.kind === 'seated') n += this.day.dinner?.seatEffects[this.mode.seat]?.gazeExtra ?? 0;
     if (this.mode.kind === 'speech') n += this.cfg.speeches[this.mode.speechId]?.audience ?? 0;
     return n;
@@ -1803,7 +1840,8 @@ export class GameSession {
       this.gameEvent('rain:soaked');
     }
     // 아이컨택
-    const eye = this.activeNpcs().filter((n) => n.percept.eyeContact && n.type !== 'ally' && n.type !== 'pet').length;
+    const eye = this.activeNpcs().filter((n) => n.percept.eyeContact && n.type !== 'ally' && n.type !== 'pet' && !n.profile.nodOnly).length;
+    this.updateNods();
     bus.setContinuous('eye', 'eyeContact', eye);
 
     // 어색한 침묵: 좁은 공간 + 지인
@@ -1904,7 +1942,13 @@ export class GameSession {
 
   /** 게임 이벤트: 목표·독백·이벤트 전화로 퍼진다 */
   gameEvent(event: string): void {
-    for (const f of marksFor(this.cfg.story, event, this.day.id)) this.story.add(f);
+    for (const m of marksFor(this.cfg.story, event, this.day.id)) {
+      const i = this.cfg.story.marks.indexOf(m);
+      if (m.oncePerDay && this.marksToday.has(i)) continue;
+      this.marksToday.add(i);
+      applyMark(this.story, m);
+      if (m.give && this.addItem(m.give)) this.toast(m.toastKey ?? 'shop.taken', { item: this.cfg.text[this.consumable(m.give)?.nameKey ?? ''] ?? m.give });
+    }
     this.objectives.fire(event);
     this.monologue.onEvent(event);
     this.day.phone.forEach((ev, i) => {

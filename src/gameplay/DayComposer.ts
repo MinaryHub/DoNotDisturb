@@ -1,6 +1,6 @@
 import type { DayDef, DayNpcDef, HappeningDef, HappeningsConfig } from '../core/configSchemas';
 import { formatTime, parseTime } from '../sim/DayCycle';
-import { applyStory, storyAllows } from './Story';
+import { applyStory, storyAllows, type StoryState } from './Story';
 
 // 같은 요일이어도 매번 조금 다른 하루 (식상하지 않게).
 // 하루 데이터(기본) + 작은 사건 몇 개를 섞어 '오늘의' DayDef를 만든다. 결과는 평범한 DayDef라 나머지 코드는 그대로 읽는다.
@@ -12,7 +12,7 @@ export interface ComposedDay {
   happenings: HappeningDef[];
 }
 
-export function composeDay(def: DayDef, cfg: HappeningsConfig, rng: (() => number) | null, flags: ReadonlySet<string> = new Set()): ComposedDay {
+export function composeDay(def: DayDef, cfg: HappeningsConfig, rng: (() => number) | null, flags: StoryState = new Map()): ComposedDay {
   const base = applyStory(def, flags);
   if (!rng) {
     return { day: { ...base, npcs: base.npcs.filter((n) => n.chance === undefined || n.chance >= 1).map(strip) }, happenings: [] };

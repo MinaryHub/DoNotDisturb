@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "어머, 302호! 마침 잘 만났다. 나 장조림 좀 했는데 가져가요~",
+    "kind": "opening",
+    "durationSec": 2.8
+  },
+  "lines": [
+    {
+      "text": "혼자 살면 반찬 하기 귀찮잖아요. 그쵸?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "우리 애들은 이제 장조림도 안 먹더라고. 서운하게.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "통은 천천히 줘도 돼요. 급한 거 아니야.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "간이 좀 셀 수도 있어. 밥이랑 먹어요.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "요즘 얼굴이 좀 피곤해 보이던데, 밥은 잘 챙겨 먹어요?",
+      "kind": "question",
+      "durationSec": 2.8
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 얼굴 빨개졌네. 부담 갖지 말고~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "맛있게 먹어요~!",
+    "parried": "아 바쁘구나, 얼른 가요! 반찬은 챙기고!",
+    "endured": "아이고 붙잡았네. 반찬 잊지 말고~",
+    "sos": "전화 받아요, 받아요! 반찬은 여기.",
+    "awkward": "…응, 그래요. 반찬은 가져가요."
+  }
+}

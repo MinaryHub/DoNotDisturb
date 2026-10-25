@@ -172,6 +172,18 @@
       },
       "breakSec": 5,
       "usesPerDay": 3
+    },
+    {
+      "id": "sidedish",
+      "nameKey": "item.sidedish",
+      "useKey": "use.sidedish",
+      "icon": "box",
+      "effects": {
+        "battery": 12,
+        "stress": 12
+      },
+      "breakSec": 8,
+      "quiet": true
     }
   ],
   "gear": [
@@ -276,7 +288,13 @@
           "item": "herbalTea",
           "price": 4000
         }
-      ]
+      ],
+      "regular": {
+        "counter": "cafe",
+        "minVisits": 2,
+        "orderStimulus": "cafeOrder",
+        "greetKey": "cafe.usual"
+      }
     },
     "takeout": {
       "titleKey": "shop.takeout",

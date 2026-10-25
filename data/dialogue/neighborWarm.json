@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "302호! 주말인데 어디 가요?",
+    "kind": "question",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "반찬통 봤어요? 이번엔 멸치볶음이야. 덜 짜게 했어.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "맛있다고 해 줘서 신나서 또 했지 뭐야.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "주말엔 푹 쉬어요. 평일에 너무 피곤해 보여.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 또 빨개졌네. 귀여워라.",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "잘 다녀와요~!",
+    "parried": "응, 다녀와요!",
+    "endured": "말이 길었다. 얼른 가요~",
+    "sos": "전화 받아요, 받아요!",
+    "awkward": "…응, 다녀와요."
+  }
+}

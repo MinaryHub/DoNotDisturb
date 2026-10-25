@@ -99,5 +99,9 @@
   {"key": "mono.upstairs.noise", "when": {"area": "home", "day": "day2", "returning": true}, "once": true},
   {"key": "mono.upstairs.noise", "when": {"area": "home", "day": "dayThu", "returning": true}, "if": ["!upstairs.resolved"], "once": true},
   {"key": "mono.upstairs.seen", "when": {"npcProfile": "upstairs", "distMax": 12, "visible": true}, "cooldownSec": 120},
-  {"key": "mono.jiu.moving", "when": {"event": "answered:friend", "day": "dayWed"}, "once": true}
+  {"key": "mono.jiu.moving", "when": {"event": "answered:friend", "day": "dayWed"}, "once": true},
+  {"key": "mono.seoyun.nod", "when": {"event": "nod:seoyun"}, "cooldownSec": 30},
+  {"key": "mono.seoyun.seen", "when": {"npcProfile": "seoyun", "distMax": 10, "visible": true}, "once": true},
+  {"key": "mono.neighbor.sidedish", "when": {"event": "talked:neighbor", "day": "day1"}, "once": true},
+  {"key": "mono.neighbor.followup", "when": {"npcProfile": "neighbor", "distMax": 10, "visible": true, "day": "dayWed"}, "if": ["neighbor.sidedish"], "once": true}
 ]

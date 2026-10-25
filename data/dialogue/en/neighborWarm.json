@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "302! Going somewhere this weekend?",
+    "kind": "question",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "Did you see the container? Stir-fried anchovies this time. Less salty.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "You said it was good, so I got excited and made more.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Rest up this weekend. You look so tired on weekdays.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, blushing again. How cute.",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "Have a good one~!",
+    "parried": "Mm, see you!",
+    "endured": "I talked too long. Go on~",
+    "sos": "Take your call, go!",
+    "awkward": "…Mm, see you."
+  }
+}

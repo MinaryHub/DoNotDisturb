@@ -243,7 +243,35 @@
       "at": "neighbor302",
       "path": "aptHall",
       "from": "10:30",
-      "to": "12:00"
+      "to": "12:00",
+      "dialogue": "neighborWarm",
+      "if": [
+        "neighbor.thanked"
+      ]
+    },
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "from": "10:30",
+      "to": "12:00",
+      "dialogue": "neighborWistful",
+      "if": [
+        "neighbor.sidedish",
+        "!neighbor.thanked"
+      ]
+    },
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "from": "10:30",
+      "to": "12:00",
+      "if": [
+        "!neighbor.sidedish"
+      ]
     },
     {
       "id": "manager",
@@ -348,6 +376,13 @@
     }
   ],
   "notes": [
+    {
+      "textKey": "note.sat.sidedish",
+      "if": [
+        "neighbor.thanked"
+      ],
+      "give": "sidedish"
+    },
     {
       "textKey": "note.sat.tangerine",
       "if": [

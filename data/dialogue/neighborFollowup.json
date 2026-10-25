@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "302호! 그 장조림, 입에 맞았어요?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "간이 좀 셌죠? 우리 남편도 짜다고 하더라고.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "다음엔 멸치볶음 해 볼까 봐요. 그건 좋아해요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "아니 뭐, 맛있으면 됐어요. 그거면 돼.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "통은 아무 때나. 진짜 아무 때나.",
+      "kind": "story",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 그렇게 쑥스러워할 일인가~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "맛있었다니 다행이다~ 또 해 줄게요!",
+    "parried": "아 그래요, 얼른 가요~",
+    "endured": "말 많이 했네. 들어가요~",
+    "sos": "전화 왔네, 받아요!",
+    "awkward": "…응, 입에 맞았으면 됐어요."
+  }
+}

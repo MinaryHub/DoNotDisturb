@@ -253,6 +253,32 @@
           "to": "20:00"
         }
       ]
+    },
+    {
+      "id": "seoyun",
+      "profile": "seoyun",
+      "at": "seoyunWindow",
+      "from": "09:00",
+      "to": "13:30"
+    },
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "to": "09:30",
+      "dialogue": "neighborFollowup",
+      "if": [
+        "neighbor.sidedish"
+      ],
+      "alt": [
+        {
+          "at": "neighbor302",
+          "path": "aptHall",
+          "from": "16:00",
+          "to": "20:00"
+        }
+      ]
     }
   ],
   "work": {

@@ -103,6 +103,15 @@
       "kind": "message",
       "contact": "friend",
       "textKey": "phone.friend.sos"
+    },
+    {
+      "on": "seated",
+      "kind": "message",
+      "contact": "seoyun",
+      "textKey": "phone.seoyun.dinner",
+      "if": [
+        "seoyun>=2"
+      ]
     }
   ],
   "npcs": [
@@ -265,6 +274,13 @@
       "profile": "regular",
       "at": "laundryRegular",
       "chance": 0.6
+    },
+    {
+      "id": "seoyun",
+      "profile": "seoyun",
+      "at": "seoyunWindow",
+      "from": "09:00",
+      "to": "18:00"
     }
   ],
   "work": {

@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "어머, 302호. 요즘 많이 바쁜가 봐요~",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "얼굴 보기가 힘드네. 일이 많아요?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "장조림은… 아니에요, 됐어요. 바쁘면 그럴 수 있지.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "그래도 밥은 챙겨 먹어요. 그게 제일이야.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 괜찮아요? 내가 괜히 물었나.",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "그래요, 주말 잘 보내요~",
+    "parried": "응, 얼른 가요.",
+    "endured": "내가 또 붙잡았네. 들어가요.",
+    "sos": "전화 받아요~",
+    "awkward": "…응, 그래요."
+  }
+}

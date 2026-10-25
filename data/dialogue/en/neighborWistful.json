@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Oh, 302. You must be really busy lately~",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "I hardly ever see you. Lots of work?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "About the braised beef… never mind, it's fine. Busy people get busy.",
+      "kind": "story",
+      "durationSec": 3.0
+    },
+    {
+      "text": "Still, make sure you eat. That's what matters most.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, are you okay? Maybe I shouldn't have asked.",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Alright, have a nice weekend~",
+    "parried": "Mm, go on.",
+    "endured": "I kept you again. Go on in.",
+    "sos": "Take your call~",
+    "awkward": "…Okay, then."
+  }
+}

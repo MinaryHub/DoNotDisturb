@@ -292,6 +292,13 @@
       "if": [
         "!upstairs.resolved"
       ]
+    },
+    {
+      "id": "seoyun",
+      "profile": "seoyun",
+      "at": "seoyunWindow",
+      "from": "09:00",
+      "to": "18:00"
     }
   ],
   "work": {

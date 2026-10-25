@@ -262,6 +262,13 @@
       "at": "surveyor",
       "from": "17:00",
       "chance": 0.7
+    },
+    {
+      "id": "seoyun",
+      "profile": "seoyun",
+      "at": "seoyunWindow",
+      "from": "09:00",
+      "to": "18:00"
     }
   ],
   "work": {

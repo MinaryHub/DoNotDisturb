@@ -212,6 +212,10 @@ export function crossCheck(cfg: GameConfig): string[] {
   for (const [id, shop] of Object.entries(cfg.items.shops)) {
     needText(shop.titleKey, `shop ${id}`);
     for (const s of shop.stock) if (!itemIds.has(s.item) && !cfg.items.gear.some((g) => g.id === s.item)) errors.push(`shop ${id}: 아이템 없음 "${s.item}"`);
+    if (shop.regular) {
+      needStim(shop.regular.orderStimulus, `shop ${id} regular`);
+      needText(shop.regular.greetKey, `shop ${id} regular`);
+    }
   }
   const portalIds = new Set(w.portals.map((p) => p.id));
   for (const p of w.portals) {
@@ -253,7 +257,10 @@ export function crossCheck(cfg: GameConfig): string[] {
       if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
       needStim(a.id, `${where} areaStimuli`);
     }
-    for (const n of d.notes ?? []) needText(n.textKey, `${where} notes`);
+    for (const n of d.notes ?? []) {
+      needText(n.textKey, `${where} notes`);
+      if (n.give && !itemIds.has(n.give)) errors.push(`${where} notes: 아이템 없음 "${n.give}"`);
+    }
     for (const [id, o] of Object.entries(d.interactAt ?? {})) {
       if (!w.interactables.some((i) => i.id === id)) errors.push(`${where} interactAt: 상호작용 없음 "${id}"`);
       if (o.labelKey) needText(o.labelKey, `${where} interactAt ${id}`);
@@ -267,7 +274,11 @@ export function crossCheck(cfg: GameConfig): string[] {
   // 이야기 줄기: 어떤 이벤트도 남기지 않는 표지를 조건에 쓰면 그 갈래는 영영 열리지 않는다
   const st = cfg.story;
   for (const th of st.threads) needText(th.nameKey, `story thread ${th.id}`);
-  for (const m of st.marks) if (m.day && !cfg.days.some((d) => d.id === m.day)) errors.push(`story mark ${m.on}: 하루 없음 "${m.day}"`);
+  for (const m of st.marks) {
+    if (m.day && !cfg.days.some((d) => d.id === m.day)) errors.push(`story mark ${m.on}: 하루 없음 "${m.day}"`);
+    if (m.give && !itemIds.has(m.give)) errors.push(`story mark ${m.on}: 아이템 없음 "${m.give}"`);
+    if (m.toastKey) needText(m.toastKey, `story mark ${m.on}`);
+  }
   for (const e of st.epilogue) {
     needText(e.textKey, 'story epilogue');
     if (!st.threads.some((th) => th.id === e.thread)) errors.push(`story epilogue ${e.textKey}: 줄기 없음 "${e.thread}"`);
@@ -315,6 +326,7 @@ export function crossCheck(cfg: GameConfig): string[] {
   function checkNpcs(list: DayDef['npcs'], where: string): void {
     for (const n of list) {
       if (!has(cfg.npcProfiles, n.profile)) errors.push(`${where} npc ${n.id}: 프로필 없음 "${n.profile}"`);
+      if (n.dialogue && !has(cfg.dialoguePools, n.dialogue)) errors.push(`${where} npc ${n.id}: 대사 풀 없음 "${n.dialogue}"`);
       for (const o of [n, ...(n.alt ?? [])]) {
         if (!has(w.spawns, o.at)) errors.push(`${where} npc ${n.id}: 스폰 없음 "${o.at}"`);
         if (o.path && !has(w.paths, o.path)) errors.push(`${where} npc ${n.id}: 경로 없음 "${o.path}"`);

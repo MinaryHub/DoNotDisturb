@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "302! Did you like the braised beef?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "A bit salty, right? My husband said so too.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Maybe stir-fried anchovies next. Do you like those?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Well, if it was tasty, that's all that matters.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Bring the container back anytime. Really, anytime.",
+      "kind": "story",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh my, no need to be so shy~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "So glad you liked it~ I'll make more!",
+    "parried": "Oh okay, go on~",
+    "endured": "I talked a lot. Go on in~",
+    "sos": "You've got a call, take it!",
+    "awkward": "…Well, as long as you liked it."
+  }
+}

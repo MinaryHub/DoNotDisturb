@@ -8,6 +8,7 @@ import { readConfig } from '../tools/lib/readData';
 
 const cfg = readConfig();
 const dt = 1 / 60;
+const st = (flags: string[]) => new Map(flags.map((f) => [f, 1] as const));
 const dayIndex = (id: string) => cfg.days.findIndex((d) => d.id === id);
 
 function step(s: GameSession, seconds: number, c: Partial<Controls> = {}): void {
@@ -16,7 +17,7 @@ function step(s: GameSession, seconds: number, c: Partial<Controls> = {}): void 
 
 function dayWith(id: string, flags: string[]): GameSession {
   const s = new GameSession(cfg);
-  for (const f of flags) s.story.add(f);
+  for (const f of flags) s.story.set(f, 1);
   s.startDay(dayIndex(id));
   s.step(dt, { ...NO_CONTROLS, confirm: true });
   return s;
@@ -24,7 +25,7 @@ function dayWith(id: string, flags: string[]): GameSession {
 
 describe('이야기 조건', () => {
   it('"flag"는 있어야, "!flag"는 없어야 한다', () => {
-    const flags = new Set(['a']);
+    const flags = new Map([['a', 1]]);
     expect(storyAllows(undefined, flags)).toBe(true);
     expect(storyAllows(['a'], flags)).toBe(true);
     expect(storyAllows(['!a'], flags)).toBe(false);
@@ -33,7 +34,7 @@ describe('이야기 조건', () => {
 
   it('조건에 맞지 않는 목표가 빠지면 그 목표를 기다리던 requires도 지운다', () => {
     const thu = cfg.days[dayIndex('dayThu')]!;
-    const day = applyStory({ ...thu, objectives: [...thu.objectives, { id: 'x', textKey: 'obj.home', on: 'never', requires: ['memo'] }] }, new Set(['upstairs.resolved']));
+    const day = applyStory({ ...thu, objectives: [...thu.objectives, { id: 'x', textKey: 'obj.home', on: 'never', requires: ['memo'] }] }, st(['upstairs.resolved']));
     expect(day.objectives.some((o) => o.id === 'memo')).toBe(false);
     expect(day.objectives.find((o) => o.id === 'x')!.requires).toEqual([]);
   });
@@ -118,11 +119,85 @@ describe('윗집·지우 줄기', () => {
 
 describe('주간 결말', () => {
   it('줄기마다 조건이 맞는 첫 줄', () => {
-    expect(epilogueKeys(cfg.story, new Set())).toEqual(['epi.pitch.rushed', 'epi.upstairs.none', 'epi.jiu.none']);
-    expect(epilogueKeys(cfg.story, new Set(['pitch.prepped', 'pitch.rehearsed', 'upstairs.note', 'upstairs.resolved', 'jiu.answered', 'jiu.met']))).toEqual([
+    expect(epilogueKeys(cfg.story, new Map())).toEqual(['epi.pitch.rushed', 'epi.upstairs.none', 'epi.jiu.none']);
+    expect(epilogueKeys(cfg.story, st(['pitch.prepped', 'pitch.rehearsed', 'upstairs.note', 'upstairs.resolved', 'jiu.answered', 'jiu.met']))).toEqual([
       'epi.pitch.ready',
       'epi.upstairs.note',
       'epi.jiu.met',
     ]);
+  });
+});
+
+describe('인물의 기억', () => {
+  it('옆집 아주머니: 월요일 대화 끝에 장조림을 받고, 수요일엔 "입에 맞았어요?", 토요일은 대답에 따라 다르다', () => {
+    const mon = dayWith('day1', []);
+    expect(mon.npcs.find((n) => n.id === 'neighbor')!.profile.dialogue).toBe('neighborSidedish');
+    mon.gameEvent('talked:neighbor');
+    expect(mon.story.get('neighbor.sidedish')).toBe(1);
+    expect(mon.player.inventory.consumables['sidedish']).toBe(1);
+
+    const wed = dayWith('dayWed', ['neighbor.sidedish']);
+    expect(wed.npcs.find((n) => n.id === 'neighbor')!.profile.dialogue).toBe('neighborFollowup');
+    expect(dayWith('dayWed', []).npcs.some((n) => n.id === 'neighbor')).toBe(false);
+
+    const warm = dayWith('day4', ['neighbor.sidedish', 'neighbor.thanked']);
+    expect(warm.npcs.find((n) => n.id === 'neighbor')!.profile.dialogue).toBe('neighborWarm');
+    expect(warm.player.inventory.consumables['sidedish']).toBe(1);
+    expect(dayWith('day4', ['neighbor.sidedish']).npcs.find((n) => n.id === 'neighbor')!.profile.dialogue).toBe('neighborWistful');
+    expect(dayWith('day4', []).npcs.find((n) => n.id === 'neighbor')!.profile.dialogue).toBe('neighbor');
+  });
+
+  it('카페: 단골이 되기 전엔 주문이 자극, 들른 날을 하루 한 번씩 세고, 세 번째 날부터 "늘 드시던 걸로요?"', () => {
+    const buy = (s: GameSession) => {
+      const counter = cfg.world.interactables.find((i) => i.id === 'cafeCounter')!;
+      s.player.pos.x = counter.at[0];
+      s.player.pos.y = counter.at[1] + 0.4;
+      s.player.inventory.consumables = {};
+      s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+      expect(s.mode.kind).toBe('shop');
+      s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+      s.step(dt, { ...NO_CONTROLS, cancel: true });
+      return s.drainFx().filter((f) => f.type === 'toast').map((f) => (f.type === 'toast' ? f.key : ''));
+    };
+    const first = dayWith('day1', []);
+    first.sim.life.addMoney(100000);
+    const tension = first.sim.energy.mood('tension');
+    expect(buy(first)).not.toContain('cafe.usual');
+    expect(first.sim.energy.mood('tension')).toBeGreaterThan(tension);
+    buy(first);
+    expect(first.story.get('cafe')).toBe(1);
+
+    const regular = dayWith('dayThu', ['cafe']);
+    regular.story.set('cafe', 2);
+    regular.sim.life.addMoney(100000);
+    const before = regular.sim.energy.mood('tension');
+    expect(buy(regular)).toContain('cafe.usual');
+    expect(regular.sim.energy.mood('tension')).toBeLessThanOrEqual(before);
+    expect(regular.story.get('cafe')).toBe(3);
+  });
+
+  it('서윤: 눈이 마주치면 고개만 끄덕인다. 시선 자극이 아니고, 마음이 가라앉고, 하루 한 번 센다', () => {
+    const s = dayWith('day1', []);
+    s.clock.minutes = parseTime('10:00');
+    const seo = s.npcs.find((n) => n.id === 'seoyun')!;
+    s.sim.energy.addMood('tension', 40);
+    for (let i = 0; i < 60 * 6 && !s.story.get('seoyun'); i++) {
+      s.player.pos.x = seo.pos.x + 2.5;
+      s.player.pos.y = seo.pos.y;
+      seo.facing = 0;
+      s.step(dt, { ...NO_CONTROLS, aim: Math.PI });
+    }
+    expect(s.story.get('seoyun')).toBe(1);
+    expect(s.gazeCount()).toBe(0);
+    expect(s.sim.energy.mood('tension')).toBeLessThan(40);
+    step(s, 2, { aim: Math.PI });
+    expect(s.story.get('seoyun')).toBe(1);
+  });
+
+  it('주간 결말: 단골·눈인사·반찬 줄은 그런 일이 있었을 때만', () => {
+    expect(epilogueKeys(cfg.story, new Map([['cafe', 2]]))).not.toContain('epi.cafe.regular');
+    expect(epilogueKeys(cfg.story, new Map([['cafe', 3], ['seoyun', 3], ['neighbor.sidedish', 1]]))).toEqual(
+      expect.arrayContaining(['epi.cafe.regular', 'epi.seoyun.often', 'epi.neighbor.sidedish']),
+    );
   });
 });
