@@ -1,8 +1,8 @@
 import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
-import type { ConsumableDef, RecoveryEffects, DayDef, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import type { ConsumableDef, RecoveryEffects, DayDef, FavorDef, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
-import { GameClock, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
+import { GameClock, formatTime, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
 import { NO_MODIFIERS, type ChannelModifiers } from '../sim/EnergyModel';
 import type { LifeChange, LifeSnapshot, LifeStatId } from '../sim/LifeStats';
@@ -173,6 +173,8 @@ export interface SaveState {
   leaveUsed?: number;
   /** 사람들의 인상 (그날 아침 기준) */
   reputation?: Record<string, number>;
+  /** 찾은 조용한 곳 (도감) */
+  quiet?: string[];
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -258,6 +260,15 @@ export class GameSession {
   readonly vacation: boolean;
   /** 휴가 며칠째 */
   vacationDayCount = 1;
+  /** 조용한 곳 도감: 찾은 곳 (날이 바뀌어도, 다시 해도 남는다) */
+  readonly quietFound = new Set<string>();
+  /** 지금 머무는 (찾은) 조용한 곳: 아무도 보지 않으면 회복 중 */
+  quietHere: { id: string; nameKey: string } | null = null;
+  private quietTimer = 0;
+  private quietSpotId: string | null = null;
+  /** 오늘 온 부탁과 받아들인 부탁 */
+  private favorsOffered: FavorDef[] = [];
+  private readonly favorsAccepted = new Set<string>();
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
   private readonly seed: number | null;
   /** 같은 날을 다시 할 때마다 다른 하루가 되도록 */
@@ -299,6 +310,7 @@ export class GameSession {
       this.story = storyFromSave(save.story);
       this.leaveUsed = save.leaveUsed ?? 0;
       this.reputation.restore(save.reputation);
+      for (const q of save.quiet ?? []) this.quietFound.add(q);
     }
     this.startDay(this.dayIndex);
   }
@@ -326,7 +338,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation, quiet: [...this.quietFound] };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -340,6 +352,7 @@ export class GameSession {
     const ambient = (this.cfg.world.ambient ?? []).filter((a) => (a.chance === undefined ? true : this.seed !== null ? this.rng() < a.chance : a.chance >= 1));
     this.day = { ...composed.day, npcs: [...composed.day.npcs, ...ambient.map(({ chance: _c, ...a }) => a)] };
     this.happenings = composed.happenings;
+    this.offerFavors();
     this.sim.life.clearLedger();
     this.ledgerSeen = 0;
     this.lastWhyToast.clear();
@@ -409,6 +422,67 @@ export class GameSession {
     this.area = this.world.map.areaAt(spawn.x, spawn.y);
     this.mode = { kind: 'dayIntro' };
     this.lastTier = 'stable';
+  }
+
+  /** 오늘의 부탁: 씨앗이 있을 때만 (테스트는 기본 하루). 문자로 오고, 답장하면 목표가 생긴다 */
+  private offerFavors(): void {
+    this.favorsOffered = [];
+    this.favorsAccepted.clear();
+    if (this.seed === null) return;
+    const fc = this.cfg.favors;
+    const pool = fc.list.filter((f) => (f.days ? !this.vacation && f.days.includes(this.day.id) : true));
+    const n = this.vacation ? fc.vacationPerDay : fc.perDay;
+    const [a, b] = fc.window.map(parseTime) as [number, number];
+    for (let i = 0; i < n && pool.length; i++) {
+      const f = pool.splice(Math.floor(this.rng() * pool.length), 1)[0]!;
+      if (this.rng() >= fc.chance) continue;
+      this.favorsOffered.push(f);
+      this.day.phone.push({ at: formatTime(Math.round(a + this.rng() * (b - a))), kind: 'message', contact: f.contact, textKey: f.offerKey });
+    }
+  }
+
+  private acceptFavor(textKey: string): void {
+    const f = this.favorsOffered.find((x) => x.offerKey === textKey);
+    if (!f || this.favorsAccepted.has(f.id)) return;
+    this.favorsAccepted.add(f.id);
+    this.objectives.add({ id: `favor_${f.id}`, textKey: f.textKey, on: f.on, optional: true, marker: f.marker });
+    this.toast('favor.accepted', { obj: this.cfg.text[f.textKey] ?? f.id });
+  }
+
+  private completeFavor(objectiveId: string): void {
+    const f = this.favorsOffered.find((x) => `favor_${x.id}` === objectiveId);
+    if (!f) return;
+    if (f.life) this.sim.life.apply(f.life, 'favor', f.contact);
+    for (const [person, d] of Object.entries(f.reputation ?? {})) this.reputation.change(person, d);
+    this.sim.report.favorsDone = (this.sim.report.favorsDone ?? 0) + 1;
+    this.toast('favor.done', { who: this.cfg.text[this.cfg.life.contacts[f.contact]?.nameKey ?? ''] ?? f.contact });
+    this.gameEvent('favor:done');
+  }
+
+  /** 조용한 곳: 머무는 동안 아무도 보지 않으면 시간이 쌓이고, 처음이면 도감에 오른다. 찾은 곳은 회복 */
+  private updateQuiet(dt: number): void {
+    const qc = this.cfg.quietSpots;
+    const p = this.player.pos;
+    const now = this.clock.minutes;
+    const spot =
+      this.mode.kind === 'free'
+        ? qc.spots.find((q) => Math.hypot(q.at[0] - p.x, q.at[1] - p.y) <= q.radius && (!q.from || now >= parseTime(q.from)) && (!q.to || now < parseTime(q.to)))
+        : undefined;
+    if (!spot || spot.id !== this.quietSpotId) this.quietTimer = 0;
+    this.quietSpotId = spot?.id ?? null;
+    this.quietHere = null;
+    if (!spot || this.gazeCount() > 0) return;
+    this.quietTimer += dt;
+    if (!this.quietFound.has(spot.id)) {
+      if (this.quietTimer < qc.discoverSec) return;
+      this.quietFound.add(spot.id);
+      this.toast('quiet.found', { name: this.cfg.text[spot.nameKey] ?? spot.id, n: this.quietFound.size, max: qc.spots.length });
+      this.fx.push({ type: 'sound', id: 'chime' });
+      this.gameEvent('quiet:found');
+    }
+    this.quietHere = { id: spot.id, nameKey: spot.nameKey };
+    this.sim.energy.calm(qc.recovery.calmPerSec * dt);
+    this.sim.energy.recover(qc.recovery.batteryPerSec * dt);
   }
 
   /** 오늘 연차를 쓸 수 있는지 (그날 허용 + 이번 주 남은 연차) */
@@ -564,6 +638,7 @@ export class GameSession {
     if (this.stopped()) return;
     this.updateItemBreak(dt, c);
     this.updateBuffs(dt);
+    this.updateQuiet(dt);
     this.updatePhone(dt, c);
     this.updateWorld(dt);
     this.updateSim(dt);
@@ -1999,7 +2074,10 @@ export class GameSession {
       }
     }
     if (how === 'answered' && contact.ally) this.sim.energy.recover(8);
-    if (how === 'replied') this.gameEvent(`replied:${contactId}`);
+    if (how === 'replied') {
+      this.gameEvent(`replied:${contactId}`);
+      this.acceptFavor(textKey);
+    }
     if (how === 'answered') {
       this.gameEvent(`answered:${contactId}`);
       if (this.isMandatoryLike(contactId) && !report.mandatoryDone.includes(`call:${contactId}`)) report.mandatoryDone.push(`call:${contactId}`);
@@ -2250,6 +2328,10 @@ export class GameSession {
     // 목표 마감
     this.objectives.checkDeadlines(this.clock.minutes);
     for (const e of this.objectives.drainEvents()) {
+      if (e.type === 'completed' && e.objective.def.id.startsWith('favor_')) {
+        this.completeFavor(e.objective.def.id);
+        continue;
+      }
       if (e.type === 'missed') {
         const d = e.objective.def;
         const delta = d.missed ?? (d.mandatory ? this.cfg.life.rewards.mandatorySkipped : null);

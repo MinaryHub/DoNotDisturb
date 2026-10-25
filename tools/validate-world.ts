@@ -42,6 +42,11 @@ const reachable = (x: number, y: number) => {
 };
 for (const it of world.interactables) if (!reachable(it.at[0], it.at[1])) warnings.push(`interactable ${it.id}: 같은 층 입구에서 걸어서 닿을 수 없음`);
 for (const s of world.safes) if (!reachable(s.rect[0] + 0.5, s.rect[1] + 0.5)) warnings.push(`safe ${s.id}: 닿을 수 없음`);
+// 조용한 곳 도감: 그 자리에 설 수 있고 걸어서 닿아야 한다
+for (const q of cfg.quietSpots.spots) {
+  if (!walk(q.at[0], q.at[1])) problems.push(`quiet ${q.id}: 막힌 칸 (${q.at[0]}, ${q.at[1]})`);
+  else if (!reachable(q.at[0], q.at[1])) warnings.push(`quiet ${q.id}: 걸어서 닿을 수 없음`);
+}
 
 const json = process.argv.includes('--json');
 const strict = process.argv.includes('--strict');

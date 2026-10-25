@@ -23,6 +23,10 @@ import {
   reputationConfigSchema,
   worldPartSchema,
   districtsConfigSchema,
+  quietSpotsSchema,
+  favorsSchema,
+  type QuietSpotsConfig,
+  type FavorsConfig,
   textTableSchema,
   tileDefsSchema,
   worldDefSchema,
@@ -61,6 +65,8 @@ export interface GameConfig {
   happenings: HappeningsConfig;
   story: StoryConfig;
   reputation: ReputationConfig;
+  quietSpots: QuietSpotsConfig;
+  favors: FavorsConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -125,6 +131,8 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     happenings: parseConfig(happeningsConfigSchema, j('happenings.json'), 'data/happenings.json'),
     story: parseConfig(storyConfigSchema, j('story.json'), 'data/story.json'),
     reputation: parseConfig(reputationConfigSchema, j('reputation.json'), 'data/reputation.json'),
+    quietSpots: parseConfig(quietSpotsSchema, j('quietSpots.json'), 'data/quietSpots.json'),
+    favors: parseConfig(favorsSchema, j('favors.json'), 'data/favors.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -327,6 +335,15 @@ export function crossCheck(cfg: GameConfig): string[] {
     for (const c of p.contacts ?? []) if (!has(cfg.life.contacts, c)) errors.push(`reputation ${id}: 연락처 없음 "${c}"`);
   }
   for (const t of rep.tiers) needText(t.key, 'reputation tier');
+  for (const q of cfg.quietSpots.spots) needText(q.nameKey, `quiet ${q.id}`);
+  for (const f of cfg.favors.list) {
+    const where = `favor ${f.id}`;
+    needText(f.offerKey, where);
+    needText(f.textKey, where);
+    if (!has(cfg.life.contacts, f.contact)) errors.push(`${where}: 연락처 없음 "${f.contact}"`);
+    if (f.marker && !w.interactables.some((i) => i.id === f.marker) && !w.areas.some((a) => a.id === f.marker)) errors.push(`${where}: marker 대상 없음 "${f.marker}"`);
+    for (const id of Object.keys(f.reputation ?? {})) if (!has(rep.people, id)) errors.push(`${where}: 사람 없음 "${id}"`);
+  }
   for (const [ev, d] of Object.entries(rep.events)) for (const id of Object.keys(d)) if (!has(rep.people, id)) errors.push(`reputation event ${ev}: 사람 없음 "${id}"`);
   const conds = [
     ...cfg.days.flatMap((d) => [...d.objectives, ...d.phone, ...d.npcs, ...(d.areaStimuli ?? []), ...(d.notes ?? [])].map((x) => x.if)),

@@ -186,6 +186,7 @@ export class Renderer {
     if (night > 0.01 && onGround) this.drawNight(s, night);
     this.drawZones(s, ps);
     this.drawInteractHints(s, ps);
+    this.drawQuietSpots(s, ps.time);
     this.drawViewCones(s, ps);
     const others = s.crowd.agents.filter((a) => a.active).map((a) => a.pos);
     this.pigeons.update(dt, s.player.pos, s.player.running, others);
@@ -392,6 +393,26 @@ export class Renderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.light, 0, 0);
     ctx.restore();
+  }
+
+  /** 찾은 조용한 곳: 바닥에 은은한 잎 모양 표시 (아직 못 찾은 곳은 보이지 않는다) */
+  private drawQuietSpots(s: GameSession, time: number): void {
+    const ctx = this.wctx;
+    for (const q of this.cfg.quietSpots.spots) {
+      if (!s.quietFound.has(q.id)) continue;
+      const [x, y] = q.at;
+      if (Math.abs(x - this.camera.x) > 40 || Math.abs(y - this.camera.y) > 28) continue;
+      const a = 0.25 + 0.1 * Math.sin(time * 1.5 + x);
+      ctx.strokeStyle = `rgba(127, 191, 106, ${a})`;
+      ctx.lineWidth = 0.06;
+      ctx.beginPath();
+      ctx.arc(x, y, q.radius * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(127, 191, 106, ${a + 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 0.22, 0.12, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   /** 대로를 달리는 마을버스 (시간표 그대로). 타고 있으면 내 자리를 창가에 표시 */

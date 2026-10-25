@@ -26,6 +26,13 @@ export class Objectives {
     this.list = day.objectives.map((def) => ({ def, progress: 0, done: false, late: false, missed: false }));
   }
 
+  /** 하루 중에 생기는 목표 (부탁을 받았을 때) */
+  add(def: ObjectiveDef): ObjectiveState {
+    const o: ObjectiveState = { def, progress: 0, done: false, late: false, missed: false };
+    this.list.splice(Math.max(0, this.list.findIndex((x) => x.def.endsDay)), 0, o);
+    return o;
+  }
+
   get(id: string): ObjectiveState | undefined {
     return this.list.find((o) => o.def.id === id);
   }

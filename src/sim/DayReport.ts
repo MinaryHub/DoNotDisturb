@@ -15,6 +15,8 @@ export interface DayReport {
   messagesIgnored: number;
   recoveredBattery: number;
   hobbies: string[];
+  /** 들어준 부탁 */
+  favorsDone?: number;
   lifeStart: Record<LifeStatId, number>;
   moneyStart: number;
 }
@@ -51,6 +53,7 @@ export function mergeReports(reports: readonly DayReport[]): Omit<DayReport, 'li
     messagesIgnored: 0,
     recoveredBattery: 0,
     hobbies: [] as string[],
+    favorsDone: 0,
   };
   for (const r of reports) {
     total.smalltalkAvoided += r.smalltalkAvoided;
@@ -64,6 +67,7 @@ export function mergeReports(reports: readonly DayReport[]): Omit<DayReport, 'li
     total.messagesIgnored += r.messagesIgnored;
     total.recoveredBattery += r.recoveredBattery;
     total.hobbies.push(...r.hobbies);
+    total.favorsDone += r.favorsDone ?? 0;
   }
   return total;
 }

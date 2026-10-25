@@ -896,6 +896,37 @@ export const reputationConfigSchema = z.object({
   tiers: z.array(z.object({ min: z.number(), key: z.string() })).min(1),
 });
 
+/** 조용한 곳 도감 (data/quietSpots.json): 찾으면 도감에 오르고, 그 자리에서는 아무도 보지 않을 때 마음이 가라앉고 기운이 조금 찬다 */
+export const quietSpotsSchema = z.object({
+  discoverSec: positive,
+  recovery: z.object({ calmPerSec: nonNegative, batteryPerSec: nonNegative }),
+  spots: z.array(z.object({ id: z.string(), at: vec2, radius: positive, nameKey: z.string(), from: hhmm.optional(), to: hhmm.optional() })),
+});
+export type QuietSpotsConfig = z.infer<typeof quietSpotsSchema>;
+
+/** 사람들의 부탁 (data/favors.json): 하루에 몇 개 문자로 온다. 답장하면 선택 목표가 생기고, 해내면 생활 지표·인상 */
+export const favorsSchema = z.object({
+  perDay: z.number().int().min(0),
+  vacationPerDay: z.number().int().min(0),
+  chance: unit,
+  window: z.tuple([hhmm, hhmm]),
+  list: z.array(
+    z.object({
+      id: z.string(),
+      contact: z.string(),
+      offerKey: z.string(),
+      textKey: z.string(),
+      on: z.string(),
+      marker: z.string().optional(),
+      life: lifeDelta.optional(),
+      reputation: z.record(z.string(), z.number()).optional(),
+      days: z.array(z.string()).optional(),
+    }),
+  ),
+});
+export type FavorsConfig = z.infer<typeof favorsSchema>;
+export type FavorDef = FavorsConfig['list'][number];
+
 export const monologueTriggersSchema = z.array(
   z.object({
     key: z.string(),

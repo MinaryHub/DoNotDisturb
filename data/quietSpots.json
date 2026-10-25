@@ -1,0 +1,24 @@
+{
+  "discoverSec": 3,
+  "recovery": { "calmPerSec": 1.4, "batteryPerSec": 0.3 },
+  "spots": [
+    { "id": "parkBench", "at": [57.5, 29.4], "radius": 1.8, "nameKey": "quiet.parkBench" },
+    { "id": "parkBush", "at": [77.5, 25.5], "radius": 1.8, "nameKey": "quiet.parkBush" },
+    { "id": "streamReeds", "at": [319.5, 27], "radius": 1.8, "nameKey": "quiet.streamReeds" },
+    { "id": "readingWindow", "at": [263.6, 20.5], "radius": 1.8, "nameKey": "quiet.readingWindow" },
+    { "id": "pocketGarden", "at": [301.5, 13.4], "radius": 1.8, "nameKey": "quiet.pocketGarden" },
+    { "id": "bookSofa", "at": [250, 34.5], "radius": 1.8, "nameKey": "quiet.bookSofa" },
+    { "id": "laundryBench", "at": [212, 44.4], "radius": 1.8, "nameKey": "quiet.laundryBench" },
+    { "id": "eastRest", "at": [241.5, 45.4], "radius": 1.8, "nameKey": "quiet.eastRest" },
+    { "id": "yogaMat", "at": [270, 88.5], "radius": 1.8, "nameKey": "quiet.yogaMat", "from": "09:00", "to": "11:00" },
+    { "id": "plazaBench", "at": [246.5, 103.4], "radius": 1.8, "nameKey": "quiet.plazaBench" },
+    { "id": "cafeCorner", "at": [124.6, 20], "radius": 1.8, "nameKey": "quiet.cafeCorner", "from": "14:00", "to": "16:30" },
+    { "id": "univReading", "at": [969, 117.6], "radius": 1.8, "nameKey": "quiet.univReading" },
+    { "id": "campusLawn", "at": [912, 86], "radius": 1.8, "nameKey": "quiet.campusLawn" },
+    { "id": "bridgeBench", "at": [353.5, 354.6], "radius": 1.8, "nameKey": "quiet.bridgeBench" },
+    { "id": "nightBridge", "at": [900, 410], "radius": 1.8, "nameKey": "quiet.nightBridge", "from": "19:00", "to": "23:59" },
+    { "id": "farBank", "at": [1090, 440], "radius": 1.8, "nameKey": "quiet.farBank" },
+    { "id": "lastPlatform", "at": [607, 127.5], "radius": 1.8, "nameKey": "quiet.lastPlatform", "from": "20:00", "to": "23:59" },
+    { "id": "marketBench", "at": [30, 174.6], "radius": 1.8, "nameKey": "quiet.marketBench" }
+  ]
+}

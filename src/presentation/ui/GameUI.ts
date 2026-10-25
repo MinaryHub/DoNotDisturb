@@ -781,6 +781,7 @@ export class GameUI {
     }
     else if (s.player.lockedSafe) text = this.tx('safe.locked');
     else if (s.player.biking && s.mode.kind === 'free') text = this.tx('bike.riding');
+    else if (s.quietHere) text = this.tx('quiet.here', { name: this.tx(s.quietHere.nameKey) });
     show(this.status, text !== '');
     setText(this.status, text);
   }
@@ -839,6 +840,16 @@ export class GameUI {
     const target = this.markerTarget(s);
     if (target) dot(target.x, target.y, '#ffd166', 9);
     for (const n of s.activeNpcs()) if (n.type !== 'passerby' && n.type !== 'pet' && n.pos.y < groundH) dot(n.pos.x, n.pos.y, n.type === 'ally' ? '#f2c94c' : '#e0645a', 5);
+    // 조용한 곳 도감: 찾은 곳은 초록 잎, 몇 곳 찾았는지
+    for (const q of this.cfg.quietSpots.spots) if (s.quietFound.has(q.id)) dot(q.at[0], q.at[1], '#7fbf6a', 6);
+    g.font = '600 20px system-ui, "Malgun Gothic", sans-serif';
+    g.textAlign = 'left';
+    g.textBaseline = 'top';
+    g.fillStyle = 'rgba(20,20,26,0.7)';
+    const count = this.tx('quiet.mapCount', { n: s.quietFound.size, max: this.cfg.quietSpots.spots.length });
+    g.fillRect(12, 12, g.measureText(count).width + 20, 34);
+    g.fillStyle = '#c9e8bf';
+    g.fillText(count, 22, 19);
     dot(shown.x, shown.y, '#fff7d6', 8);
     dot(shown.x, shown.y, '#3f78c9', 5);
   }
@@ -900,6 +911,7 @@ export class GameUI {
       row('report.calls', `${r.callsAnswered} / ${r.callsAvoided}`),
       row('report.messages', `${r.messagesReplied} / ${r.messagesIgnored}`),
       row('report.recovered', n(Math.round(r.recoveredBattery))),
+      row('report.favors', n(r.favorsDone ?? 0)),
     ].join('');
   }
 
@@ -994,6 +1006,7 @@ export class GameUI {
       <table class="report">${this.reportRows(total)}</table>
       <h3>${escapeHtml(this.tx('report.life'))}</h3>
       ${this.lifeBars(s.sim.life.all())}
+      <p class="rep__overall">${escapeHtml(this.tx('quiet.mapCount', { n: s.quietFound.size, max: this.cfg.quietSpots.spots.length }))}</p>
       ${this.peopleHtml(s)}
       ${this.epilogueHtml(s)}
       <p class="screen__comfort">${escapeHtml(this.tx('report.comfort.2'))}</p>

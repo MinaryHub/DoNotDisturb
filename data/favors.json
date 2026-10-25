@@ -1,0 +1,16 @@
+{
+  "perDay": 1,
+  "vacationPerDay": 2,
+  "chance": 0.75,
+  "window": ["10:00", "17:00"],
+  "list": [
+    { "id": "momPatch", "contact": "mom", "offerKey": "favor.momPatch.offer", "textKey": "favor.momPatch.obj", "on": "done:pharmacy", "marker": "pharmacyTalk", "life": { "bond": 6 }, "reputation": { "mom": 6 } },
+    { "id": "jiuIceCream", "contact": "friend", "offerKey": "favor.jiuIceCream.offer", "textKey": "favor.jiuIceCream.obj", "on": "enter:riverKiosk", "marker": "riverKiosk", "life": { "bond": 5 }, "reputation": { "jiu": 6 } },
+    { "id": "seoyunBook", "contact": "seoyun", "offerKey": "favor.seoyunBook.offer", "textKey": "favor.seoyunBook.obj", "on": "enter:univLibrary", "marker": "univLibrary", "life": { "income": 2 }, "reputation": { "seoyun": 8 }, "days": ["day1", "day2", "dayWed", "dayThu", "day3"] },
+    { "id": "teamBread", "contact": "teamChat", "offerKey": "favor.teamBread.offer", "textKey": "favor.teamBread.obj", "on": "bought:bakery", "marker": "stationBakery", "life": { "income": 2 }, "reputation": { "team": 6 }, "days": ["day1", "day2", "dayWed", "dayThu", "day3"] },
+    { "id": "mgmtNotice", "contact": "mgmtOffice", "offerKey": "favor.mgmtNotice.offer", "textKey": "favor.mgmtNotice.obj", "on": "interact:lobbyBoard", "marker": "lobbyBoard", "life": { "housing": 3 }, "reputation": { "mgmt": 6 } },
+    { "id": "bossTteok", "contact": "boss", "offerKey": "favor.bossTteok.offer", "textKey": "favor.bossTteok.obj", "on": "interact:mkTteok", "marker": "mkTteok", "life": { "income": 3 }, "reputation": { "boss": 8 }, "days": ["day1", "day2", "dayWed", "dayThu"] },
+    { "id": "momBanchan", "contact": "mom", "offerKey": "favor.momBanchan.offer", "textKey": "favor.momBanchan.obj", "on": "interact:mkBanchan", "marker": "mkBanchan", "life": { "bond": 4 }, "reputation": { "mom": 5 } },
+    { "id": "jiuStation", "contact": "friend", "offerKey": "favor.jiuStation.offer", "textKey": "favor.jiuStation.obj", "on": "enter:centralStation", "marker": "stationBoard", "life": { "bond": 4 }, "reputation": { "jiu": 5 } }
+  ]
+}
