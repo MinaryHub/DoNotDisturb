@@ -5,3 +5,5 @@ dist/
 /reports/
 .DS_Store
 .playwright-mcp/
+.vercel
+.env*
