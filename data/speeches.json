@@ -34,5 +34,10 @@
     "chunks": ["좋은 질문", "감사합니다.", "그 부분은", "확인해서", "메일로", "드리겠습니다."],
     "chunksEn": ["Thank you", "for the question.", "Let me", "double-check that", "and follow up", "by email."],
     "stimulus": "pitchQna", "audience": 9, "objectiveEvent": "done:pitchQna", "introKey": "speech.pitchQna.intro", "rumination": true
+  },
+  "bankCard": {
+    "chunks": ["저…", "카드를", "잃어버려서요.", "재발급", "부탁드려요."],
+    "chunksEn": ["Um…", "I lost", "my card.", "I'd like", "a replacement, please."],
+    "stimulus": "bankTalk", "audience": 3, "objectiveEvent": "done:bank", "introKey": "speech.bank.intro", "anytime": true
   }
 }

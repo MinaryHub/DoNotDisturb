@@ -172,7 +172,7 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
-        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box', 'book', 'fidget', 'cream']).optional(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box', 'book', 'fidget', 'cream', 'flower']).optional(),
         effects: recoveryEffects,
         /** 혼자만의 틈: 이만큼(초) 멈춰 서서 천천히 먹거나 쓰고, 효과도 그동안 나눠 찬다. 움직이거나 말을 걸려 오면 그만둔다 */
         breakSec: positive.optional(),

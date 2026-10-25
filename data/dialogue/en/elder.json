@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Excuse me, young one! Or are you a teacher? Can I ask the way?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "Where do I catch the No. 7 bus? The one to Haeoreum Stream.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "They keep renaming the stops these days, it's confusing.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "My grandkid lives around here. I came to drop off some side dishes.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Thank you. Young people are all so busy, I feel bad even asking.",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh dear, did I keep you? Your face went red.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Thank you, bless you!",
+    "parried": "Oh, you're busy, go on, go on!",
+    "endured": "I talked a lot, didn't I? Thank you.",
+    "sos": "You've got a call, take it!",
+    "awkward": "…Alright, I'll find it myself."
+  }
+}

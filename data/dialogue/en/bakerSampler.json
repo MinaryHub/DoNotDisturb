@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Fresh salt bread! Try one before you go~",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "Everything's 10% off for our grand opening!",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "The cream buns sell out by afternoon. Now's your chance~",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "You like bread? It's written all over your face~",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, you're shy. Just take one~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Enjoy~ come again!",
+    "parried": "Okay~ be sure to stop by next time!",
+    "endured": "I kept you, didn't I? Have a bun~",
+    "sos": "Take your call!",
+    "awkward": "…Okay, then~"
+  }
+}

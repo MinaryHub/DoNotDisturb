@@ -1,6 +1,6 @@
 // 소모품 아이콘 (인라인 SVG, 도형 조합). items.json의 icon 이름으로 고른다.
 
-export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box' | 'book' | 'fidget' | 'cream';
+export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box' | 'book' | 'fidget' | 'cream' | 'flower';
 
 const SVG: Record<ItemIcon, string> = {
   // 찬 음료: 얼음 든 플라스틱 컵 + 빨대
@@ -35,6 +35,7 @@ const SVG: Record<ItemIcon, string> = {
   fidget: '<circle cx="12" cy="12.5" r="8.5" fill="#9fd3c7"/><circle cx="9" cy="10" r="1.8" fill="#7cbcae"/><circle cx="14.5" cy="9.5" r="1.8" fill="#7cbcae"/><circle cx="8.5" cy="15" r="1.8" fill="#7cbcae"/><circle cx="14" cy="15.5" r="1.8" fill="#7cbcae"/><circle cx="11.5" cy="12.5" r="1.8" fill="#7cbcae"/><ellipse cx="9" cy="7" rx="2.5" ry="1.2" fill="#fff" opacity=".5"/>',
   // 핸드크림: 짜는 튜브
   cream: '<path d="M7 3h10l-1.5 15h-7z" fill="#f3c1c6"/><rect x="9" y="18" width="6" height="3.5" rx="1" fill="#f6f2e8"/><rect x="8.2" y="7" width="7.6" height="5" rx="1" fill="#fff" opacity=".7"/><path d="M10 9.5h4" stroke="#d98c96" stroke-width="1" stroke-linecap="round"/><rect x="7" y="3" width="10" height="1.6" fill="#e3a3ab"/>',
+  flower: '<path d="M12 13v8" stroke="#5d8a4f" stroke-width="1.6" stroke-linecap="round"/><path d="M12 18c-2-2-4-2-5-1 1 2 3 2 5 1zM12 17c2-2 4-2 5-1-1 2-3 2-5 1z" fill="#7fbf6a"/><circle cx="12" cy="6" r="2.6" fill="#f3c1c6"/><circle cx="9" cy="9" r="2.6" fill="#f3c1c6"/><circle cx="15" cy="9" r="2.6" fill="#f3c1c6"/><circle cx="10" cy="12" r="2.6" fill="#e8a3ad"/><circle cx="14" cy="12" r="2.6" fill="#e8a3ad"/><circle cx="12" cy="9.5" r="2" fill="#f2c94c"/>',
   // 두통약: 알약 + 포장
   pill: '<rect x="4" y="6" width="16" height="12" rx="2" fill="#eef0f3"/><rect x="4" y="6" width="16" height="3.5" rx="1.5" fill="#6fb3ff"/><g transform="rotate(-35 12 13.5)"><rect x="7.5" y="11.5" width="9" height="4" rx="2" fill="#fff" stroke="#c9cdd2" stroke-width=".6"/><rect x="12" y="11.5" width="4.5" height="4" rx="2" fill="#e05a5a"/></g>',
 };

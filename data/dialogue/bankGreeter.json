@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "안녕하세요~ 어떤 업무 보러 오셨어요?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "번호표 뽑아 드릴까요? 카드 업무는 이쪽이에요.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "요즘 앱으로 하시면 훨씬 빨라요. 알려 드릴까요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "대기 인원이 좀 있어서요. 앉아서 기다리세요~",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "괜찮으세요? 물 한 잔 드릴까요?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "호명하면 창구로 오세요~",
+    "parried": "네~ 천천히 보세요!",
+    "endured": "제가 말이 길었네요. 앉아 계세요~",
+    "sos": "전화 받으세요~",
+    "awkward": "…네, 그럼 기다려 주세요."
+  }
+}

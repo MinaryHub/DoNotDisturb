@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Welcome. Is it a gift, or for your place?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "The freesias are lovely today. They smell nice.",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "I'll wrap even a single stem. No pressure.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Take your time. People talking to you is uncomfortable, right? Same for me.",
+      "kind": "story",
+      "durationSec": 2.8
+    }
+  ],
+  "flushRemark": {
+    "text": "It's okay, take all the time you need.",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "Have a nice day.",
+    "parried": "Sure, look around freely.",
+    "endured": "I shouldn't have chatted. Take your time.",
+    "sos": "Go ahead and take your call.",
+    "awkward": "…Sure, look around freely."
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Hello~ What can we help you with today?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "Shall I get you a number ticket? Card services are this way.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "It's much faster on the app these days. Want me to show you?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "There's a bit of a wait. Have a seat~",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Are you alright? Can I get you some water?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "Head to the counter when your number's called~",
+    "parried": "Sure~ take your time!",
+    "endured": "I talked too long. Have a seat~",
+    "sos": "Go ahead and take that~",
+    "awkward": "…Okay, please wait then."
+  }
+}

@@ -64,6 +64,23 @@ describe('DayComposer', () => {
     }
   });
 
+  it('모든 사건을 일어날 수 있는 날마다 하나씩 강제로 넣어 진행해도 오류가 없다', () => {
+    for (const h of cfg.happenings.list) {
+      const only = { ...cfg, happenings: { maxPerDay: 1, list: [{ ...h, chance: 1 }] } };
+      const s = new GameSession(only, undefined, { seed: 1 });
+      for (let i = 0; i < cfg.days.length; i++) {
+        const d = cfg.days[i]!;
+        if (h.days && !h.days.includes(d.id)) continue;
+        if (h.weather && h.weather !== (d.weather ?? 'clear')) continue;
+        s.startDay(i);
+        expect(s.happenings.map((x) => x.id), `${h.id} @ ${d.id}`).toEqual([h.id]);
+        s.step(1 / 60, { ...NO_CONTROLS, confirm: true });
+        for (let k = 0; k < 60; k++) s.step(1 / 60, NO_CONTROLS);
+        expect(s.mode.kind, `${h.id} @ ${d.id}`).not.toBe('dayIntro');
+      }
+    }
+  });
+
   it('같은 날을 다시 하면 다른 변형이 나온다', () => {
     const s = new GameSession(cfg, undefined, { seed: 42 });
     const seen = new Set<string>();

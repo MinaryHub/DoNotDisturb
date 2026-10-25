@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "저기, 학생! 아니 선생님인가? 길 좀 물읍시다.",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "7번 버스 타는 데가 어디예요? 해오름천 가는 거.",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "요즘은 정류장 이름을 자꾸 바꿔서 헷갈려.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "우리 손주가 이 동네 사는데, 반찬 갖다주러 왔어요.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "고마워요. 요즘 젊은 사람들 다 바빠서 물어보기도 미안해.",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "아이고, 내가 괜히 붙잡았나. 얼굴이 빨개졌네.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "고마워요, 복 받을 거야!",
+    "parried": "아이고 바쁘구나, 가 봐요 가 봐!",
+    "endured": "내가 말이 많았지? 고마워요.",
+    "sos": "전화 왔네, 받아요!",
+    "awkward": "…그래요, 내가 찾아볼게."
+  }
+}

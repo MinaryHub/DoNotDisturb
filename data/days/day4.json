@@ -431,6 +431,41 @@
       "at": "streamWalker",
       "path": "streamWalk",
       "chance": 0.6
+    },
+    {
+      "id": "baker",
+      "profile": "staff",
+      "at": "baker",
+      "from": "07:30",
+      "to": "21:00"
+    },
+    {
+      "id": "snackOwner",
+      "profile": "staff",
+      "at": "snackOwner",
+      "from": "10:30",
+      "to": "21:00"
+    },
+    {
+      "id": "snackGuest",
+      "profile": "regular",
+      "at": "snackGuest",
+      "from": "11:30",
+      "to": "14:00",
+      "chance": 0.6
+    },
+    {
+      "id": "florist",
+      "profile": "florist",
+      "at": "florist",
+      "from": "10:00",
+      "to": "20:00"
+    },
+    {
+      "id": "plazaSitter",
+      "profile": "regular",
+      "at": "plazaSitter",
+      "chance": 0.5
     }
   ],
   "notes": [
@@ -452,6 +487,12 @@
       "if": [
         "!upstairs.resolved"
       ]
+    }
+  ],
+  "blocked": [
+    {
+      "interactable": "bankTeller",
+      "toastKey": "bank.closed"
     }
   ]
 }

@@ -254,6 +254,49 @@
     { "op": "tiles", "tile": "tree", "at": [[308, 84], [309, 100], [308, 118], [296, 94], [300, 110]] },
     { "op": "fill", "rect": [262, 104, 24, 24], "tile": "plaza" },
     { "op": "tiles", "tile": "plant", "at": [[262, 104], [285, 104], [262, 127], [285, 127]] },
+    { "op": "fill", "rect": [227, 77, 2, 37], "tile": "sidewalk" },
+    { "op": "fill", "rect": [229, 100, 13, 2], "tile": "sidewalk" },
+    { "op": "room", "rect": [202, 80, 24, 20], "floor": "floorTile", "wall": "wall" },
+    { "op": "fill", "rect": [213, 80, 2, 1], "tile": "door" },
+    { "op": "fill", "rect": [213, 77, 2, 3], "tile": "sidewalk" },
+    { "op": "fill", "rect": [225, 84, 1, 10], "tile": "window" },
+    { "op": "fill", "rect": [205, 91, 17, 1], "tile": "counter" },
+    { "op": "fill", "rect": [208, 85, 8, 1], "tile": "bench" },
+    { "op": "fill", "rect": [203, 82, 1, 5], "tile": "vending" },
+    { "op": "fill", "rect": [206, 94, 1, 4], "tile": "partition" },
+    { "op": "fill", "rect": [214, 94, 1, 4], "tile": "partition" },
+    { "op": "tiles", "tile": "plant", "at": [[203, 98], [224, 98], [224, 81]] },
+    { "op": "room", "rect": [230, 80, 28, 16], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [243, 80, 2, 1], "tile": "door" },
+    { "op": "fill", "rect": [243, 77, 2, 3], "tile": "sidewalk" },
+    { "op": "fill", "rect": [232, 80, 9, 1], "tile": "window" },
+    { "op": "fill", "rect": [247, 80, 9, 1], "tile": "window" },
+    { "op": "fill", "rect": [233, 84, 8, 1], "tile": "shelf" },
+    { "op": "fill", "rect": [233, 88, 8, 1], "tile": "shelf" },
+    { "op": "fill", "rect": [246, 90, 9, 1], "tile": "counter" },
+    { "op": "fill", "rect": [236, 92, 3, 2], "tile": "table" },
+    { "op": "tiles", "tile": "plant", "at": [[256, 81], [231, 94]] },
+    { "op": "room", "rect": [202, 108, 20, 21], "floor": "floorRestaurant", "wall": "wall" },
+    { "op": "fill", "rect": [211, 128, 2, 1], "tile": "door" },
+    { "op": "fill", "rect": [211, 129, 2, 3], "tile": "sidewalk" },
+    { "op": "fill", "rect": [204, 112, 12, 1], "tile": "counter" },
+    { "op": "fill", "rect": [204, 109, 12, 1], "tile": "appliance" },
+    { "op": "fill", "rect": [205, 118, 4, 2], "tile": "table" },
+    { "op": "fill", "rect": [212, 118, 4, 2], "tile": "table" },
+    { "op": "fill", "rect": [205, 123, 4, 2], "tile": "table" },
+    { "op": "fill", "rect": [212, 123, 4, 2], "tile": "table" },
+    { "op": "fill", "rect": [202, 116, 1, 8], "tile": "window" },
+    { "op": "room", "rect": [226, 114, 14, 15], "floor": "floorTile", "wall": "wall" },
+    { "op": "fill", "rect": [232, 128, 2, 1], "tile": "door" },
+    { "op": "fill", "rect": [232, 129, 2, 3], "tile": "sidewalk" },
+    { "op": "fill", "rect": [228, 117, 6, 1], "tile": "counter" },
+    { "op": "fill", "rect": [239, 117, 1, 8], "tile": "window" },
+    { "op": "tiles", "tile": "plant", "at": [[227, 115], [229, 115], [236, 115], [238, 115], [227, 121], [227, 124], [227, 127], [238, 127], [235, 120], [236, 120]] },
+    { "op": "fill", "rect": [242, 100, 16, 14], "tile": "plaza" },
+    { "op": "fill", "rect": [245, 104, 3, 1], "tile": "bench" },
+    { "op": "fill", "rect": [252, 104, 3, 1], "tile": "bench" },
+    { "op": "tiles", "tile": "tree", "at": [[243, 101], [256, 101], [243, 112], [256, 112], [249, 110]] },
+    { "op": "tiles", "tile": "tree", "at": [[200, 104], [224, 105], [241, 96], [258, 98], [200, 130], [223, 131], [241, 130], [257, 124]] },
     { "op": "room", "rect": [0, 142, 124, 16], "floor": "platform", "wall": "wall" },
     { "op": "fill", "rect": [1, 148, 3, 4], "tile": "stairs" },
     { "op": "fill", "rect": [120, 148, 3, 4], "tile": "stairs" },
@@ -378,7 +421,12 @@
     { "id": "yoga", "rect": [262, 80, 26, 20], "kind": "indoor", "labelKey": "area.yoga" },
     { "id": "villa1", "rect": [292, 80, 14, 12], "kind": "indoor", "labelKey": "area.villa" },
     { "id": "villa2", "rect": [292, 96, 14, 12], "kind": "indoor", "labelKey": "area.villa" },
-    { "id": "villa3", "rect": [292, 112, 14, 12], "kind": "indoor", "labelKey": "area.villa" }
+    { "id": "villa3", "rect": [292, 112, 14, 12], "kind": "indoor", "labelKey": "area.villa" },
+
+    { "id": "bank", "rect": [202, 80, 24, 20], "kind": "indoor", "labelKey": "area.bank", "stimulus": { "id": "bankHum", "intensity": 1 } },
+    { "id": "bakery", "rect": [230, 80, 28, 16], "kind": "indoor", "labelKey": "area.bakery" },
+    { "id": "snackBar", "rect": [202, 108, 20, 21], "kind": "indoor", "labelKey": "area.snackBar", "stimulus": { "id": "snackChatter", "intensity": 1 } },
+    { "id": "florist", "rect": [226, 114, 14, 15], "kind": "indoor", "labelKey": "area.florist" }
   ],
 
   "hides": [
@@ -494,7 +542,17 @@
     { "id": "busM_east", "kind": "busStop", "at": [140, 71.2], "labelKey": "interact.bus.toEast", "target": "east" },
     { "id": "busM_west", "kind": "busStop", "at": [140, 62.4], "labelKey": "interact.bus.toWest", "target": "west" },
     { "id": "busE_mid", "kind": "busStop", "at": [302, 62.4], "labelKey": "interact.bus.toMiddle", "target": "middle" },
-    { "id": "busE_west", "kind": "busStop", "at": [306, 62.4], "labelKey": "interact.bus.toWest", "target": "west" }
+    { "id": "busE_west", "kind": "busStop", "at": [306, 62.4], "labelKey": "interact.bus.toWest", "target": "west" },
+
+    { "id": "bankTeller", "kind": "speech", "at": [213, 90.4], "labelKey": "interact.bankTeller", "speech": "bankCard" },
+    { "id": "bankAtm", "kind": "flavor", "at": [204.4, 84.5], "labelKey": "interact.atm", "monologue": "mono.bank.atm" },
+    { "id": "bankTicket", "kind": "flavor", "at": [216.5, 82.4], "labelKey": "interact.ticket", "monologue": "mono.bank.ticket" },
+    { "id": "bakeryCounter", "kind": "shop", "at": [250, 89.4], "labelKey": "interact.bakery", "shop": "bakery" },
+    { "id": "bakeryShelf", "kind": "flavor", "at": [237, 86.5], "labelKey": "interact.bakeryShelf", "monologue": "mono.bakery.shelf" },
+    { "id": "snackSeat", "kind": "soloMeal", "at": [207, 113.6], "labelKey": "interact.snackSeat", "price": 6000 },
+    { "id": "snackMenu", "kind": "flavor", "at": [218.5, 126.5], "labelKey": "interact.menu", "monologue": "mono.snack.menu" },
+    { "id": "floristCounter", "kind": "shop", "at": [231, 118.4], "labelKey": "interact.florist", "shop": "florist" },
+    { "id": "plazaBench", "kind": "bench", "at": [246.5, 103.4], "labelKey": "interact.bench" }
   ],
 
   "portals": [
@@ -555,7 +613,22 @@
     "petOwner": [301, 43.5],
     "yogaTeacher": [279, 86.5],
     "streamWalker": [317, 10],
-    "libraryReader": [268, 19.5]
+    "libraryReader": [268, 19.5],
+
+    "bankGreeter": [210, 83.2],
+    "bankTellerA": [209, 93.5],
+    "bankTellerB": [217, 93.5],
+    "bankWait1": [209, 84.2],
+    "bankWait2": [212, 84.2],
+    "bankWait3": [219, 87],
+    "baker": [250, 92.5],
+    "bakeryFront": [240, 78.4],
+    "snackOwner": [210, 110.6],
+    "snackGuest": [207, 121],
+    "florist": [231, 115.6],
+    "busStopMid": [137, 71.6],
+    "vetFront": [292.5, 46],
+    "plazaSitter": [253, 102.6]
   },
 
   "paths": {
@@ -822,7 +895,15 @@
     { "kind": "busStop", "at": [140, 60.7], "rot": 3.1416 },
     { "kind": "busStop", "at": [304, 60.7], "rot": 3.1416 },
     { "kind": "busStop", "at": [20, 60.7], "rot": 3.1416 },
-    { "kind": "busStop", "at": [304, 72.9] }
+    { "kind": "busStop", "at": [304, 72.9] },
+
+    { "kind": "bin", "at": [226.5, 78.5] },
+    { "kind": "bike", "at": [215.5, 130.6] },
+    { "kind": "bike", "at": [217.6, 130.6] },
+    { "kind": "aircon", "at": [221.4, 110] },
+    { "kind": "pot", "at": [234.6, 130.6] },
+    { "kind": "pot", "at": [230.6, 130.6] },
+    { "kind": "lamp", "at": [241.5, 106] }
   ],
 
   "labels": [
@@ -848,6 +929,11 @@
     { "at": [304, 29], "textKey": "sign.vet", "color": "#3f8f8a" },
     { "at": [275, 79], "textKey": "sign.yoga", "color": "#8a7a5a" },
     { "at": [326, 58.6], "textKey": "sign.stream" },
-    { "at": [274, 103], "textKey": "sign.parking" }
+    { "at": [274, 103], "textKey": "sign.parking" },
+
+    { "at": [213.5, 79], "textKey": "sign.bank", "color": "#2f5d8a" },
+    { "at": [244, 79], "textKey": "sign.bakery", "color": "#b07a3a" },
+    { "at": [211.5, 131], "textKey": "sign.snackBar", "color": "#c0392b" },
+    { "at": [232.5, 131], "textKey": "sign.florist", "color": "#c46a8a" }
   ]
 }

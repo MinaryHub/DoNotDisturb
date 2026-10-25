@@ -184,6 +184,29 @@
       },
       "breakSec": 8,
       "quiet": true
+    },
+    {
+      "id": "creamBun",
+      "nameKey": "item.creamBun",
+      "useKey": "use.creamBun",
+      "icon": "bread",
+      "effects": {
+        "battery": 7,
+        "stress": 8
+      },
+      "breakSec": 5,
+      "quiet": true
+    },
+    {
+      "id": "flower",
+      "nameKey": "item.flower",
+      "useKey": "use.flower",
+      "icon": "flower",
+      "effects": {
+        "stress": 16,
+        "flush": 0.3
+      },
+      "breakSec": 4
     }
   ],
   "gear": [
@@ -369,6 +392,32 @@
         {
           "item": "handCream",
           "price": 0
+        }
+      ]
+    },
+    "bakery": {
+      "titleKey": "shop.bakery",
+      "stock": [
+        {
+          "item": "bread",
+          "price": 3200
+        },
+        {
+          "item": "creamBun",
+          "price": 2800
+        },
+        {
+          "item": "sandwich",
+          "price": 5800
+        }
+      ]
+    },
+    "florist": {
+      "titleKey": "shop.florist",
+      "stock": [
+        {
+          "item": "flower",
+          "price": 5000
         }
       ]
     }

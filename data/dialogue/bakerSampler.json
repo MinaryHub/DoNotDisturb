@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "갓 나온 소금빵이에요! 하나 맛보고 가세요~",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "오늘 오픈 기념으로 다 10% 할인이에요!",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "크림빵은 오후면 다 나가요. 지금이 기회예요~",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "빵 좋아하세요? 얼굴에 쓰여 있어요~",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 수줍으시구나. 그냥 하나 가져가세요~",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "맛있게 드세요~ 또 오세요!",
+    "parried": "네~ 다음에 꼭 들르세요!",
+    "endured": "제가 너무 붙잡았죠? 빵 하나 드세요~",
+    "sos": "전화 받으세요!",
+    "awkward": "…네, 그럼~"
+  }
+}

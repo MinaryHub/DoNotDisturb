@@ -1,5 +1,5 @@
 {
-  "maxPerDay": 3,
+  "maxPerDay": 4,
   "list": [
     {
       "id": "elevatorCheck",
@@ -144,6 +144,118 @@
       "chance": 0.35,
       "group": "phoneSpam",
       "phone": [{ "at": "11:20", "jitterMin": 120, "kind": "call", "contact": "unknownNumber", "textKey": "hap.phone.spam" }]
+    },
+    {
+      "id": "bankLine",
+      "introKey": "hap.bankLine",
+      "chance": 0.3,
+      "group": "southBlock",
+      "days": ["day1", "day2", "dayWed", "dayThu", "day3"],
+      "npcs": [
+        { "id": "bankLineA", "profile": "regular", "at": "bankWait1", "from": "09:00", "to": "16:00" },
+        { "id": "bankLineB", "profile": "regular", "at": "bankWait2", "from": "09:00", "to": "16:00" },
+        { "id": "bankLineC", "profile": "elder", "at": "bankWait3", "from": "09:30", "to": "15:00" }
+      ],
+      "areaStimuli": [{ "area": "bank", "id": "bankHum", "intensity": 2.2 }]
+    },
+    {
+      "id": "bakeryOpening",
+      "introKey": "hap.bakeryOpening",
+      "chance": 0.3,
+      "group": "southBlock",
+      "npcs": [{ "id": "bakerSampler", "profile": "bakerSampler", "at": "bakeryFront", "from": "08:00", "to": "19:00" }],
+      "crowdLanes": [{ "id": "bakeryQueue", "from": [236, 78.6], "to": [252, 78.6], "width": 0.8, "count": 7, "speed": 0.15, "zone": "southLots" }]
+    },
+    {
+      "id": "elderAsksWay",
+      "chance": 0.35,
+      "group": "elder",
+      "npcs": [{ "id": "elderBus", "profile": "elder", "at": "busStopMid", "from": "09:30", "to": "16:00" }]
+    },
+    {
+      "id": "busDetour",
+      "introKey": "hap.busDetour",
+      "chance": 0.15,
+      "group": "bus",
+      "blocked": [
+        { "interactable": "busM_east", "toastKey": "hap.busDetour.toast" },
+        { "interactable": "busM_west", "toastKey": "hap.busDetour.toast" }
+      ]
+    },
+    {
+      "id": "streamFestival",
+      "introKey": "hap.streamFestival",
+      "chance": 0.5,
+      "days": ["day4"],
+      "weather": "clear",
+      "group": "stream",
+      "crowdLanes": [
+        { "id": "festivalN", "from": [316.5, 6], "to": [316.5, 130], "width": 1.6, "count": 14, "speed": 0.7, "zone": "stream" },
+        { "id": "festivalS", "from": [319.5, 130], "to": [319.5, 6], "width": 1.6, "count": 12, "speed": 0.7, "zone": "stream" }
+      ],
+      "stalls": [
+        { "rect": [312, 26, 2, 4], "color": "#e0a26a" },
+        { "rect": [312, 36, 2, 4], "color": "#6c8fb2" },
+        { "rect": [312, 90, 2, 4], "color": "#b56576" },
+        { "rect": [312, 112, 2, 4], "color": "#84a98c" }
+      ],
+      "areaStimuli": [
+        { "area": "stream", "id": "festivalNoise", "intensity": 1 },
+        { "area": "streamSouth", "id": "festivalNoise", "intensity": 1 }
+      ]
+    },
+    {
+      "id": "libraryCough",
+      "introKey": "hap.libraryCough",
+      "chance": 0.3,
+      "group": "library",
+      "areaStimuli": [{ "area": "readingRoom", "id": "readingCough", "intensity": 1 }]
+    },
+    {
+      "id": "vetAdoption",
+      "introKey": "hap.vetAdoption",
+      "chance": 0.4,
+      "days": ["dayWed", "day4"],
+      "group": "vet",
+      "npcs": [{ "id": "adoptVolunteer", "profile": "petOwner", "at": "vetFront", "from": "11:00", "to": "17:00" }],
+      "stalls": [{ "rect": [296, 53, 8, 2], "color": "#3f8f8a" }],
+      "crowdLanes": [{ "id": "adoptCrowd", "from": [291, 44], "to": [291, 54], "width": 1.2, "count": 5, "speed": 0.25, "zone": "eastNorth" }]
+    },
+    {
+      "id": "kidsFieldTrip",
+      "introKey": "hap.kidsFieldTrip",
+      "chance": 0.25,
+      "days": ["day1", "day2", "dayWed", "dayThu", "day3"],
+      "group": "eastNorth",
+      "crowdLanes": [{ "id": "fieldTrip", "from": [292, 6], "to": [292, 54], "width": 1.8, "count": 12, "speed": 0.8, "zone": "eastNorth" }],
+      "areaStimuli": [{ "area": "eastNorth", "id": "kidsChatter", "intensity": 1 }]
+    },
+    {
+      "id": "cafeCashOnly",
+      "chance": 0.12,
+      "group": "cafe",
+      "blocked": [{ "interactable": "cafeCounter", "toastKey": "hap.cafeCashOnly.toast" }]
+    },
+    {
+      "id": "wrongNumber",
+      "chance": 0.25,
+      "group": "phoneSpam",
+      "phone": [{ "at": "14:30", "jitterMin": 150, "kind": "call", "contact": "unknownNumber", "textKey": "hap.phone.wrongNumber" }]
+    },
+    {
+      "id": "floristGift",
+      "introKey": "hap.floristGift",
+      "chance": 0.3,
+      "days": ["day4", "dayWed"],
+      "group": "southBlock2",
+      "npcs": [{ "id": "floristOut", "profile": "florist", "at": "plazaSitter", "from": "11:00", "to": "15:00" }]
+    },
+    {
+      "id": "snackLunchRush",
+      "chance": 0.3,
+      "group": "snack",
+      "areaStimuli": [{ "area": "snackBar", "id": "snackChatter", "intensity": 2 }],
+      "npcs": [{ "id": "snackRushA", "profile": "coworker", "at": "snackGuest", "from": "11:40", "to": "13:30" }]
     }
   ]
 }
