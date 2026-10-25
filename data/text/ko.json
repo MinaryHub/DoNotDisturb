@@ -497,7 +497,7 @@
   "touch.meat1": "고기 1",
   "touch.meat2": "고기 2",
   "touch.meat3": "고기 3",
-  "touch.leave": "일어나기",
+  "touch.leave": "연차 쓰기",
   "touch.buy": "사기",
   "touch.peek": "몰래 보기",
   "touch.interact": "상호작용",
@@ -1040,5 +1040,6 @@
   "vacation.phone.friend": "휴가 축하해 🎉 강변 매점 아이스크림 맛있대. 혼자 가도 좋은 데야.",
   "touch.vacation": "휴가 모드",
   "interact.bikeOff": "자전거에서 내리기",
-  "bike.riding": "🚲 자전거 타는 중 · [F] 내리기 (대여소에 대면 반납)"
+  "bike.riding": "🚲 자전거 타는 중 · [F] 내리기 (대여소에 대면 반납)",
+  "touch.mapZoom": "주변/전체"
 }

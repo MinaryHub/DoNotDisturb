@@ -109,6 +109,10 @@ export class GameUI {
     else this.mapOpen = false;
   }
 
+  closeMap(): void {
+    this.mapOpen = false;
+  }
+
   get isMapOpen(): boolean {
     return this.mapOpen;
   }

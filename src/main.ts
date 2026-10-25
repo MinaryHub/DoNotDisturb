@@ -238,7 +238,9 @@ function boot(): void {
       if (input.wasPressed('options')) ui.toggleOptions();
       if (input.wasPressed('toggleHints')) ui.toggleHints();
       if (input.wasPressed('map') && !s.isModal()) ui.toggleMap();
-      if (input.wasPressed('pause') && s.mode.kind === 'free') {
+      // Esc: 지도가 열려 있으면 지도부터 닫는다
+      if (input.wasPressed('pause') && ui.isMapOpen) ui.closeMap();
+      else if (input.wasPressed('pause') && s.mode.kind === 'free') {
         paused = !paused;
         ui.toast(paused ? 'screen.paused' : 'screen.resume');
       }

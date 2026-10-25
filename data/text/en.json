@@ -502,7 +502,7 @@
   "touch.meat1": "Meat 1",
   "touch.meat2": "Meat 2",
   "touch.meat3": "Meat 3",
-  "touch.leave": "Get up",
+  "touch.leave": "Day off",
   "touch.buy": "Buy",
   "touch.peek": "Peek",
   "touch.interact": "Interact",
@@ -1040,5 +1040,6 @@
   "vacation.phone.friend": "Happy vacation 🎉 The riverside kiosk ice cream is supposedly good. A nice place to go alone.",
   "touch.vacation": "Vacation",
   "interact.bikeOff": "Get off the bike",
-  "bike.riding": "🚲 Riding · [F] get off (return it at a dock)"
+  "bike.riding": "🚲 Riding · [F] get off (return it at a dock)",
+  "touch.mapZoom": "Near/All"
 }

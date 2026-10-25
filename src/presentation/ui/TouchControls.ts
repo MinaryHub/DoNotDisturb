@@ -93,14 +93,19 @@ export class TouchControls {
       const vacation: Btn[] = this.cfg.vacationDay ? [{ code: 'KeyV', label: 'touch.vacation' }] : [];
       return { main: [{ code: 'Enter', label: 'touch.start', big: true }, { code: 'KeyN', label: 'touch.newGame' }, ...vacation], top: [settings, full], stick: false };
     }
-    if (ctx.mapOpen) return { main: [{ code: 'KeyM', label: 'touch.close', big: true }], top: [], stick: false };
+    // 지도: [M]은 주변 ↔ 도시 전체, 닫기는 Esc
+    if (ctx.mapOpen) return { main: [{ code: 'Escape', label: 'touch.close', big: true }, { code: 'KeyM', label: 'touch.mapZoom' }], top: [], stick: false };
     const s = ctx.session;
     const m = s.mode.kind;
     const top: Btn[] = [settings, full];
     const call: Btn[] = s.phone.ringing
       ? [{ code: 'KeyY', label: 'touch.accept', big: true }, { code: 'KeyN', label: 'touch.decline' }, { code: 'KeyU', label: 'touch.textInstead' }]
       : [];
-    if (m === 'dayIntro' || m === 'night' || m === 'final') return { main: [{ code: 'Enter', label: 'touch.continue', big: true }], top, stick: false };
+    if (m === 'dayIntro') {
+      const leave: Btn[] = s.canTakeLeave ? [{ code: 'KeyL', label: 'touch.leave' }] : [];
+      return { main: [{ code: 'Enter', label: 'touch.continue', big: true }, ...leave], top, stick: false };
+    }
+    if (m === 'night' || m === 'final') return { main: [{ code: 'Enter', label: 'touch.continue', big: true }], top, stick: false };
     if (m === 'burnout') return { main: [{ code: 'Enter', label: 'touch.wakeHome', big: true }], top, stick: false };
     if (m === 'collapse') return { main: [{ code: 'KeyR', label: 'touch.retry', big: true }], top, stick: false };
     if (s.phoneOpen) {

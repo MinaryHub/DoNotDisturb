@@ -599,6 +599,8 @@ export class Renderer {
     const markers = new Set(s.objectives.visible().map((o) => o.def.marker).filter((m): m is string => !!m));
     for (const it of this.cfg.world.interactables) {
       const [x, y] = it.at;
+      // 넓은 도시: 먼 것부터 거른다 (보이는지 따지는 건 그다음)
+      if (Math.abs(x - this.camera.x) > 45 || Math.abs(y - this.camera.y) > 30) continue;
       if (!this.visible({ x, y })) continue;
       const d = Math.hypot(x - p.x, y - p.y);
       if (markers.has(it.id)) {
