@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Oh, hi there~ He just loves people.",
+    "kind": "opening",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "Want to pet him? He doesn't bite!",
+      "kind": "question",
+      "durationSec": 2
+    },
+    {
+      "text": "His name's Kong. He's three.",
+      "kind": "story",
+      "durationSec": 2
+    },
+    {
+      "text": "You have a cat, don't you? He must smell it, haha.",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Are you warm? Your cheeks are all rosy.",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "Kong, say bye~ Have a good one!",
+    "parried": "Okay~ Have a nice day!",
+    "endured": "Come on, Kong~",
+    "sos": "Go ahead, take your call~",
+    "awkward": "…Oh, okay. Come on, Kong."
+  }
+}

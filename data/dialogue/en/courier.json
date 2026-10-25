@@ -1,0 +1,31 @@
+{
+  "greeting": {
+    "text": "Delivery! Just need a signature here, please.",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "Unit 302, right? The box is a bit heavy.",
+      "kind": "question",
+      "durationSec": 2
+    },
+    {
+      "text": "Want me to leave it at the door next time? You can set it in the app.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, looks like you rushed out.",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "Thanks! Have a good one!",
+    "parried": "Okay, here you go!",
+    "endured": "Alright, I'm off then!",
+    "sos": "Sure, here you go!",
+    "awkward": "…Thank you."
+  }
+}

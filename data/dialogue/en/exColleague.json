@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "Huh? Is that you? It's been forever!",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "I left that place and work somewhere else now. Did you hear?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Is that team still the same? Who's still there?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "The whole industry's like that lately. How about you?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "We pulled so many late nights back then, haha.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Let's get everyone together sometime. I'll make a group chat!",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "You're turning red, haha. Same as always.",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Great to see you! I'll text you~",
+    "parried": "Yeah, yeah, you're busy. See you next time!",
+    "endured": "Anyway, take care~",
+    "sos": "You've got a call, take it! See you!",
+    "awkward": "…Oh, okay. Take care."
+  }
+}

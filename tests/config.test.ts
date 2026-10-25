@@ -27,6 +27,15 @@ describe('/data 설정 파일', () => {
     for (const sp of Object.values(cfg.speeches)) expect(sp.chunksEn?.length).toBeGreaterThan(0);
   });
 
+  it('영어 대사·독백에 한글이 남지 않고 모든 대사 풀·독백 키가 번역돼 있다', () => {
+    const raw = readRawConfig();
+    const cfg = parseGameConfig(raw, 'en');
+    const hangul = /[가-힣]/;
+    expect(Object.keys(raw.dialogueEn ?? {}).sort()).toEqual(Object.keys(raw.dialogue).sort());
+    for (const [id, pool] of Object.entries(cfg.dialoguePools)) expect(hangul.test(JSON.stringify(pool)), id).toBe(false);
+    for (const [key, text] of Object.entries(cfg.monologue)) expect(hangul.test(text), key).toBe(false);
+  });
+
   it('잘못된 값은 파일명과 경로를 포함한 오류', () => {
     const raw = readRawConfig();
     const balance = raw.json['balance.json'] as Record<string, unknown>;

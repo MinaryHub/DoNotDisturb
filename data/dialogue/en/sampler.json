@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Excuse me~ Try one before you go!",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "Dumplings are on sale today, buy one get one free!",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "How is it? Tasty, right?",
+      "kind": "question",
+      "durationSec": 2
+    },
+    {
+      "text": "This is honestly our best seller right now.",
+      "kind": "story",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Shall I put one in your cart?",
+      "kind": "question",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, you're all red~ Was it too spicy?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "Enjoy~!",
+    "parried": "Okay~ Take your time!",
+    "endured": "Come again~",
+    "sos": "Sure, sure, take your call~",
+    "awkward": "…Okay, take your time."
+  }
+}

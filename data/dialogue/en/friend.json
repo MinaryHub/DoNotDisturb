@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "You're here? Sit. You don't have to say anything.",
+    "kind": "opening",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "How was your day? You don't have to talk about it.",
+      "kind": "question",
+      "durationSec": 3
+    },
+    {
+      "text": "I started playing that game again lately.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "…",
+      "kind": "opening",
+      "durationSec": 3
+    },
+    {
+      "text": "I found a quiet café for next week. Want to come?",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "You're fine just the way you are. You know that, right?",
+      "kind": "story",
+      "durationSec": 2.8
+    }
+  ],
+  "flushRemark": {
+    "text": "…",
+    "kind": "remark",
+    "durationSec": 2
+  },
+  "closers": {
+    "satisfied": "Go home and get some rest. Text me whenever.",
+    "parried": "Okay, go on. See you again.",
+    "endured": "You did good today.",
+    "sos": "Yeah, go ahead, take it.",
+    "awkward": "It's okay. See you again."
+  }
+}

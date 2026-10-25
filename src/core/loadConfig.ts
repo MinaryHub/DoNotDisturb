@@ -15,8 +15,10 @@ export function rawFromModules(modules: Record<string, unknown>, csv: string): R
   for (const [path, data] of Object.entries(modules)) {
     const rel = path.slice(path.indexOf('/data/') + '/data/'.length);
     const dialogue = /^dialogue\/([^/]+)\.json$/.exec(rel);
+    const dialogueEn = /^dialogue\/en\/([^/]+)\.json$/.exec(rel);
     const day = /^days\/([^/]+)\.json$/.exec(rel);
-    if (dialogue) raw.dialogue[dialogue[1]!] = data;
+    if (dialogueEn) (raw.dialogueEn ??= {})[dialogueEn[1]!] = data;
+    else if (dialogue) raw.dialogue[dialogue[1]!] = data;
     else if (day) raw.days[day[1]!] = data;
     else raw.json[rel] = data;
   }

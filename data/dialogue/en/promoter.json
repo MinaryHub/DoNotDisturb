@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Hi~ Excuse me! We just opened a new gym!",
+    "kind": "opening",
+    "durationSec": 2
+  },
+  "lines": [
+    {
+      "text": "Sign up now and get a month free. Just try it out!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Do you work out? Seems like everyone does these days.",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "You can just take a flyer. Really!",
+      "kind": "opening",
+      "durationSec": 2
+    },
+    {
+      "text": "A PT consult only takes ten minutes. Got time?",
+      "kind": "question",
+      "durationSec": 2
+    }
+  ],
+  "flushRemark": {
+    "text": "Hot today, huh? You look a little red!",
+    "kind": "remark",
+    "durationSec": 2
+  },
+  "closers": {
+    "satisfied": "Have a nice day~!",
+    "parried": "Sure, sure, come by sometime~",
+    "endured": "Anyway, call us if you're interested!",
+    "sos": "Oh, take your call! Just the flyer…",
+    "awkward": "…Oh, okay. Thank you."
+  }
+}

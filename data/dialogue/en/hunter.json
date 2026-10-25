@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Hi there~ Do you have just a moment?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "We just opened a new Pilates studio. First month's free!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Do you work around here, by any chance?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Do a quick survey and you get a free gift~",
+      "kind": "opening",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Your skin looks a little dry. Try our sample.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Aww, you're a bit shy, huh~",
+    "kind": "remark",
+    "durationSec": 2
+  },
+  "closers": {
+    "satisfied": "Okay~ Have a nice day!",
+    "parried": "Oh, sure, sure, drop by sometime~",
+    "endured": "At least take a flyer~",
+    "sos": "Oh, go ahead, take your call~",
+    "awkward": "…Okay, bye now."
+  }
+}

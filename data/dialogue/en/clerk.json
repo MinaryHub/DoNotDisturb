@@ -1,0 +1,51 @@
+{
+  "greeting": {
+    "text": "Looking for anything special~?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "This is new for the season. Feel free to try it on!",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "What size do you usually wear?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Don't you think this would fit you perfectly?",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "It's 10% off if you get the set~",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Take your time~ Just call me if you need anything.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "How about this color? I think it suits your skin tone.",
+      "kind": "question",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh my, you're all flushed~ It's warm in here, huh?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Okay~ Take your time looking around!",
+    "parried": "Sure, sure, browse at your own pace~",
+    "endured": "Just call me if you need me~",
+    "sos": "Oh, go ahead and take your call~",
+    "awkward": "…Okay, take your time."
+  }
+}

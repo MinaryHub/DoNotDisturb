@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Just one minute! We're doing a neighborhood survey.",
+    "kind": "opening",
+    "durationSec": 2
+  },
+  "lines": [
+    {
+      "text": "How long have you lived in Sunrise?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Is there a facility you'd like to see in the neighborhood?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "You get a coupon when you finish. Only three questions left!",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, no pressure at all~",
+    "kind": "remark",
+    "durationSec": 1.8
+  },
+  "closers": {
+    "satisfied": "Thanks so much for your help!",
+    "parried": "Oh, okay, maybe next time!",
+    "endured": "Here's your coupon, thank you!",
+    "sos": "Sure, go ahead with your call~",
+    "awkward": "…Okay, have a nice day."
+  }
+}

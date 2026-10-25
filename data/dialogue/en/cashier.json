@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "Hello~ Do you need a bag?",
+    "kind": "question",
+    "durationSec": 2
+  },
+  "lines": [
+    {
+      "text": "Would you like to collect points?",
+      "kind": "question",
+      "durationSec": 2
+    },
+    {
+      "text": "Would you like a receipt?",
+      "kind": "question",
+      "durationSec": 1.8
+    },
+    {
+      "text": "Nice weather today, huh?",
+      "kind": "opening",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "Are you okay?",
+    "kind": "remark",
+    "durationSec": 1.6
+  },
+  "closers": {
+    "satisfied": "Thank you~ Have a nice day!",
+    "parried": "Okay, have a nice day~",
+    "endured": "Thank you~",
+    "sos": "Okay, have a nice day~",
+    "awkward": "…Thank you."
+  }
+}

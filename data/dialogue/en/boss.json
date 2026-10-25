@@ -1,0 +1,66 @@
+{
+  "greeting": {
+    "text": "Hey, got a minute?",
+    "kind": "opening",
+    "durationSec": 2
+  },
+  "lines": [
+    {
+      "text": "How's work going? Tell me if anything's tough.",
+      "kind": "question",
+      "durationSec": 3
+    },
+    {
+      "text": "Back when I was a new hire, all-nighters were normal.",
+      "kind": "story",
+      "durationSec": 3.4
+    },
+    {
+      "text": "That report's on the right track, just polish it a bit more.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "You heard this quarter's targets, right? Our team needs to step up.",
+      "kind": "question",
+      "durationSec": 3
+    },
+    {
+      "text": "Want to take on next week's presentation?",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Young folks these days are so quiet. Speak up in meetings.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "What'd you do this weekend? You should try hiking.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Anyway, that's all I'm saying.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "So you know what I told the CEO back then…",
+      "kind": "story",
+      "durationSec": 3.6
+    }
+  ],
+  "flushRemark": {
+    "text": "What's with your face? Not feeling well?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Alright, keep it up. Looking forward to it.",
+    "parried": "Yeah, yeah, get back to it.",
+    "endured": "…Anyway, that's what I mean. Off you go.",
+    "sos": "Take the call. Sounds urgent.",
+    "awkward": "…Hm. Alright, off you go."
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "Huh…? Wait… is that you? From high school!",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "Wow, it's been ages. How many years has it been?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "I live around here now. You're in this area too?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "You remember that kid from our class? They got married.",
+      "kind": "story",
+      "durationSec": 3
+    },
+    {
+      "text": "We should grab a meal sometime. For real.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Did you change your number? I couldn't find you in the group chat.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "You haven't changed one bit, seriously.",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Oh, I was in the middle of grocery shopping, haha.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "You're turning red, haha. Same as ever.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "So good to see you! Keep in touch~",
+    "parried": "Yeah, yeah, let's definitely meet up next time!",
+    "endured": "Anyway, great seeing you. Take care~",
+    "sos": "Oh, you've got a call, get it! Text me~",
+    "awkward": "…Oh, okay. Take care."
+  }
+}

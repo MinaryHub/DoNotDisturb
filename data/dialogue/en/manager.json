@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "Ah, unit 302! Good timing.",
+    "kind": "opening",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "You know there's a fire inspection this week, right? You'll need to be home.",
+      "kind": "question",
+      "durationSec": 3
+    },
+    {
+      "text": "Recycling day changed. I put up a notice…",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Did you pick up your parking sticker?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "We've had some noise complaints, so we're asking everyone to be careful.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "If anything's bothering you, just let me know anytime.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "You okay? You look a little flushed.",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Okay, have a good one!",
+    "parried": "Oh, you're busy. Let's talk later.",
+    "endured": "So just keep that in mind~",
+    "sos": "Take your call, go on.",
+    "awkward": "…Okay, well, just keep that in mind."
+  }
+}

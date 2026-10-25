@@ -1,0 +1,36 @@
+{
+  "greeting": {
+    "text": "…Looking for anything in particular?",
+    "kind": "opening",
+    "durationSec": 1.8
+  },
+  "lines": [
+    {
+      "text": "That author's new book came in this week.",
+      "kind": "story",
+      "durationSec": 2.4
+    },
+    {
+      "text": "If you like essays, check the shelf by the window too.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Do you collect points with us?",
+      "kind": "question",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, I think I interrupted you. Take your time.",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "Take your time looking around.",
+    "parried": "Sure, browse at your own pace.",
+    "endured": "Just call me if you need anything.",
+    "sos": "Oh, okay.",
+    "awkward": "…Okay."
+  }
+}

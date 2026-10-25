@@ -79,6 +79,8 @@ export interface RawConfig {
   json: Record<string, unknown>;
   /** data/dialogue/<id>.json */
   dialogue: Record<string, unknown>;
+  /** data/dialogue/en/<id>.json — 같은 모양에 글만 영어. 영어일 때 덮어쓴다 */
+  dialogueEn?: Record<string, unknown>;
   /** data/days/<id>.json */
   days: Record<string, unknown>;
   monologueCsv: string;
@@ -98,7 +100,10 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     return parseConfig(daySchema, raw.days[id], `data/days/${id}.json`);
   });
   const dialoguePools = Object.fromEntries(
-    Object.entries(raw.dialogue).map(([id, data]) => [id, parseConfig(dialoguePoolSchema, data, `data/dialogue/${id}.json`)]),
+    Object.entries(raw.dialogue).map(([id, data]) => {
+      const en = lang === 'en' ? raw.dialogueEn?.[id] : undefined;
+      return [id, parseConfig(dialoguePoolSchema, en === undefined ? data : overlay(data, en), `data/dialogue/${id}.json`)];
+    }),
   );
   return {
     input: parseConfig(inputConfigSchema, j('input.json'), 'data/input.json'),
@@ -127,6 +132,21 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     },
     lang,
   };
+}
+
+/** 번역본을 원본 위에 덮는다. 객체는 키별, 배열은 칸별로 겹치고 번역에 없는 값은 원본을 쓴다 */
+export function overlay(base: unknown, top: unknown): unknown {
+  if (Array.isArray(base) && Array.isArray(top)) return base.map((b, i) => (i < top.length ? overlay(b, top[i]) : b));
+  if (isRecord(base) && isRecord(top)) {
+    const out: Record<string, unknown> = { ...base };
+    for (const [k, v] of Object.entries(top)) out[k] = k in base ? overlay(base[k], v) : v;
+    return out;
+  }
+  return top === undefined ? base : top;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /** sim 계층 설정 묶음 */

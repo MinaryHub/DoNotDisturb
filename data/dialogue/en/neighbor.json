@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "Oh my, isn't it 302? Heading to work~?",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "Did you hear they're inspecting the elevator soon?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "My kid just took an exam, and you won't believe it…",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "It's gotten chilly, hasn't it? Don't catch a cold.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Oh, that reminds me, your parcel came to our place by mistake.",
+      "kind": "story",
+      "durationSec": 3
+    },
+    {
+      "text": "Living alone, are you eating properly?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Maintenance fees went up again. Isn't that too much?",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Oh dear, here I am keeping a busy person.",
+      "kind": "opening",
+      "durationSec": 2.2
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh my, why is your face so red? Are you sick?",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Well, have a lovely day~!",
+    "parried": "Oh, okay, off you go!",
+    "endured": "Oh dear, look at me. Off you go~",
+    "sos": "Oh, you've got a call, go ahead, take it!",
+    "awkward": "…Okay, then. Off you go."
+  }
+}

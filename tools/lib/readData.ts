@@ -25,8 +25,10 @@ export function readRawConfig(dataDir = DATA_DIR): RawConfig {
       throw new Error(`JSON 문법 오류 (data/${rel}): ${(e as Error).message}`, { cause: e });
     }
     const dialogue = /^dialogue\/([^/]+)\.json$/.exec(rel);
+    const dialogueEn = /^dialogue\/en\/([^/]+)\.json$/.exec(rel);
     const day = /^days\/([^/]+)\.json$/.exec(rel);
-    if (dialogue) raw.dialogue[dialogue[1]!] = data;
+    if (dialogueEn) (raw.dialogueEn ??= {})[dialogueEn[1]!] = data;
+    else if (dialogue) raw.dialogue[dialogue[1]!] = data;
     else if (day) raw.days[day[1]!] = data;
     else raw.json[rel] = data;
   }

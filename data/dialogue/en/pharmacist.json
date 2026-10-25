@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Welcome. What seems to be bothering you?",
+    "kind": "opening",
+    "durationSec": 2.2
+  },
+  "lines": [
+    {
+      "text": "How often do you get headaches?",
+      "kind": "question",
+      "durationSec": 2.2
+    },
+    {
+      "text": "Take this after meals, no more than three times a day.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "And are you sleeping okay?",
+      "kind": "question",
+      "durationSec": 1.8
+    },
+    {
+      "text": "Drink lots of water, and don't stare at screens too long.",
+      "kind": "story",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "You seem a little feverish. Shall we check your temperature?",
+    "kind": "remark",
+    "durationSec": 2.4
+  },
+  "closers": {
+    "satisfied": "Okay, take care of yourself.",
+    "parried": "Okay, just take these then.",
+    "endured": "If it keeps hurting, please see a doctor.",
+    "sos": "Sure, go ahead with your call~",
+    "awkward": "…Okay, take care."
+  }
+}

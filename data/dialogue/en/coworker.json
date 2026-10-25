@@ -1,0 +1,56 @@
+{
+  "greeting": {
+    "text": "Oh, good morning~ Have a nice weekend?",
+    "kind": "question",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "Did you watch that drama last night? The ending was wild.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "So I just moved, right? But my landlord is seriously…",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "Decided what to get for lunch today?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "The team lead looks kind of moody today. Be careful.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Oh right, they set the date for the team dinner.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "I just started working out and it's so hard, haha.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Want to grab a coffee? Oh, never mind, you're busy.",
+      "kind": "opening",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Huh? Why's your face red? Are you hot?",
+    "kind": "remark",
+    "durationSec": 2.2
+  },
+  "closers": {
+    "satisfied": "See you later then~",
+    "parried": "Oh right, gotta work. See you later!",
+    "endured": "Anyway, that's the story. Hang in there~",
+    "sos": "Getting a call? Go ahead, go ahead.",
+    "awkward": "…Oh, okay. Hang in there."
+  }
+}

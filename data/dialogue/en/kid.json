@@ -1,0 +1,31 @@
+{
+  "greeting": {
+    "text": "Hello!!",
+    "kind": "opening",
+    "durationSec": 1.2
+  },
+  "lines": [
+    {
+      "text": "I got a good-job sticker at school today!",
+      "kind": "story",
+      "durationSec": 2
+    },
+    {
+      "text": "Do you have a cat? I saw it in the window!",
+      "kind": "question",
+      "durationSec": 1.8
+    }
+  ],
+  "flushRemark": {
+    "text": "Your face is red! Are you hot?",
+    "kind": "remark",
+    "durationSec": 1.4
+  },
+  "closers": {
+    "satisfied": "Bye-bye!!",
+    "parried": "Bye!",
+    "endured": "Bye-bye!",
+    "sos": "Answer your phone!",
+    "awkward": "…Bye."
+  }
+}
