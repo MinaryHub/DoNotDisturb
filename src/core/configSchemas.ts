@@ -9,6 +9,8 @@ const unit = z.number().min(0).max(1);
 const vec2 = z.tuple([z.number(), z.number()]);
 const rect = z.tuple([z.number(), z.number(), positive, positive]);
 const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/, 'HH:MM 형식이어야 합니다');
+/** 이야기 조건: 지난 날들에 생긴 이야기 표지. "flag"는 있어야, "!flag"는 없어야 한다 (data/story.json) */
+const storyIf = z.array(z.string().regex(/^!?[\w.]+$/, '이야기 표지는 영문·숫자·점, 없어야 하면 앞에 !'));
 const lifeDelta = z.object(Object.fromEntries(lifeStatIds.map((id) => [id, z.number().optional()])) as Record<
   (typeof lifeStatIds)[number],
   z.ZodOptional<z.ZodNumber>
@@ -467,6 +469,10 @@ export const speechesSchema = z.record(
     anytime: z.boolean().optional(),
     /** 끝나면 이 소모품을 값을 치르고 받는다 */
     grant: z.object({ item: z.string(), price: nonNegative }).optional(),
+    /** 끝나면 이어서 시작하는 발화 (발표 → 질문 시간) */
+    next: z.string().optional(),
+    /** 잘 끝나도 이불킥이 온다 */
+    rumination: z.boolean().optional(),
   }),
 );
 export type SpeechDefs = z.infer<typeof speechesSchema>;
@@ -609,6 +615,7 @@ const dayNpcSchema = z.object({
   chance: unit.optional(),
   /** 위치·경로·시간 대안: 하루를 시작할 때 기본값 또는 이 중 하나를 고른다 */
   alt: z.array(z.object({ at: z.string(), path: z.string().optional(), from: hhmm.optional(), to: hhmm.optional() })).optional(),
+  if: storyIf.optional(),
 });
 export type DayNpcDef = z.infer<typeof dayNpcSchema>;
 
@@ -625,9 +632,13 @@ export const daySchema = z.object({
   /** 그날만 생기는 군중 동선 (플리마켓 등) */
   crowdLanes: z.array(crowdLaneSchema).optional(),
   /** 그날만 영역 자극을 덮어쓴다 */
-  areaStimuli: z.array(z.object({ area: z.string(), id: z.string(), intensity: nonNegative })).optional(),
+  areaStimuli: z.array(z.object({ area: z.string(), id: z.string(), intensity: nonNegative, if: storyIf.optional() })).optional(),
   /** 그날만 서는 노점 천막 (충돌 없음, 그림만) */
   stalls: z.array(z.object({ rect, color: z.string() })).optional(),
+  /** 하루 시작 화면에 붙는 이야기 한 줄 (지난 날의 선택이 남긴 것) */
+  notes: z.array(z.object({ textKey: z.string(), if: storyIf.optional() })).optional(),
+  /** 그날만 상호작용의 안내·독백·발화를 바꾼다 (목요일 회의 자리 = 발표) */
+  interactAt: z.record(z.string(), z.object({ labelKey: z.string().optional(), monologue: z.string().optional(), speech: z.string().optional() })).optional(),
   objectives: z.array(
     z.object({
       id: z.string(),
@@ -648,6 +659,7 @@ export const daySchema = z.object({
       endsDay: z.boolean().optional(),
       /** 지도·화면 가장자리 화살표가 가리킬 곳: 상호작용 id 또는 영역 id */
       marker: z.string().optional(),
+      if: storyIf.optional(),
     }),
   ),
   phone: z.array(
@@ -667,6 +679,7 @@ export const daySchema = z.object({
         textKeys: z.array(z.string()).optional(),
         /** at 시각을 ±분 만큼 흔든다 */
         jitterMin: nonNegative.optional(),
+        if: storyIf.optional(),
       })
       .refine((p) => (p.at === undefined) !== (p.on === undefined), 'at(시각) 또는 on(이벤트) 중 하나만 지정'),
   ),
@@ -728,6 +741,19 @@ export const happeningsConfigSchema = z.object({
 export type HappeningsConfig = z.infer<typeof happeningsConfigSchema>;
 export type HappeningDef = HappeningsConfig['list'][number];
 
+/**
+ * 한 주를 꿰는 이야기 줄기 (data/story.json).
+ * 게임 이벤트가 이야기 표지를 남기고(marks), 다음 날들의 전화·목표·사람·독백이 표지(if)를 보고 달라진다.
+ * 주간 리포트 끝에 줄기마다 결말 한 줄(epilogue, 조건이 맞는 첫 줄)과 맺음말.
+ */
+export const storyConfigSchema = z.object({
+  threads: z.array(z.object({ id: z.string(), nameKey: z.string() })),
+  marks: z.array(z.object({ on: z.string(), day: z.string().optional(), flags: z.array(z.string()).min(1) })),
+  epilogue: z.array(z.object({ thread: z.string(), textKey: z.string(), if: storyIf.optional() })),
+  closingKey: z.string(),
+});
+export type StoryConfig = z.infer<typeof storyConfigSchema>;
+
 export const monologueTriggersSchema = z.array(
   z.object({
     key: z.string(),
@@ -744,6 +770,7 @@ export const monologueTriggersSchema = z.array(
       /** 이 하루(id)에만 */
       day: z.string().optional(),
     }),
+    if: storyIf.optional(),
     once: z.boolean().optional(),
     cooldownSec: nonNegative.optional(),
   }),

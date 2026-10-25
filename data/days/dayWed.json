@@ -115,11 +115,24 @@
       "jitterMin": 20
     },
     {
-      "at": "19:00",
-      "kind": "message",
+      "at": "18:20",
+      "kind": "call",
       "contact": "friend",
-      "textKey": "phone.friend.market",
-      "jitterMin": 20
+      "textKey": "phone.friend.moving",
+      "jitterMin": 15,
+      "if": [
+        "jiu.answered"
+      ]
+    },
+    {
+      "at": "18:20",
+      "kind": "call",
+      "contact": "friend",
+      "textKey": "phone.friend.movingWorried",
+      "jitterMin": 15,
+      "if": [
+        "!jiu.answered"
+      ]
     }
   ],
   "npcs": [
@@ -225,6 +238,21 @@
       "id": "cat",
       "profile": "cat",
       "at": "cat"
+    },
+    {
+      "id": "upstairs",
+      "profile": "upstairs",
+      "at": "lobbyWalk",
+      "path": "lobbyLoop",
+      "to": "09:00",
+      "alt": [
+        {
+          "at": "courierHall",
+          "path": "aptHall",
+          "from": "16:00",
+          "to": "20:00"
+        }
+      ]
     }
   ],
   "work": {

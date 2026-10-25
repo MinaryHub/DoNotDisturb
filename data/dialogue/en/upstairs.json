@@ -1,0 +1,51 @@
+{
+  "greeting": {
+    "text": "Um… are you, by any chance, from 302?",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "I'm in 402. We've been pretty loud lately, huh…",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "I just moved in, so I've been unpacking at night… sorry.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "If you hear thumping at night, just let me know.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Honestly, running into people in the elevator is awkward for me too.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "I put down some floor mats. It should be better from this weekend.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Oh, your cat… I saw it in the window. So cute.",
+      "kind": "question",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "Uh… are you okay? Sorry, I shouldn't have kept you.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Glad I said hi. Take care!",
+    "parried": "Oh, you're busy. Sorry!",
+    "endured": "I talked too long. Have a good one.",
+    "sos": "Oh, go ahead and take that!",
+    "awkward": "…Okay, well. Bye."
+  }
+}

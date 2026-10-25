@@ -1,4 +1,5 @@
 import type { MonologueTrigger, NpcType } from '../core/configSchemas';
+import { storyAllows } from './Story';
 
 // 내면 독백 (CLAUDE.md 5.11). 상황·거리 조건에 맞는 문구를 고른다. 문구는 data/monologue/<lang>.csv.
 
@@ -33,6 +34,7 @@ export class MonologueDirector {
   private lastArea: string | null = null;
   private checkTimer = 0;
   private dayId = '';
+  private flags: ReadonlySet<string> = new Set();
 
   constructor(
     private readonly triggers: readonly MonologueTrigger[],
@@ -95,9 +97,10 @@ export class MonologueDirector {
     this.queue.length = 0;
   }
 
-  /** 새 하루: 1회성 기록과 쿨다운 초기화 */
-  reset(dayId: string): void {
+  /** 새 하루: 1회성 기록과 쿨다운 초기화. 이야기 표지에 맞지 않는 독백은 오늘 쉰다 */
+  reset(dayId: string, flags: ReadonlySet<string> = new Set()): void {
     this.dayId = dayId;
+    this.flags = flags;
     this.clear();
     this.cooldown.clear();
     this.fired.clear();
@@ -116,7 +119,7 @@ export class MonologueDirector {
   }
 
   private today(tr: MonologueTrigger): boolean {
-    return tr.when.day === undefined || tr.when.day === this.dayId;
+    return (tr.when.day === undefined || tr.when.day === this.dayId) && storyAllows(tr.if, this.flags);
   }
 
   private tryFire(i: number): void {

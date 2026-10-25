@@ -16,6 +16,7 @@ import { dist, inRect, type AreaDef, type Vec2 } from '../world/TileMap';
 import { buildWorld, inHide, safeAt, type World } from '../world/World';
 import { GrillGame, PIANO_MELODY, PianoGame, WorkGame } from './minigames';
 import { composeDay } from './DayComposer';
+import { marksFor } from './Story';
 import { MonologueDirector } from './Monologue';
 import { Objectives } from './Objectives';
 
@@ -151,6 +152,8 @@ export interface SaveState {
   gear?: string[];
   /** 첫 연습 대화를 마쳤는지 */
   practiced?: boolean;
+  /** 이야기 표지 (data/story.json). 그날 아침 기준 */
+  story?: string[];
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -194,9 +197,11 @@ export class GameSession {
   sanctuaryBroken = 0;
   reports: DayReport[] = [];
   readonly fx: FxEvent[] = [];
+  /** 이야기 표지: 지난 날들의 선택이 남긴 것 (data/story.json) */
+  story = new Set<string>();
 
   private nextMax: number;
-  private dayStart!: { life: LifeSnapshot; max: number };
+  private dayStart!: { life: LifeSnapshot; max: number; story: string[] };
   private rngState = 12345;
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
@@ -244,6 +249,7 @@ export class GameSession {
       this.reports = save.reports;
       for (const g of save.gear ?? []) this.ownedGear.add(g);
       this.practiced = save.practiced ?? save.dayIndex > 0;
+      this.story = new Set(save.story ?? []);
     }
     this.startDay(this.dayIndex);
   }
@@ -271,7 +277,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -279,10 +285,10 @@ export class GameSession {
   startDay(index: number): void {
     this.dayIndex = index;
     if (this.seed !== null) this.rngState = mix(this.seed, index, this.attempt++);
-    const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null);
+    const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
     this.day = composed.day;
     this.happenings = composed.happenings;
-    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax };
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: [...this.story] };
     this.sim.startDay(this.nextMax);
     this.clock = new GameClock(parseTime(this.day.start));
     this.objectives = new Objectives(this.day);
@@ -290,7 +296,7 @@ export class GameSession {
     this.phone.drainEvents();
     // 그날만 생기는 군중 동선까지 포함해 다시 만든다
     this.crowd = new Crowd([...this.cfg.world.crowdLanes, ...(this.day.crowdLanes ?? [])], () => this.rng());
-    this.monologue.reset(this.day.id);
+    this.monologue.reset(this.day.id, new Set(this.story));
     this.firedPhone = new Set();
     this.pendingEscalations = [];
     this.homeLocked = true;
@@ -380,6 +386,7 @@ export class GameSession {
   retryDay(): void {
     this.sim.life.restore(this.dayStart.life);
     this.nextMax = this.dayStart.max;
+    this.story = new Set(this.dayStart.story);
     this.startDay(this.dayIndex);
   }
 
@@ -439,6 +446,7 @@ export class GameSession {
         if (c.retry) {
           this.sim.life.restore({ values: { ...this.cfg.life.stats.start }, money: this.cfg.life.stats.startMoney, avoidCounts: {} });
           this.reports = [];
+          this.story.clear();
           this.nextMax = this.cfg.balance.battery.start;
           this.startDay(0);
         }
@@ -715,7 +723,7 @@ export class GameSession {
       if (d >= bestD) continue;
       if (it.kind === 'doorLock' && !this.atHome) continue;
       bestD = d;
-      best = { kind: it.kind, labelKey: it.kind === 'doorLock' && this.homeLocked ? 'interact.doorUnlock' : it.labelKey, at, def: it };
+      best = { kind: it.kind, labelKey: it.kind === 'doorLock' && this.homeLocked ? 'interact.doorUnlock' : (this.day.interactAt?.[it.id]?.labelKey ?? it.labelKey), at, def: it };
     }
     for (const portal of this.world.portals) {
       const at = { x: portal.at[0], y: portal.at[1] };
@@ -810,9 +818,11 @@ export class GameSession {
       case 'elevator':
         this.callElevator(it);
         break;
-      case 'flavor':
-        if (it.monologue) this.monologue.say(it.monologue);
+      case 'flavor': {
+        const mono = this.day.interactAt?.[it.id]?.monologue ?? it.monologue;
+        if (mono) this.monologue.say(mono);
         break;
+      }
       case 'desk':
         if (this.objectiveAvailable('done:work') && this.day.work) {
           const w = this.day.work;
@@ -820,8 +830,9 @@ export class GameSession {
         } else this.toast('interact.bed.notYet');
         break;
       case 'speech': {
-        const sp = this.cfg.speeches[it.speech!]!;
-        if (this.objectiveAvailable(sp.objectiveEvent) || sp.anytime) this.startSpeech(it.speech!);
+        const speechId = this.day.interactAt?.[it.id]?.speech ?? it.speech!;
+        const sp = this.cfg.speeches[speechId]!;
+        if (this.objectiveAvailable(sp.objectiveEvent) || sp.anytime) this.startSpeech(speechId);
         else this.toast('interact.bed.notYet');
         break;
       }
@@ -1235,6 +1246,7 @@ export class GameSession {
       this.gameEvent(`met:${npc.id}`);
     } else {
       this.sim.report.smalltalkEndured++;
+      this.gameEvent(`talked:${npc.id}`);
       if (b.wrongCount > 0) {
         this.sim.bus.emit('rumination');
         this.gameEvent('rumination');
@@ -1277,7 +1289,8 @@ export class GameSession {
 
   private finishSpeech(m: Extract<Mode, { kind: 'speech' }>): void {
     const sp = this.cfg.speeches[m.speechId]!;
-    if (m.challenge.misses >= 2) {
+    // 잘 끝나도 이불킥이 오는 발화가 있다 (발표)
+    if (m.challenge.misses >= 2 || sp.rumination) {
       this.sim.bus.emit('rumination');
       this.gameEvent('rumination');
     }
@@ -1292,6 +1305,10 @@ export class GameSession {
       this.toast('shop.bought', { item: this.cfg.text[this.consumable(sp.grant.item)!.nameKey] ?? sp.grant.item });
     }
     this.mode = this.resumeMode();
+    if (sp.next) {
+      this.startSpeech(sp.next);
+      return;
+    }
     // 일반 계산대: 스몰토크 확률
     if (m.speechId === 'checkoutNormal' && this.rng() < 0.5) {
       const cashier = this.activeNpcs().find((n) => n.profileId === 'cashier' && dist(n.pos, this.player.pos) < 4);
@@ -1626,6 +1643,7 @@ export class GameSession {
       }
     }
     if (how === 'answered' && contact.ally) this.sim.energy.recover(8);
+    if (how === 'replied') this.gameEvent(`replied:${contactId}`);
     if (how === 'answered') {
       this.gameEvent(`answered:${contactId}`);
       if (this.isMandatoryLike(contactId) && !report.mandatoryDone.includes(`call:${contactId}`)) report.mandatoryDone.push(`call:${contactId}`);
@@ -1886,6 +1904,7 @@ export class GameSession {
 
   /** 게임 이벤트: 목표·독백·이벤트 전화로 퍼진다 */
   gameEvent(event: string): void {
+    for (const f of marksFor(this.cfg.story, event, this.day.id)) this.story.add(f);
     this.objectives.fire(event);
     this.monologue.onEvent(event);
     this.day.phone.forEach((ev, i) => {

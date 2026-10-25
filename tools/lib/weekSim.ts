@@ -3,12 +3,14 @@ import { nightRecovery, parseTime, settleDay } from '../../src/sim/DayCycle';
 import { NO_MODIFIERS } from '../../src/sim/EnergyModel';
 import { applyContactOutcome, type CallHow, type MessageHow } from '../../src/sim/Phone';
 import { Simulation } from '../../src/sim/Simulation';
+import { applyStory, marksFor } from '../../src/gameplay/Story';
 
 // 한 주 밸런스 시뮬레이션 (sim 계층만). 실제 data로 세 가지 플레이 방식을 돌려 본다.
 //   avoid    전부 회피: 전화·문자 무시, 대화 피함, 선택 목표 건너뜀 → 생활 지표가 무너져야 한다
 //   accept   전부 수용: 모든 전화·문자·대화를 끝까지 → 배터리가 바닥나야 한다
 //   balanced 적당히: 중요한 연락만 받고 나머지는 문자로, 대화 2번(짧게), 커피 1잔·집밥 → 한 주를 버텨야 한다
 // 필수 상호작용은 세 방식 모두 수행한다. 이동·대화 시간은 대략값이다.
+// 이야기 표지(data/story.json)도 게임처럼 남겨, 다음 날의 전화·목표가 플레이 방식에 따라 달라진다.
 
 export type Policy = 'avoid' | 'accept' | 'balanced';
 
@@ -57,7 +59,12 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
   };
   const rows: DayRow[] = [];
   let nextMax = game.balance.battery.start;
-  for (const day of game.days) {
+  const story = new Set<string>();
+  for (const def of game.days) {
+    const day = applyStory(def, story);
+    const mark = (event: string) => {
+      for (const f of marksFor(game.story, event, day.id)) story.add(f);
+    };
     sim.startDay(nextMax);
     let talks = 0;
     const encounter = (stimulus: string, talkSec: number) => {
@@ -73,7 +80,12 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     const mandatoryCalls = day.objectives.filter((o) => o.mandatory && o.on.startsWith('answered:')).map((o) => o.on.split(':')[1]!);
     for (const o of day.objectives) {
       const speech = Object.values(game.speeches).find((s) => s.objectiveEvent === o.on);
-      if (o.mandatory && speech) encounter(speech.stimulus, 0.1);
+      if (o.mandatory && speech) {
+        encounter(speech.stimulus, 0.1);
+        mark(o.on);
+        if (speech.next) encounter(game.speeches[speech.next]!.stimulus, 0.1);
+        if (speech.rumination || (speech.next && game.speeches[speech.next]!.rumination)) sim.bus.emit('rumination');
+      }
     }
     // 전화·문자
     for (const ev of day.phone) {
@@ -85,6 +97,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       else if (policy === 'avoid') how = ev.kind === 'call' ? 'missed' : 'unread';
       else how = ev.kind === 'call' ? (important ? 'answered' : 'texted') : important ? 'replied' : 'readIgnored';
       const out = applyContactOutcome(ev.contact, contact, how, sim.life);
+      if (how === 'answered' || how === 'replied') mark(`${how}:${ev.contact}`);
       if (out.stimulus) sim.bus.emit(out.stimulus);
       if (how === 'replied') sim.bus.emit('textMessage');
       if (out.escalation) sim.bus.emit(out.escalation);

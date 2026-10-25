@@ -1,0 +1,51 @@
+{
+  "greeting": {
+    "text": "아… 저, 혹시 302호 분이세요?",
+    "kind": "opening",
+    "durationSec": 2.4
+  },
+  "lines": [
+    {
+      "text": "저 402호예요. 요즘 저희 집 많이 시끄럽죠…",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "이사 온 지 얼마 안 돼서 짐 정리를 밤에 하느라… 죄송해요.",
+      "kind": "story",
+      "durationSec": 3.2
+    },
+    {
+      "text": "혹시 밤에 쿵쿵 소리 나면, 그냥 말씀해 주세요.",
+      "kind": "question",
+      "durationSec": 2.8
+    },
+    {
+      "text": "저도 엘리베이터에서 사람 만나면 좀 어색하거든요.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "매트 깔았어요. 이번 주말부터는 좀 나을 거예요.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "아, 그 고양이… 창문에서 봤어요. 귀엽더라고요.",
+      "kind": "question",
+      "durationSec": 2.6
+    }
+  ],
+  "flushRemark": {
+    "text": "어… 괜찮으세요? 제가 괜히 붙잡았나 봐요.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "말 걸어서 다행이다. 들어가세요!",
+    "parried": "아, 바쁘시죠. 죄송해요!",
+    "endured": "제가 말이 길었네요. 들어가세요.",
+    "sos": "아, 전화 받으세요!",
+    "awkward": "…네, 그럼. 안녕히 가세요."
+  }
+}

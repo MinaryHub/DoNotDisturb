@@ -24,5 +24,15 @@
     "chunks": ["봉투는", "괜찮아요.", "적립도", "괜찮습니다."],
     "chunksEn": ["No bag,", "thanks.", "No points", "either, thanks."],
     "stimulus": "checkoutTalk", "audience": 1, "objectiveEvent": "done:checkout", "introKey": "speech.checkout.intro"
+  },
+  "pitch": {
+    "chunks": ["안녕하세요,", "기획팀", "신규 프로젝트", "소개드리겠습니다.", "핵심은", "세 가지입니다.", "자세한 일정은", "다음 장에", "있습니다."],
+    "chunksEn": ["Hello,", "from Planning,", "I'll introduce", "our new project.", "The core", "comes down to three things.", "The detailed schedule", "is on", "the next slide."],
+    "stimulus": "pitchSpeech", "audience": 9, "objectiveEvent": "done:pitch", "introKey": "speech.pitch.intro", "next": "pitchQna"
+  },
+  "pitchQna": {
+    "chunks": ["좋은 질문", "감사합니다.", "그 부분은", "확인해서", "메일로", "드리겠습니다."],
+    "chunksEn": ["Thank you", "for the question.", "Let me", "double-check that", "and follow up", "by email."],
+    "stimulus": "pitchQna", "audience": 9, "objectiveEvent": "done:pitchQna", "introKey": "speech.pitchQna.intro", "rumination": true
   }
 }

@@ -318,6 +318,7 @@
     { "id": "mirror", "kind": "mirror", "at": [128.8, 151.6], "labelKey": "interact.mirror" },
     { "id": "doorLock", "kind": "doorLock", "at": [144.3, 149.3], "labelKey": "interact.doorLock" },
     { "id": "peephole", "kind": "peephole", "at": [144.3, 150.8], "labelKey": "interact.peephole" },
+    { "id": "homeMemo", "kind": "flavor", "at": [144.3, 148.3], "labelKey": "interact.memo", "monologue": "mono.home.memo" },
     { "id": "elevator3F", "kind": "elevator", "at": [177, 148.6], "labelKey": "interact.elevator", "target": "elevator1F" },
     { "id": "elevator1F", "kind": "elevator", "at": [11, 31.6], "labelKey": "interact.elevator", "target": "elevator3F" },
     { "id": "lobbyBoard", "kind": "flavor", "at": [8.5, 33.5], "labelKey": "interact.board", "monologue": "mono.board.lobby" },

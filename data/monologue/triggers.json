@@ -91,5 +91,13 @@
   {"key": "mono.avoid.housing", "when": {"event": "avoided:housing"}, "cooldownSec": 45},
   {"key": "mono.avoid.essentials", "when": {"event": "avoided:essentials"}, "cooldownSec": 45},
   {"key": "mono.avoid.bond", "when": {"event": "avoided:bond"}, "cooldownSec": 45},
-  {"key": "mono.avoid.almost", "when": {"event": "avoided:almost"}, "cooldownSec": 20}
+  {"key": "mono.avoid.almost", "when": {"event": "avoided:almost"}, "cooldownSec": 20},
+  {"key": "mono.wake.pitch", "when": {"event": "dayStart:dayThu"}, "once": true},
+  {"key": "mono.pitch.mirror", "when": {"event": "interact:mirror", "day": "dayThu"}, "once": true},
+  {"key": "mono.pitch.done", "when": {"event": "done:pitchQna"}, "once": true},
+  {"key": "mono.pitch.friday", "when": {"area": "restaurant", "day": "day3"}, "once": true},
+  {"key": "mono.upstairs.noise", "when": {"area": "home", "day": "day2", "returning": true}, "once": true},
+  {"key": "mono.upstairs.noise", "when": {"area": "home", "day": "dayThu", "returning": true}, "if": ["!upstairs.resolved"], "once": true},
+  {"key": "mono.upstairs.seen", "when": {"npcProfile": "upstairs", "distMax": 12, "visible": true}, "cooldownSec": 120},
+  {"key": "mono.jiu.moving", "when": {"event": "answered:friend", "day": "dayWed"}, "once": true}
 ]

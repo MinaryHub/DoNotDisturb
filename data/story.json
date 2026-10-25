@@ -1,0 +1,36 @@
+{
+  "threads": [
+    { "id": "pitch", "nameKey": "story.pitch" },
+    { "id": "upstairs", "nameKey": "story.upstairs" },
+    { "id": "jiu", "nameKey": "story.jiu" }
+  ],
+  "marks": [
+    { "on": "replied:boss", "day": "day2", "flags": ["pitch.prepped"] },
+    { "on": "interact:mirror", "day": "dayThu", "flags": ["pitch.rehearsed"] },
+    { "on": "done:pitch", "flags": ["pitch.done"] },
+
+    { "on": "talked:upstairs", "flags": ["upstairs.talked", "upstairs.resolved"] },
+    { "on": "interact:homeMemo", "day": "dayThu", "flags": ["upstairs.note", "upstairs.resolved"] },
+
+    { "on": "replied:friend", "day": "day1", "flags": ["jiu.answered"] },
+    { "on": "replied:friend", "day": "day2", "flags": ["jiu.answered"] },
+    { "on": "answered:friend", "day": "dayWed", "flags": ["jiu.answered", "jiu.called"] },
+    { "on": "met:friend", "day": "day4", "flags": ["jiu.met"] }
+  ],
+  "epilogue": [
+    { "thread": "pitch", "if": ["pitch.prepped", "pitch.rehearsed"], "textKey": "epi.pitch.ready" },
+    { "thread": "pitch", "if": ["pitch.prepped"], "textKey": "epi.pitch.prepped" },
+    { "thread": "pitch", "if": ["pitch.rehearsed"], "textKey": "epi.pitch.rehearsed" },
+    { "thread": "pitch", "textKey": "epi.pitch.rushed" },
+
+    { "thread": "upstairs", "if": ["upstairs.talked"], "textKey": "epi.upstairs.talked" },
+    { "thread": "upstairs", "if": ["upstairs.note"], "textKey": "epi.upstairs.note" },
+    { "thread": "upstairs", "textKey": "epi.upstairs.none" },
+
+    { "thread": "jiu", "if": ["jiu.met", "jiu.called"], "textKey": "epi.jiu.metCalled" },
+    { "thread": "jiu", "if": ["jiu.met"], "textKey": "epi.jiu.met" },
+    { "thread": "jiu", "if": ["jiu.answered"], "textKey": "epi.jiu.answered" },
+    { "thread": "jiu", "textKey": "epi.jiu.none" }
+  ],
+  "closingKey": "epi.closing"
+}

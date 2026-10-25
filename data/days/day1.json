@@ -90,10 +90,16 @@
       ]
     },
     {
+      "on": "done:meeting",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.pitchAssign"
+    },
+    {
       "on": "done:work",
       "kind": "message",
       "contact": "friend",
-      "textKey": "phone.friend.park"
+      "textKey": "phone.friend.saturday"
     },
     {
       "at": "19:30",

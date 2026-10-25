@@ -46,6 +46,14 @@
       "area": "park",
       "id": "marketChatter",
       "intensity": 1
+    },
+    {
+      "area": "home",
+      "id": "upstairsNoise",
+      "intensity": 1,
+      "if": [
+        "!upstairs.resolved"
+      ]
     }
   ],
   "stalls": [
@@ -138,13 +146,16 @@
     },
     {
       "id": "friend",
-      "textKey": "obj.friend",
+      "textKey": "obj.friendMoving",
       "on": "met:friend",
       "optional": true,
       "skip": {
         "bond": -8
       },
-      "marker": "cafe"
+      "marker": "cafe",
+      "if": [
+        "jiu.answered"
+      ]
     },
     {
       "id": "market",
@@ -171,7 +182,10 @@
       "kind": "message",
       "contact": "friend",
       "textKey": "phone.friend.cafe",
-      "jitterMin": 20
+      "jitterMin": 20,
+      "if": [
+        "jiu.answered"
+      ]
     },
     {
       "at": "11:30",
@@ -199,7 +213,27 @@
       "textKey": "phone.friend.cancel",
       "effect": "plansCancelled",
       "chance": 0.35,
-      "jitterMin": 20
+      "jitterMin": 20,
+      "if": [
+        "jiu.answered"
+      ]
+    },
+    {
+      "at": "11:40",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.nextTime",
+      "jitterMin": 20,
+      "if": [
+        "!jiu.answered"
+      ]
+    },
+    {
+      "at": "11:10",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.thanks",
+      "jitterMin": 15
     }
   ],
   "npcs": [
@@ -252,7 +286,10 @@
       "profile": "friend",
       "at": "friendCafe",
       "from": "11:00",
-      "to": "17:00"
+      "to": "17:00",
+      "if": [
+        "jiu.answered"
+      ]
     },
     {
       "id": "parkWalker",
@@ -297,6 +334,31 @@
       "path": "parkLoop",
       "from": "11:00",
       "to": "15:00"
+    },
+    {
+      "id": "upstairs",
+      "profile": "upstairs",
+      "at": "lobbyWalk",
+      "path": "lobbyLoop",
+      "from": "10:30",
+      "to": "12:30",
+      "if": [
+        "!upstairs.resolved"
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "textKey": "note.sat.tangerine",
+      "if": [
+        "upstairs.resolved"
+      ]
+    },
+    {
+      "textKey": "note.sat.noise",
+      "if": [
+        "!upstairs.resolved"
+      ]
     }
   ]
 }

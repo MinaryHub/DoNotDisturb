@@ -81,6 +81,12 @@
       "jitterMin": 20
     },
     {
+      "at": "09:20",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.pitchPrep"
+    },
+    {
       "on": "done:work",
       "kind": "message",
       "contact": "delivery",
@@ -97,7 +103,20 @@
       "kind": "message",
       "contact": "friend",
       "textKey": "phone.friend.howsday",
-      "jitterMin": 20
+      "jitterMin": 20,
+      "if": [
+        "jiu.answered"
+      ]
+    },
+    {
+      "at": "12:40",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.nudge",
+      "jitterMin": 15,
+      "if": [
+        "!jiu.answered"
+      ]
     }
   ],
   "npcs": [
@@ -254,5 +273,12 @@
       7
     ],
     "pingTimeoutSec": 4
-  }
+  },
+  "areaStimuli": [
+    {
+      "area": "home",
+      "id": "upstairsNoise",
+      "intensity": 1
+    }
+  ]
 }

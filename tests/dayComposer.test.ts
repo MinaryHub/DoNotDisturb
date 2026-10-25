@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { composeDay } from '../src/gameplay/DayComposer';
+import { storyAllows } from '../src/gameplay/Story';
 import { GameSession, NO_CONTROLS } from '../src/gameplay/GameSession';
 import { readConfig } from '../tools/lib/readData';
 
@@ -16,12 +17,12 @@ function lcg(seed: number): () => number {
 }
 
 describe('DayComposer', () => {
-  it('씨앗이 없으면 기본 하루 그대로 (확률 NPC 제외, 사건 없음)', () => {
+  it('씨앗이 없으면 기본 하루 그대로 (확률 NPC 제외, 사건 없음, 이야기 표지만 적용)', () => {
     for (const d of cfg.days) {
       const { day, happenings } = composeDay(d, cfg.happenings, null);
       expect(happenings).toEqual([]);
       expect(day.npcs.every((n) => n.alt === undefined && n.chance === undefined)).toBe(true);
-      expect(day.phone.map((p) => p.textKey)).toEqual(d.phone.map((p) => p.textKey));
+      expect(day.phone.map((p) => p.textKey)).toEqual(d.phone.filter((p) => storyAllows(p.if, new Set())).map((p) => p.textKey));
     }
   });
 

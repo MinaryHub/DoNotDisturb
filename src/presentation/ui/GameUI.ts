@@ -10,6 +10,7 @@ import type { Camera2D } from '../Camera2D';
 import type { PresentationState } from '../PresentationState';
 import type { Settings } from '../Settings';
 import { layerOf } from '../../world/World';
+import { epilogueKeys } from '../../gameplay/Story';
 import { el, escapeHtml, setHtml, setText, show } from './dom';
 import { itemIcon } from './icons';
 
@@ -187,7 +188,9 @@ export class GameUI {
 
   /** 하루 시작 화면: 오늘만의 작은 사건 */
   private happeningsHtml(s: GameSession): string {
-    const lines = s.happenings.filter((h) => h.introKey).map((h) => `<li>${escapeHtml(this.tx(h.introKey!))}</li>`);
+    // 지난 날의 선택이 남긴 이야기 한 줄이 먼저, 그다음 오늘만의 작은 사건
+    const keys = [...(s.day.notes ?? []).map((n) => n.textKey), ...s.happenings.flatMap((h) => (h.introKey ? [h.introKey] : []))];
+    const lines = keys.map((k) => `<li>${escapeHtml(this.tx(k))}</li>`);
     return lines.length ? `<ul class="screen__today">${lines.join('')}</ul>` : '';
   }
 
@@ -784,9 +787,19 @@ export class GameUI {
       <table class="report">${this.reportRows(total)}</table>
       <h3>${escapeHtml(this.tx('report.life'))}</h3>
       ${this.lifeBars(s.sim.life.all())}
+      ${this.epilogueHtml(s)}
       <p class="screen__comfort">${escapeHtml(this.tx('report.comfort.2'))}</p>
       <p class="screen__cta">${escapeHtml(this.tx('final.restart'))}</p>
     </div>`;
+  }
+
+  /** 한 주의 이야기 줄기마다 결말 한 줄, 그리고 일요일 아침의 맺음말 */
+  private epilogueHtml(s: GameSession): string {
+    const lines = epilogueKeys(s.cfg.story, s.story).map((k) => `<li>${escapeHtml(this.tx(k))}</li>`);
+    if (!lines.length) return '';
+    return `<h3>${escapeHtml(this.tx('final.epilogue'))}</h3>
+      <ul class="screen__epilogue">${lines.join('')}</ul>
+      <p class="screen__closing">${escapeHtml(this.tx(s.cfg.story.closingKey))}</p>`;
   }
 
   // ───────────────────────── 설정 ─────────────────────────

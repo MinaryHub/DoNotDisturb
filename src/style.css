@@ -982,6 +982,24 @@ kbd {
   margin-top: 28px;
 }
 
+.screen__epilogue {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.7;
+  color: #e8e2d6;
+}
+
+.screen__epilogue li {
+  margin: 6px 0;
+}
+
+.screen__closing {
+  margin: 14px 0 0;
+  color: #cfc6b4;
+  text-align: center;
+}
+
 .screen__comfort {
   margin: 20px 0 0;
   font-size: 17px;

@@ -19,6 +19,7 @@ import {
   somaticConfigSchema,
   speechesSchema,
   stimulusTableSchema,
+  storyConfigSchema,
   textTableSchema,
   tileDefsSchema,
   worldDefSchema,
@@ -38,12 +39,14 @@ import {
   type SomaticFileConfig,
   type SpeechDefs,
   type StimulusTableConfig,
+  type StoryConfig,
   type TextTable,
   type WorldDef,
 } from './configSchemas';
 import type { TileDef } from '../world/TileMap';
 import type { DialoguePool } from '../sim/DialogueBattle';
 import type { SimConfig } from '../sim/Simulation';
+import { unknownStoryFlags } from '../gameplay/Story';
 
 export interface GameConfig {
   input: InputConfig;
@@ -51,6 +54,7 @@ export interface GameConfig {
   items: ItemsConfig;
   chores: ChoresConfig;
   happenings: HappeningsConfig;
+  story: StoryConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -111,6 +115,7 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     items: parseConfig(itemsConfigSchema, j('items.json'), 'data/items.json'),
     chores: parseConfig(choresConfigSchema, j('chores.json'), 'data/chores.json'),
     happenings: parseConfig(happeningsConfigSchema, j('happenings.json'), 'data/happenings.json'),
+    story: parseConfig(storyConfigSchema, j('story.json'), 'data/story.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -223,6 +228,7 @@ export function crossCheck(cfg: GameConfig): string[] {
     needStim(s.stimulus, `speech ${id}`);
     needText(s.introKey, `speech ${id}`);
     if (s.grant && !cfg.items.consumables.some((c) => c.id === s.grant!.item)) errors.push(`speech ${id}: 아이템 없음 "${s.grant.item}"`);
+    if (s.next && !has(cfg.speeches, s.next)) errors.push(`speech ${id}: 이어지는 발화 없음 "${s.next}"`);
   }
   for (const [id, c] of Object.entries(cfg.life.contacts)) {
     needText(c.nameKey, `contact ${id}`);
@@ -247,10 +253,33 @@ export function crossCheck(cfg: GameConfig): string[] {
       if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
       needStim(a.id, `${where} areaStimuli`);
     }
+    for (const n of d.notes ?? []) needText(n.textKey, `${where} notes`);
+    for (const [id, o] of Object.entries(d.interactAt ?? {})) {
+      if (!w.interactables.some((i) => i.id === id)) errors.push(`${where} interactAt: 상호작용 없음 "${id}"`);
+      if (o.labelKey) needText(o.labelKey, `${where} interactAt ${id}`);
+      if (o.monologue && !has(cfg.monologue, o.monologue)) errors.push(`${where} interactAt ${id}: 독백 없음 "${o.monologue}"`);
+      if (o.speech && !has(cfg.speeches, o.speech)) errors.push(`${where} interactAt ${id}: 발화 없음 "${o.speech}"`);
+    }
     checkPhone(d.phone, where);
     checkNpcs(d.npcs, where);
     checkBlocked(d.blocked ?? [], where);
   }
+  // 이야기 줄기: 어떤 이벤트도 남기지 않는 표지를 조건에 쓰면 그 갈래는 영영 열리지 않는다
+  const st = cfg.story;
+  for (const th of st.threads) needText(th.nameKey, `story thread ${th.id}`);
+  for (const m of st.marks) if (m.day && !cfg.days.some((d) => d.id === m.day)) errors.push(`story mark ${m.on}: 하루 없음 "${m.day}"`);
+  for (const e of st.epilogue) {
+    needText(e.textKey, 'story epilogue');
+    if (!st.threads.some((th) => th.id === e.thread)) errors.push(`story epilogue ${e.textKey}: 줄기 없음 "${e.thread}"`);
+  }
+  needText(st.closingKey, 'story closingKey');
+  const conds = [
+    ...cfg.days.flatMap((d) => [...d.objectives, ...d.phone, ...d.npcs, ...(d.areaStimuli ?? []), ...(d.notes ?? [])].map((x) => x.if)),
+    ...cfg.happenings.list.flatMap((h) => [...(h.phone ?? []), ...(h.npcs ?? [])].map((x) => x.if)),
+    ...cfg.monologueTriggers.map((tr) => tr.if),
+    ...st.epilogue.map((e) => e.if),
+  ];
+  for (const f of unknownStoryFlags(st, conds)) errors.push(`story: 어떤 mark도 남기지 않는 표지 "${f}" (data/story.json)`);
   const dayIds = new Set(cfg.days.map((d) => d.id));
   const happeningIds = new Set<string>();
   for (const h of cfg.happenings.list) {

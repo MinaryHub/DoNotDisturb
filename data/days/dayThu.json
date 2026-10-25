@@ -1,0 +1,307 @@
+{
+  "id": "dayThu",
+  "weekdayKey": "weekday.thu",
+  "titleKey": "dayThu.title",
+  "introKey": "dayThu.intro",
+  "start": "07:50",
+  "spawn": "player",
+  "flags": {
+    "weeklyEval": false,
+    "monthEnd": false
+  },
+  "notes": [
+    {
+      "textKey": "note.thu.prepped",
+      "if": [
+        "pitch.prepped"
+      ]
+    },
+    {
+      "textKey": "note.thu.notPrepped",
+      "if": [
+        "!pitch.prepped"
+      ]
+    },
+    {
+      "textKey": "note.thu.upstairs",
+      "if": [
+        "!upstairs.resolved"
+      ]
+    }
+  ],
+  "areaStimuli": [
+    {
+      "area": "home",
+      "id": "upstairsNoise",
+      "intensity": 1,
+      "if": [
+        "!upstairs.resolved"
+      ]
+    }
+  ],
+  "interactAt": {
+    "meetingSeat": {
+      "speech": "pitch",
+      "labelKey": "interact.pitch"
+    },
+    "homeMemo": {
+      "labelKey": "interact.writeNote",
+      "monologue": "mono.upstairs.note"
+    }
+  },
+  "objectives": [
+    {
+      "id": "commute",
+      "textKey": "obj.commute",
+      "on": "enter:officeFloor",
+      "deadline": "09:00",
+      "late": {
+        "income": -8
+      },
+      "marker": "officeFloor",
+      "closes": "12:00"
+    },
+    {
+      "id": "work",
+      "textKey": "obj.workPitchRush",
+      "on": "done:work",
+      "requires": [
+        "commute"
+      ],
+      "deadline": "10:30",
+      "late": {
+        "income": -6
+      },
+      "marker": "officeDesk",
+      "closes": "13:00",
+      "missed": {
+        "income": -10
+      },
+      "if": [
+        "!pitch.prepped"
+      ]
+    },
+    {
+      "id": "work",
+      "textKey": "obj.workPitchCheck",
+      "on": "done:work",
+      "requires": [
+        "commute"
+      ],
+      "marker": "officeDesk",
+      "closes": "13:00",
+      "missed": {
+        "income": -6
+      },
+      "if": [
+        "pitch.prepped"
+      ]
+    },
+    {
+      "id": "pitch",
+      "textKey": "obj.pitch",
+      "on": "done:pitch",
+      "mandatory": true,
+      "requires": [
+        "work"
+      ],
+      "marker": "meetingSeat"
+    },
+    {
+      "id": "memo",
+      "textKey": "obj.upstairsNote",
+      "on": "interact:homeMemo",
+      "optional": true,
+      "requires": [
+        "pitch"
+      ],
+      "marker": "homeMemo",
+      "if": [
+        "!upstairs.resolved"
+      ]
+    },
+    {
+      "id": "home",
+      "textKey": "obj.home",
+      "on": "interact:bed",
+      "requires": [
+        "pitch"
+      ],
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "08:15",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.pitchDay"
+    },
+    {
+      "at": "09:05",
+      "kind": "message",
+      "contact": "boss",
+      "textKey": "phone.boss.pitchWhere",
+      "if": [
+        "!pitch.prepped"
+      ]
+    },
+    {
+      "on": "done:pitch",
+      "kind": "message",
+      "contact": "teamChat",
+      "textKey": "phone.team.pitch",
+      "textKeys": [
+        "phone.team.pitch",
+        "phone.team.pitch.2"
+      ]
+    },
+    {
+      "at": "19:30",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "phone.friend.thu",
+      "jitterMin": 20,
+      "if": [
+        "jiu.answered"
+      ]
+    },
+    {
+      "at": "20:30",
+      "kind": "call",
+      "contact": "mom",
+      "textKey": "phone.mom.thu",
+      "jitterMin": 20
+    }
+  ],
+  "npcs": [
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "to": "09:30",
+      "alt": [
+        {
+          "at": "lobbyWalk",
+          "path": "lobbyLoop",
+          "to": "09:30"
+        },
+        {
+          "at": "neighbor302",
+          "path": "aptHall",
+          "from": "08:05",
+          "to": "09:10"
+        }
+      ]
+    },
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "guard",
+      "profile": "staff",
+      "at": "guard"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer",
+      "alt": [
+        {
+          "at": "flyer2"
+        }
+      ]
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "boss",
+      "profile": "boss",
+      "at": "boss",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerA",
+      "profile": "coworker",
+      "at": "coworkerA",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerB",
+      "profile": "coworker",
+      "at": "pantryA",
+      "path": "pantryIdle",
+      "from": "09:00"
+    },
+    {
+      "id": "coworkerC",
+      "profile": "coworker",
+      "at": "coworkerC",
+      "path": "officeLoop",
+      "from": "09:00",
+      "alt": [
+        {
+          "at": "pantryB",
+          "path": "pantryIdle",
+          "from": "09:00"
+        }
+      ]
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    },
+    {
+      "id": "pharmacist",
+      "profile": "pharmacist",
+      "at": "pharmacist"
+    },
+    {
+      "id": "bookseller",
+      "profile": "bookseller",
+      "at": "bookseller",
+      "path": "bookAisle",
+      "from": "10:00"
+    },
+    {
+      "id": "laundryRegular",
+      "profile": "regular",
+      "at": "laundryRegular",
+      "chance": 0.6
+    },
+    {
+      "id": "upstairs",
+      "profile": "upstairs",
+      "at": "courierHall",
+      "path": "aptHall",
+      "from": "18:00",
+      "to": "22:00",
+      "if": [
+        "!upstairs.resolved"
+      ]
+    }
+  ],
+  "work": {
+    "endTime": "18:05",
+    "tasks": 5,
+    "focusPerSec": 22,
+    "pingEverySec": [
+      4,
+      7
+    ],
+    "pingTimeoutSec": 4
+  }
+}
