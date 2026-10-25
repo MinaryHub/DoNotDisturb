@@ -9,6 +9,7 @@ export interface ReputationConfig {
   phone: Record<'answered' | 'replied' | 'texted' | 'declined' | 'missed' | 'readIgnored' | 'unread', number>;
   events: Record<string, Record<string, number>>;
   warmth: { min: number; max: number };
+  talk: { parryWindow: number; satisfy: number; duration: number; nodFrom: number; nodChance: number; nodCalm: number };
   tiers: { min: number; key: string }[];
 }
 
@@ -77,6 +78,17 @@ export class Reputation {
     if (!person) return 1;
     const { min, max } = this.cfg.warmth;
     return min + (max - min) * (this.get(person) / 100);
+  }
+
+  /** 그 사람과 얼마나 편한 사이인지 (−1~1, 인상 50에서 0). 편할수록 대화가 짧고 쉽다, 서운할수록 길고 어렵다 */
+  ease(person: string | null): number {
+    if (!person) return 0;
+    return Math.max(-1, Math.min(1, (this.get(person) - 50) / 50));
+  }
+
+  /** 편한 사이라 말 대신 눈인사로 끝낼 수 있는지 (확률은 부르는 쪽에서) */
+  canNodInstead(person: string | null): boolean {
+    return !!person && this.get(person) >= this.cfg.talk.nodFrom;
   }
 
   /** 인상을 말로 (숫자 없이) */

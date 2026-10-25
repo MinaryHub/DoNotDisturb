@@ -12,6 +12,7 @@ export interface LifeStatsConfig {
   /** 같은 대상을 이 횟수만큼 회피하면 상위 자극으로 에스컬레이션 */
   escalateAfter: number;
   lowTipBelow?: number;
+  softCap?: { from: number; keep: number };
 }
 
 export interface AvoidResult {
@@ -64,10 +65,21 @@ export class LifeStats {
       const d = delta[id];
       if (d === undefined || d === 0) continue;
       const before = this.values[id];
-      this.values[id] = Math.min(this.cfg.max, Math.max(0, before + d));
+      this.values[id] = Math.min(this.cfg.max, Math.max(0, before + (d > 0 ? this.softened(before, d) : d)));
       const real = this.values[id] - before;
       if (real !== 0) this.ledger.push({ stat: id, delta: real, why, who });
     }
+  }
+
+  /** 높을수록 덜 오른다 (softCap.from 위에서 max에 가까울수록 keep배까지) */
+  private softened(value: number, gain: number): number {
+    const sc = this.cfg.softCap;
+    if (!sc || value + gain <= sc.from) return gain;
+    const below = Math.max(0, sc.from - value);
+    const span = this.cfg.max - sc.from;
+    const mid = Math.min(1, (Math.max(value, sc.from) - sc.from + (gain - below) / 2) / span);
+    // 지표는 정수로 둔다 (오르는 일이면 적어도 1)
+    return Math.max(1, Math.round(below + (gain - below) * (1 - (1 - sc.keep) * mid)));
   }
 
   clearLedger(): void {

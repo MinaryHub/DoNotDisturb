@@ -401,4 +401,19 @@ describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
     expect(r.failed).toBeNull();
     for (const d of r.rows) for (const v of Object.values(d.life)) expect(v).toBeGreaterThan(20);
   });
+
+  it('적당히 해도 생활 지표가 위에서 꽉 차지 않는다 (후반에도 회피의 대가가 남는다)', () => {
+    const r = playWeek(game, 'balanced');
+    for (const d of r.rows.slice(3)) for (const v of Object.values(d.life)) expect(v).toBeLessThan(95);
+  });
+
+  it('기술·조용한 곳·부탁까지 써도 한 주의 정점(목요일)은 여전히 빠듯하다', () => {
+    const plain = playWeek(game, 'balanced');
+    const r = playWeek(game, 'balanced', { commuteSec: 120, extras: true });
+    expect(r.failed).toBeNull();
+    const thu = (w: typeof r) => w.rows.find((d) => d.day === 'dayThu')!.batteryEnd;
+    // 회복 수단을 찾아 쓴 만큼은 편해지지만, 반 넘게 남지는 않는다
+    expect(thu(r)).toBeGreaterThan(thu(plain));
+    expect(thu(r)).toBeLessThan(50);
+  });
 });

@@ -38,7 +38,7 @@ describe('조용한 곳 도감', () => {
       other.step(dt, NO_CONTROLS);
     }
     expect(s.quietHere?.id).toBe('farBank');
-    expect(s.sim.energy.mood('stress')).toBeLessThan(other.sim.energy.mood('stress') - 2);
+    expect(s.sim.energy.mood('stress')).toBeLessThan(other.sim.energy.mood('stress') - 1);
   });
 
   it('시간이 정해진 곳은 그 시간에만, 찾은 곳은 저장에 남는다', () => {

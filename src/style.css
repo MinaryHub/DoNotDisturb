@@ -1259,6 +1259,14 @@ body.is-touch .hotbar {
   color: #cfc6b4;
 }
 
+.dlg__style--warm {
+  color: #f2d98a;
+}
+
+.dlg__style--hurt {
+  color: #b9b4c9;
+}
+
 .ach__list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));

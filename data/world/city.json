@@ -485,6 +485,7 @@
     { "id": "cafeCounter", "kind": "shop", "at": [120, 9.6], "labelKey": "interact.cafeOrder", "shop": "cafe" },
     { "id": "homeDrawer", "kind": "shop", "at": [137.5, 464.4], "labelKey": "interact.homeDrawer", "shop": "homeDrawer" },
     { "id": "homePantry", "kind": "shop", "at": [143.4, 471.5], "labelKey": "interact.homePantry", "shop": "homePantry" },
+    { "id": "homeDelivery", "kind": "shop", "at": [140.5, 471.5], "labelKey": "interact.homeDelivery", "shop": "homeDelivery" },
     { "id": "pantrySnacks", "kind": "shop", "at": [163.9, 30.6], "labelKey": "interact.pantrySnacks", "shop": "officePantry" },
     { "id": "restaurantTakeout", "kind": "shop", "at": [39.5, 82.4], "labelKey": "interact.takeout", "shop": "takeout" },
     { "id": "parkBench", "kind": "bench", "at": [57.5, 29.4], "labelKey": "interact.bench" },

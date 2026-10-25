@@ -601,6 +601,8 @@ export class GameUI {
     const volume = Math.max(0.45, 1 - ps.flush * 0.5);
     const mood = b.satisfaction >= 80 ? '😊' : b.satisfaction >= 45 ? '🙂' : b.satisfaction >= 15 ? '😐' : '🫤';
     const ally = npc.type === 'ally';
+    const ease = ally ? 0 : s.reputation.ease(s.reputation.personOfNpc(npc.id));
+    const rapport = ease >= 0.3 ? 'warm' : ease <= -0.3 ? 'hurt' : '';
     const windowW = (b.windowSec / line.durationSec) * 100;
     const myLine = m.myLine && m.myLineTime < 1.6 ? this.tx(m.myLine) : '';
     const shownMy = myLine && s.sim.somatic.active('stutter') ? stutterText(myLine) : myLine;
@@ -615,6 +617,7 @@ export class GameUI {
       ${m.practice && !b.ended ? `<div class="dlg__coach">💡 ${escapeHtml(this.tx(this.coachKey(m)))}</div>` : ''}
       <div class="dlg__who"><span class="dlg__face" style="background:${npc.profile.color}">${mood}</span>${escapeHtml(this.tx(npc.profile.displayTagKey))}</div>
       ${npc.profile.talkStyle?.hintKey && !b.ended ? `<div class="dlg__style">${escapeHtml(this.tx(npc.profile.talkStyle.hintKey))}</div>` : ''}
+      ${rapport && !b.ended ? `<div class="dlg__style dlg__style--${rapport}">${escapeHtml(this.tx(`dialogue.rapport.${rapport}`))}</div>` : ''}
       <div class="dlg__bubble" style="opacity:${volume.toFixed(2)};font-size:${(15 + volume * 4).toFixed(1)}px">${escapeHtml(npcText)}</div>
       ${shownMy ? `<div class="dlg__me">${escapeHtml(shownMy)}</div>` : ''}
       ${

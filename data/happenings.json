@@ -234,6 +234,21 @@
       "group": "snack",
       "areaStimuli": [{ "area": "snackBar", "id": "snackChatter", "intensity": 2 }],
       "npcs": [{ "id": "snackRushA", "profile": "coworker", "at": "snackGuest", "from": "11:40", "to": "13:30" }]
+    },
+    {
+      "id": "catVet",
+      "introKey": "hap.catVet",
+      "chance": 0.3,
+      "group": "home",
+      "days": ["day2", "dayWed", "dayThu", "day3"],
+      "expense": { "money": 28000, "toastKey": "hap.catVet.toast" }
+    },
+    {
+      "id": "chargerBroke",
+      "introKey": "hap.chargerBroke",
+      "chance": 0.2,
+      "days": ["day1", "day2", "dayWed", "dayThu", "day3"],
+      "expense": { "money": 19000, "toastKey": "hap.chargerBroke.toast" }
     }
   ]
 }

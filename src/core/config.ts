@@ -258,6 +258,8 @@ export function crossCheck(cfg: GameConfig): string[] {
   for (const c of cfg.items.consumables) {
     needText(c.nameKey, `item ${c.id}`);
     needText(c.useKey, `item ${c.id}`);
+    // 가게·막대에 효과 요약으로 보인다
+    needText(`${c.nameKey}.desc`, `item ${c.id}`);
   }
   for (const [id, ch] of Object.entries(cfg.chores)) needText(ch.toastKey, `chore ${id}`);
   for (const g of cfg.items.gear) {

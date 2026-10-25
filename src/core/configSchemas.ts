@@ -283,6 +283,8 @@ export const lifeConfigSchema = z.object({
     escalateAfter: positive,
     /** 생활 지표가 이 값보다 낮으면 메모에 '이렇게 하면 오른다' 안내 */
     lowTipBelow: nonNegative,
+    /** 높을수록 덜 오른다: from 위에서는 오르는 양이 max에 가까울수록 keep배까지 줄어든다 (후반에 지표가 꽉 차 회피의 대가가 사라지지 않게) */
+    softCap: z.object({ from: nonNegative, keep: z.number().min(0).max(1) }).optional(),
   }),
   contacts: z.record(z.string(), contactSchema),
   settlement: z.object({
@@ -863,6 +865,8 @@ export const happeningsConfigSchema = z.object({
       areaStimuli: z.array(z.object({ area: z.string(), id: z.string(), intensity: nonNegative })).optional(),
       stalls: z.array(z.object({ rect, color: z.string() })).optional(),
       blocked: z.array(z.object({ interactable: z.string(), toastKey: z.string() })).optional(),
+      /** 예상 못 한 지출 (하루를 시작할 때 나간다, 모자라면 있는 만큼) */
+      expense: z.object({ money: positive, toastKey: z.string() }).optional(),
       /** 그날 쉬는 사람 (옆집 아주머니 여행 등) */
       removeNpcs: z.array(z.string()).optional(),
     }),
@@ -909,6 +913,8 @@ export const reputationConfigSchema = z.object({
   phone: outcomeTable(['answered', 'replied', 'texted', 'declined', 'missed', 'readIgnored', 'unread'] as const),
   events: z.record(z.string(), z.record(z.string(), z.number())),
   warmth: z.object({ min: positive, max: positive }),
+  /** 인상이 대화를 바꾸는 정도: 50에서 0, 100에서 +1, 0에서 −1인 '편함'에 곱한다. 편한 사이는 눈인사로 끝내기도 한다 */
+  talk: z.object({ parryWindow: nonNegative, satisfy: nonNegative, duration: z.number().min(0).max(0.9), nodFrom: z.number().min(0).max(100), nodChance: z.number().min(0).max(1), nodCalm: nonNegative }),
   tiers: z.array(z.object({ min: z.number(), key: z.string() })).min(1),
 });
 

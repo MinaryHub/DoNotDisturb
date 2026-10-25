@@ -254,6 +254,31 @@
       }
     },
     {
+      "id": "deliveryTteok",
+      "nameKey": "item.deliveryTteok",
+      "useKey": "use.deliveryTteok",
+      "icon": "box",
+      "effects": {
+        "battery": 20,
+        "stress": 15
+      },
+      "breakSec": 10,
+      "quiet": true
+    },
+    {
+      "id": "deliveryPorridge",
+      "nameKey": "item.deliveryPorridge",
+      "useKey": "use.deliveryPorridge",
+      "icon": "rice",
+      "effects": {
+        "battery": 12,
+        "stress": 22,
+        "migraine": 0.3
+      },
+      "breakSec": 8,
+      "quiet": true
+    },
+    {
       "id": "vanish",
       "nameKey": "item.vanish",
       "useKey": "use.vanish",
@@ -411,6 +436,21 @@
         {
           "item": "gimbap",
           "price": 2500
+        }
+      ]
+    },
+    "homeDelivery": {
+      "titleKey": "shop.homeDelivery",
+      "stock": [
+        {
+          "item": "deliveryTteok",
+          "price": 16000,
+          "perDay": 1
+        },
+        {
+          "item": "deliveryPorridge",
+          "price": 11000,
+          "perDay": 1
         }
       ]
     },

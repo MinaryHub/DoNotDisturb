@@ -1,6 +1,6 @@
 {
   "discoverSec": 3,
-  "recovery": { "calmPerSec": 1.4, "batteryPerSec": 0.3 },
+  "recovery": { "calmPerSec": 1.0, "batteryPerSec": 0.15 },
   "spots": [
     { "id": "parkBench", "at": [57.5, 29.4], "radius": 1.8, "nameKey": "quiet.parkBench" },
     { "id": "parkBush", "at": [77.5, 25.5], "radius": 1.8, "nameKey": "quiet.parkBush" },

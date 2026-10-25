@@ -9,6 +9,7 @@ import { applyMark, applyStory, marksFor } from '../../src/gameplay/Story';
 //   avoid    전부 회피: 전화·문자 무시, 대화 피함, 선택 목표 건너뜀 → 생활 지표가 무너져야 한다
 //   accept   전부 수용: 모든 전화·문자·대화를 끝까지 → 배터리가 바닥나야 한다
 //   balanced 적당히: 중요한 연락만 받고 나머지는 문자로, 대화 2번(짧게), 커피 1잔·집밥 → 한 주를 버텨야 한다
+// extras를 켜면 게임성 요소까지 쓴다: 밤마다 기술 하나(EXTRA_PERKS 순서), 하루 한 번 조용한 곳에서 60초, 부탁 하나
 // 필수 상호작용은 세 방식 모두 수행한다. 이동·대화 시간은 대략값이다.
 // 이야기 표지(data/story.json)도 게임처럼 남겨, 다음 날의 전화·목표가 플레이 방식에 따라 달라진다.
 
@@ -19,6 +20,8 @@ export interface WeekOptions {
   commuteSec: number;
   /** 출퇴근 중 평균 군중 밀도 (기본 0.5 = 주변에 두 명쯤) */
   crowd?: number;
+  /** 기술·조용한 곳·부탁까지 쓰는 플레이 (회복 수단이 늘어난 만큼 한 주가 얼마나 쉬워지는지) */
+  extras?: boolean;
 }
 
 export interface DayRow {
@@ -38,9 +41,14 @@ export interface WeekResult {
 }
 
 const IMPORTANT = ['boss', 'landlord', 'mgmtOffice', 'delivery'];
+/** extras: 주간 시뮬레이션이 다룰 수 있는 기술을 이 순서로 밤마다 하나씩 */
+const EXTRA_PERKS = ['deepSleep', 'shortAnswers', 'crowdIsland', 'restMaster', 'helper'];
 
 export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = { commuteSec: 120 }): WeekResult {
   const sim = new Simulation(simConfigOf(game), game.stimuli);
+  const perks: Record<string, number>[] = [];
+  const mul = (key: string) => perks.reduce((a, e) => a * (e[key] ?? 1), 1);
+  const add = (key: string) => perks.reduce((a, e) => a + (e[key] ?? 0), 0);
   const run = (sec: number, outdoor: boolean) => {
     const ctx = { outdoor, inSafe: false, modifiers: NO_MODIFIERS };
     for (let i = 0; i < Math.round(sec * 60); i++) sim.step(1 / 60, ctx);
@@ -48,7 +56,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
   /** 출퇴근: 거리 군중 속을 걷는다 (밀도만큼 군중 자극 + 긴장, 게임과 같은 규칙) */
   const commute = (sec: number) => {
     const cd = game.balance.crowdDensity;
-    const density = opts.crowd ?? 0.5;
+    const density = (opts.crowd ?? 0.5) * mul('crowdScale');
     sim.bus.setContinuous('crowd', 'crowd', density);
     const ctx = { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS };
     for (let i = 0; i < Math.round(sec * 60); i++) {
@@ -70,7 +78,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     const encounter = (stimulus: string, talkSec: number) => {
       talks++;
       sim.bus.emit(stimulus);
-      sim.bus.setContinuous('dialogue', 'dialogue', 1);
+      sim.bus.setContinuous('dialogue', 'dialogue', mul('dialogueDrainScale'));
       run(talkSec, true);
       sim.bus.setContinuous('dialogue', 'dialogue', 0);
       run(5, true);
@@ -109,7 +117,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     if (policy === 'accept') for (const n of approachers) encounter(game.npcProfiles[n.profile]!.encounterStimulus, game.npcProfiles[n.profile]!.baseDurationSec);
     if (policy === 'balanced') {
       for (const n of approachers.slice(0, 2)) encounter(game.npcProfiles[n.profile]!.encounterStimulus, 12);
-      sim.energy.recover(game.items.consumables.find((c) => c.id === 'coffee')?.effects.battery ?? 0);
+      sim.energy.recover((game.items.consumables.find((c) => c.id === 'coffee')?.effects.battery ?? 0) * mul('restScale'));
     }
     // 업무: 일하는 동안 업무 스트레스, 끝나면 오후를 건너뛰고 지쳐서 퇴근
     if (day.work) {
@@ -125,11 +133,22 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       sim.energy.addMood('stress', w.afternoonStress);
     }
     commute(opts.commuteSec / 2);
+    if (opts.extras) {
+      // 조용한 곳에서 60초 (아무도 보지 않는 자리), 부탁 하나
+      const q = game.quietSpots.recovery;
+      for (let i = 0; i < 60 * 60; i++) {
+        sim.energy.calm((q.calmPerSec * mul('restScale')) / 60);
+        sim.energy.recover((q.batteryPerSec * mul('restScale')) / 60);
+        sim.step(1 / 60, { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS });
+      }
+      const favor = game.favors.list[rows.length % game.favors.list.length];
+      if (favor?.life) sim.life.apply(Object.fromEntries(Object.entries(favor.life).map(([k, v]) => [k, Math.round((v ?? 0) * mul('favorScale'))])));
+    }
     // 선택 목표·장보기·집밥
     for (const o of day.objectives) if (o.optional && policy === 'avoid' && o.skip) sim.life.apply(o.skip);
     if (day.objectives.some((o) => o.on === 'done:checkout') && policy !== 'avoid') sim.life.apply(game.life.rewards.groceries);
     if (policy !== 'accept') {
-      sim.energy.recover(game.balance.recovery.homeMeal);
+      sim.energy.recover(game.balance.recovery.homeMeal * mul('restScale'));
       sim.life.apply({ essentials: game.life.rewards.homeMealEssentials });
     }
     const batteryEnd = sim.energy.battery;
@@ -146,6 +165,11 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       housing: sim.life.get('housing'),
       essentials: sim.life.get('essentials'),
     }).nextMax;
+    if (opts.extras) {
+      const pick = game.perks.list.find((k) => k.id === EXTRA_PERKS[perks.length]);
+      if (pick) perks.push(pick.effects as Record<string, number>);
+      nextMax = Math.min(game.balance.battery.max, nextMax + add('nightMaxBonus'));
+    }
   }
   return { failed: null, day: 'all', rows };
 }

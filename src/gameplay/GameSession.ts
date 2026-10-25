@@ -733,7 +733,14 @@ export class GameSession {
         if (c.confirm) {
           this.mode = { kind: 'free' };
           this.gameEvent(`dayStart:${this.day.id}`);
-          for (const h of this.happenings) this.gameEvent(`happening:${h.id}`);
+          for (const h of this.happenings) {
+            this.gameEvent(`happening:${h.id}`);
+            if (h.expense) {
+              const paid = Math.min(h.expense.money, this.sim.life.money);
+              this.sim.life.addMoney(-paid);
+              this.toast(h.expense.toastKey, { money: paid.toLocaleString('ko-KR') });
+            }
+          }
         }
         return;
       case 'night': {
@@ -1736,18 +1743,22 @@ export class GameSession {
     const practice = !this.practiced && !ally;
     const rules = this.cfg.dialogueRules;
     const ts = p.talkStyle ?? {};
+    // 편한 사이일수록 틈이 넓고 금방 만족하고 짧게 끝난다 (서운한 사이는 반대). 관계에 쓴 에너지가 돌아온다
+    const ease = ally ? 0 : this.reputation.ease(this.reputation.personOfNpc(npc.id));
+    const talk = this.cfg.reputation.talk;
+    const length = 1 - talk.duration * ease;
     const battle = new DialogueBattle(
       {
         ...rules,
-        parryWindowSec: rules.parryWindowSec * (ts.parryWindowScale ?? 1) + this.perkAdd('parryBonusSec'),
+        parryWindowSec: rules.parryWindowSec * (ts.parryWindowScale ?? 1) * Math.max(0.4, 1 + talk.parryWindow * ease) + this.perkAdd('parryBonusSec'),
         smileDropPerSec: rules.smileDropPerSec * (ts.smileDropScale ?? 1) * this.perkMul('smileDropScale'),
-        satisfactionPerReply: rules.satisfactionPerReply * (ts.satisfyScale ?? 1),
+        satisfactionPerReply: rules.satisfactionPerReply * (ts.satisfyScale ?? 1) * Math.max(0.4, 1 + talk.satisfy * ease),
         gapSec: rules.gapSec * (ts.gapScale ?? 1),
       },
       pool,
       {
-        minDurationSec: practice ? 0 : p.minDurationSec,
-        baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec,
+        minDurationSec: practice ? 0 : p.minDurationSec * length,
+        baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec * length,
         ally,
         rng: () => this.rng(),
         practice,
@@ -2335,14 +2346,19 @@ export class GameSession {
         talkBlocked: talkBlocked || (seatedFocus && npc.type !== 'boss'),
         rng: () => this.rng(),
       });
+      let warmNodded = false;
       for (const e of npc.drainEvents()) {
         if (e.type !== 'talk') continue;
+        if (this.warmNod(e.npc)) {
+          warmNodded = true;
+          continue;
+        }
         if (interruptible) this.mode = { kind: 'free' };
         if (this.mode.kind === 'free') this.startDialogue(e.npc, e.fromBehind);
         else e.npc.endDialogue(5);
       }
       // 다가오던 사람이 말을 걸지 못하고 돌아섬 = 피한 스몰토크
-      if (wasPursuing && npc.state === 'giveUp') {
+      if (wasPursuing && npc.state === 'giveUp' && !warmNodded) {
         this.sim.report.smalltalkAvoided++;
         this.reputation.change(this.reputation.personOfNpc(npc.id), this.cfg.reputation.dialogue.avoided);
       }
@@ -2390,6 +2406,19 @@ export class GameSession {
       this.sim.energy.calm(nod.calm);
       this.gameEvent(`nod:${n.id}`);
     }
+  }
+
+  /** 편한 사이는 가끔 말 대신 눈인사만 하고 지나간다 (사람마다 하루 한 번). 마음이 조금 가라앉는다 */
+  private warmNod(npc: Npc): boolean {
+    if (npc.type === 'ally' || npc.type === 'boss' || this.nodded.has(npc.id)) return false;
+    const person = this.reputation.personOfNpc(npc.id);
+    if (!this.reputation.canNodInstead(person) || this.rng() >= this.cfg.reputation.talk.nodChance) return false;
+    this.nodded.add(npc.id);
+    npc.endDialogue(npc.profile.cooldownSec * 3);
+    this.sim.energy.calm(this.cfg.reputation.talk.nodCalm);
+    this.toast('toast.warmNod', { name: this.cfg.text[this.cfg.reputation.people[person!]!.nameKey] ?? person! });
+    this.gameEvent('warmNod');
+    return true;
   }
 
   /** 지금 나를 보고 있는 시선 수 */
