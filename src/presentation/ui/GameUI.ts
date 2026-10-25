@@ -946,9 +946,29 @@ export class GameUI {
       ${this.peopleTodayHtml(s)}
       ${settle ? `<ul class="settle">${settle}</ul>` : ''}
       <ul class="settle">${night}<li><span>${escapeHtml(this.tx('night.nextMax'))}</span> <b class="nextmax"><span style="width:${m.nextMax}%"></span></b></li></ul>
+      ${this.perkChoiceHtml(m)}
       <p class="screen__comfort">${escapeHtml(comfort)}</p>
       <p class="screen__cta">${escapeHtml(this.tx('night.next'))}</p>
     </div>`;
+  }
+
+  /** 밤: 오늘 익힐 기술 셋 중 하나 (고른 뒤엔 그것만 밝게) */
+  private perkChoiceHtml(m: Extract<Mode, { kind: 'night' }>): string {
+    if (!m.perkChoices.length) return '';
+    const cards = m.perkChoices
+      .map((id, i) => {
+        const d = this.cfg.perks.list.find((k) => k.id === id)!;
+        const cls = m.perkChosen ? (m.perkChosen === id ? 'perk__card perk__card--on' : 'perk__card perk__card--off') : 'perk__card';
+        return `<button class="${cls}" data-code="Digit${i + 1}"><kbd>${i + 1}</kbd><b>${escapeHtml(this.tx(d.nameKey))}</b><small>${escapeHtml(this.tx(d.descKey))}</small></button>`;
+      })
+      .join('');
+    return `<h3>${escapeHtml(this.tx('perk.title'))}</h3><div class="perk">${cards}</div>`;
+  }
+
+  /** 주간 리포트: 익힌 기술 */
+  private perksHtml(s: GameSession): string {
+    const items = this.cfg.perks.list.filter((k) => s.perks.has(k.id)).map((k) => `<li><b>${escapeHtml(this.tx(k.nameKey))}</b> — ${escapeHtml(this.tx(k.descKey))}</li>`);
+    return `<h3>${escapeHtml(this.tx('perk.final'))}</h3>${items.length ? `<ul class="perk__list">${items.join('')}</ul>` : `<p class="rep__tier">${escapeHtml(this.tx('perk.none'))}</p>`}`;
   }
 
   /** 오늘 나에 대한 인상이 바뀐 사람: 화살표와 말로 (숫자 없이) */
@@ -1008,6 +1028,7 @@ export class GameUI {
       ${this.lifeBars(s.sim.life.all())}
       <p class="rep__overall">${escapeHtml(this.tx('quiet.mapCount', { n: s.quietFound.size, max: this.cfg.quietSpots.spots.length }))}</p>
       ${this.peopleHtml(s)}
+      ${this.perksHtml(s)}
       ${this.epilogueHtml(s)}
       <p class="screen__comfort">${escapeHtml(this.tx('report.comfort.2'))}</p>
       <p class="screen__cta">${escapeHtml(this.tx('final.restart'))}</p>

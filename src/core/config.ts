@@ -25,6 +25,8 @@ import {
   districtsConfigSchema,
   quietSpotsSchema,
   favorsSchema,
+  perksSchema,
+  type PerksConfig,
   type QuietSpotsConfig,
   type FavorsConfig,
   textTableSchema,
@@ -67,6 +69,7 @@ export interface GameConfig {
   reputation: ReputationConfig;
   quietSpots: QuietSpotsConfig;
   favors: FavorsConfig;
+  perks: PerksConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -133,6 +136,7 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     reputation: parseConfig(reputationConfigSchema, j('reputation.json'), 'data/reputation.json'),
     quietSpots: parseConfig(quietSpotsSchema, j('quietSpots.json'), 'data/quietSpots.json'),
     favors: parseConfig(favorsSchema, j('favors.json'), 'data/favors.json'),
+    perks: parseConfig(perksSchema, j('perks.json'), 'data/perks.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -336,6 +340,7 @@ export function crossCheck(cfg: GameConfig): string[] {
   }
   for (const t of rep.tiers) needText(t.key, 'reputation tier');
   for (const q of cfg.quietSpots.spots) needText(q.nameKey, `quiet ${q.id}`);
+  for (const k of cfg.perks.list) for (const key of [k.nameKey, k.descKey]) needText(key, `perk ${k.id}`);
   for (const f of cfg.favors.list) {
     const where = `favor ${f.id}`;
     needText(f.offerKey, where);

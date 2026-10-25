@@ -77,7 +77,7 @@ function boot(): void {
   // 마우스: 아이템 막대의 칸을 누르면 그 단축키를 누른 것처럼 (터치는 TouchControls가 맡는다)
   if (!touch) {
     document.addEventListener('pointerdown', (e) => {
-      const slot = (e.target as HTMLElement | null)?.closest<HTMLElement>('.hotbar [data-code]');
+      const slot = (e.target as HTMLElement | null)?.closest<HTMLElement>('.hotbar [data-code], .perk [data-code]');
       if (!slot) return;
       const code = slot.dataset['code']!;
       input.touchDown(code);

@@ -927,6 +927,40 @@ export const favorsSchema = z.object({
 export type FavorsConfig = z.infer<typeof favorsSchema>;
 export type FavorDef = FavorsConfig['list'][number];
 
+/**
+ * 내향인의 기술 (data/perks.json): 밤마다 그날 한 일(tag)에 맞춰 offer개를 보여 주고 하나를 고른다. 한 주 동안 쌓인다.
+ * 효과: 배율(…Scale)은 곱하고, 더하기(…Bonus·orderFree)는 더한다
+ */
+export const perksSchema = z.object({
+  offer: z.number().int().min(1),
+  list: z.array(
+    z.object({
+      id: z.string(),
+      tag: z.enum(['avoid', 'endure', 'rest', 'explore', 'favor']),
+      nameKey: z.string(),
+      descKey: z.string(),
+      effects: z
+        .object({
+          noticeScale: positive,
+          parryBonusSec: nonNegative,
+          earphoneScale: positive,
+          smileDropScale: nonNegative,
+          dialogueDrainScale: nonNegative,
+          crowdScale: nonNegative,
+          restScale: positive,
+          nightMaxBonus: nonNegative,
+          breakScale: positive,
+          walkScale: positive,
+          orderFree: nonNegative,
+          favorScale: positive,
+        })
+        .partial(),
+    }),
+  ),
+});
+export type PerksConfig = z.infer<typeof perksSchema>;
+export type PerkEffects = PerksConfig['list'][number]['effects'];
+
 export const monologueTriggersSchema = z.array(
   z.object({
     key: z.string(),

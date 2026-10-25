@@ -1,6 +1,6 @@
 import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
-import type { ConsumableDef, RecoveryEffects, DayDef, FavorDef, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
+import type { ConsumableDef, RecoveryEffects, DayDef, FavorDef, PerkEffects, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
 import { GameClock, formatTime, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
@@ -141,7 +141,8 @@ export type Mode =
   | { kind: 'seated'; seat: string; grill: GrillGame; time: number; toastDone: boolean; distractedFor: number; laughIn: number; bossCheckIn: number }
   | { kind: 'burnout'; time: number }
   | { kind: 'collapse'; stat: LifeStatId; time: number }
-  | { kind: 'night'; breakdown: Breakdown[]; settlement: SettlementLine[]; nextMax: number; report: DayReport; lifeEnd: Record<LifeStatId, number>; moneyEnd: number }
+  /** perkChoices: 오늘 밤 고를 수 있는 기술, perkChosen: 고른 것 */
+  | { kind: 'night'; breakdown: Breakdown[]; settlement: SettlementLine[]; nextMax: number; report: DayReport; lifeEnd: Record<LifeStatId, number>; moneyEnd: number; perkChoices: string[]; perkChosen: string | null }
   | { kind: 'final'; reports: DayReport[] };
 
 export interface Qte {
@@ -175,6 +176,8 @@ export interface SaveState {
   reputation?: Record<string, number>;
   /** 찾은 조용한 곳 (도감) */
   quiet?: string[];
+  /** 익힌 내향인의 기술 */
+  perks?: string[];
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -260,6 +263,10 @@ export class GameSession {
   readonly vacation: boolean;
   /** 휴가 며칠째 */
   vacationDayCount = 1;
+  /** 익힌 내향인의 기술 (data/perks.json) */
+  readonly perks = new Set<string>();
+  /** 오늘 새로 찾은 조용한 곳 수 (기술 고르기) */
+  private quietToday = 0;
   /** 조용한 곳 도감: 찾은 곳 (날이 바뀌어도, 다시 해도 남는다) */
   readonly quietFound = new Set<string>();
   /** 지금 머무는 (찾은) 조용한 곳: 아무도 보지 않으면 회복 중 */
@@ -311,6 +318,7 @@ export class GameSession {
       this.leaveUsed = save.leaveUsed ?? 0;
       this.reputation.restore(save.reputation);
       for (const q of save.quiet ?? []) this.quietFound.add(q);
+      for (const k of save.perks ?? []) this.perks.add(k);
     }
     this.startDay(this.dayIndex);
   }
@@ -338,7 +346,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation, quiet: [...this.quietFound] };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation, quiet: [...this.quietFound], perks: [...this.perks] };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -352,6 +360,7 @@ export class GameSession {
     const ambient = (this.cfg.world.ambient ?? []).filter((a) => (a.chance === undefined ? true : this.seed !== null ? this.rng() < a.chance : a.chance >= 1));
     this.day = { ...composed.day, npcs: [...composed.day.npcs, ...ambient.map(({ chance: _c, ...a }) => a)] };
     this.happenings = composed.happenings;
+    this.quietToday = 0;
     this.offerFavors();
     this.sim.life.clearLedger();
     this.ledgerSeen = 0;
@@ -424,6 +433,41 @@ export class GameSession {
     this.lastTier = 'stable';
   }
 
+  /** 익힌 기술의 효과: 배율은 곱하고 */
+  perkMul(key: keyof PerkEffects): number {
+    let v = 1;
+    for (const k of this.cfg.perks.list) if (this.perks.has(k.id)) v *= k.effects[key] ?? 1;
+    return v;
+  }
+
+  /** 익힌 기술의 효과: 더하기 */
+  perkAdd(key: keyof PerkEffects): number {
+    let v = 0;
+    for (const k of this.cfg.perks.list) if (this.perks.has(k.id)) v += k.effects[key] ?? 0;
+    return v;
+  }
+
+  /** 오늘 밤 고를 기술: 오늘 한 일(피함·견딤·쉼·돌아다님·부탁)에 맞춰 가중치를 두고, 아직 없는 것 중에서 */
+  private perkChoices(): string[] {
+    const r = this.sim.report;
+    const score: Record<string, number> = {
+      avoid: 1 + r.smalltalkAvoided + r.parried + r.callsAvoided * 0.5,
+      endure: 1 + r.smalltalkEndured + r.silenceSec / 15 + r.mandatoryDone.length,
+      rest: 1 + r.recoveredBattery / 15 + r.hobbies.length,
+      explore: 1 + this.quietToday * 2,
+      favor: 1 + (r.favorsDone ?? 0) * 3,
+    };
+    const pool = this.cfg.perks.list.filter((k) => !this.perks.has(k.id));
+    const out: string[] = [];
+    while (out.length < this.cfg.perks.offer && pool.length) {
+      const total = pool.reduce((a, k) => a + score[k.tag]!, 0);
+      let x = this.rng() * total;
+      const i = Math.max(0, pool.findIndex((k) => (x -= score[k.tag]!) <= 0));
+      out.push(pool.splice(i, 1)[0]!.id);
+    }
+    return out;
+  }
+
   /** 오늘의 부탁: 씨앗이 있을 때만 (테스트는 기본 하루). 문자로 오고, 답장하면 목표가 생긴다 */
   private offerFavors(): void {
     this.favorsOffered = [];
@@ -452,8 +496,9 @@ export class GameSession {
   private completeFavor(objectiveId: string): void {
     const f = this.favorsOffered.find((x) => `favor_${x.id}` === objectiveId);
     if (!f) return;
-    if (f.life) this.sim.life.apply(f.life, 'favor', f.contact);
-    for (const [person, d] of Object.entries(f.reputation ?? {})) this.reputation.change(person, d);
+    const fs = this.perkMul('favorScale');
+    if (f.life) this.sim.life.apply(Object.fromEntries(Object.entries(f.life).map(([k, v]) => [k, Math.round((v ?? 0) * fs)])), 'favor', f.contact);
+    for (const [person, d] of Object.entries(f.reputation ?? {})) this.reputation.change(person, Math.round(d * fs));
     this.sim.report.favorsDone = (this.sim.report.favorsDone ?? 0) + 1;
     this.toast('favor.done', { who: this.cfg.text[this.cfg.life.contacts[f.contact]?.nameKey ?? ''] ?? f.contact });
     this.gameEvent('favor:done');
@@ -476,13 +521,15 @@ export class GameSession {
     if (!this.quietFound.has(spot.id)) {
       if (this.quietTimer < qc.discoverSec) return;
       this.quietFound.add(spot.id);
+      this.quietToday++;
       this.toast('quiet.found', { name: this.cfg.text[spot.nameKey] ?? spot.id, n: this.quietFound.size, max: qc.spots.length });
       this.fx.push({ type: 'sound', id: 'chime' });
       this.gameEvent('quiet:found');
     }
     this.quietHere = { id: spot.id, nameKey: spot.nameKey };
-    this.sim.energy.calm(qc.recovery.calmPerSec * dt);
-    this.sim.energy.recover(qc.recovery.batteryPerSec * dt);
+    const rs = this.perkMul('restScale');
+    this.sim.energy.calm(qc.recovery.calmPerSec * rs * dt);
+    this.sim.energy.recover(qc.recovery.batteryPerSec * rs * dt);
   }
 
   /** 오늘 연차를 쓸 수 있는지 (그날 허용 + 이번 주 남은 연차) */
@@ -517,6 +564,8 @@ export class GameSession {
     this.sim.revive(r.battery);
     this.phoneOpen = false;
     this.qte = null;
+    this.itemBreak = null;
+    this.buffs = { soothe: { perSec: 0, left: 0 }, resist: { scale: 1, left: 0 } };
     this.viewTarget = null;
     this.hurry = 0;
     const p = this.player;
@@ -573,7 +622,7 @@ export class GameSession {
           areaId: this.world.map.areaAt(pos.x, pos.y)?.id ?? null,
         }),
       );
-      this.npcs.at(-1)!.warmth = this.reputation.warmth(this.reputation.personOfNpc(n.id));
+      this.npcs.at(-1)!.warmth = this.reputation.warmth(this.reputation.personOfNpc(n.id)) * this.perkMul('noticeScale');
     }
   }
 
@@ -603,9 +652,18 @@ export class GameSession {
           for (const h of this.happenings) this.gameEvent(`happening:${h.id}`);
         }
         return;
-      case 'night':
+      case 'night': {
+        const m = this.mode;
+        // [1]~[3] 오늘 밤 익힐 기술 고르기 (한 번만, 건너뛰어도 된다)
+        if (c.useItem !== null && !m.perkChosen && m.perkChoices[c.useItem]) {
+          m.perkChosen = m.perkChoices[c.useItem]!;
+          this.perks.add(m.perkChosen);
+          const def = this.cfg.perks.list.find((k) => k.id === m.perkChosen)!;
+          this.toast('perk.chosen', { name: this.cfg.text[def.nameKey] ?? def.id });
+        }
         if (c.confirm) this.advanceDay();
         return;
+      }
       case 'final':
         if (c.retry) {
           this.sim.life.restore({ values: { ...this.cfg.life.stats.start }, money: this.cfg.life.stats.startMoney, avoidCounts: {} });
@@ -613,6 +671,7 @@ export class GameSession {
           this.story.clear();
           this.leaveUsed = 0;
           this.reputation.reset();
+          this.perks.clear();
           this.nextMax = this.cfg.balance.battery.start;
           this.startDay(0);
         }
@@ -720,6 +779,7 @@ export class GameSession {
     p.running = p.moving && c.sprint && p.winded <= 0 && !p.phonePretend && !p.biking;
     let speed = p.running ? this.cfg.player.runSpeed : this.cfg.player.walkSpeed;
     if (p.biking) speed *= this.cfg.balance.bike.speedMultiplier;
+    speed *= this.perkMul('walkScale');
     if (p.phonePretend) speed *= sk.phonePretend.moveMultiplier;
     if (p.cover) speed *= sk.coverCheeks.moveMultiplier;
     if (p.eyesClosed) speed *= sk.closeEyes.moveMultiplier;
@@ -809,7 +869,7 @@ export class GameSession {
       case 'rest': {
         m.time += dt;
         const r = this.cfg.balance.recovery;
-        this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : m.what === 'books' ? r.booksPerSec : r.windowPerSec) * dt);
+        this.sim.energy.recover((m.what === 'bench' ? r.benchPerSec : m.what === 'books' ? r.booksPerSec : r.windowPerSec) * this.perkMul('restScale') * dt);
         if (m.what === 'books') this.sim.energy.calm(r.booksStressPerSec * dt);
         if (m.what === 'window' && m.time > 4) this.calmBuff = true;
         if (c.interactPressed || c.cancel || Math.hypot(c.move.x, c.move.y) > 0.1) this.mode = { kind: 'free' };
@@ -1198,7 +1258,7 @@ export class GameSession {
       return;
     }
     // 혼자만의 틈: 멈춰 서서 천천히. 효과는 그동안 나눠 찬다
-    this.itemBreak = { id: def.id, time: 0, dur: def.breakSec, paused: false };
+    this.itemBreak = { id: def.id, time: 0, dur: def.breakSec * this.perkMul('breakScale'), paused: false };
     this.toast(def.usesPerDay ? 'break.startComfort' : 'break.startFood', { item: this.cfg.text[def.nameKey] ?? def.id });
   }
 
@@ -1248,12 +1308,17 @@ export class GameSession {
     Object.assign(this.player, { frozen: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null, biking: false });
     this.phoneOpen = false;
     this.hurry = 0;
+    // 피팅룸 노크·외시경 같은 그 자리의 일은 두고 온다
+    this.qte = null;
+    this.viewTarget = null;
+    this.itemBreak = null;
     this.teleport({ ...home });
-    this.area = this.world.map.areaAt(home.x, home.y);
+    // 영역(this.area)은 그대로 두어 다음 updateWorld가 '집에 들어옴'(enter:home, 미뤄 둔 초인종)을 처리하게 한다
     this.homeLocked = true;
     this.mode = { kind: 'free' };
     this.fx.push({ type: 'warp' });
     this.fx.push({ type: 'sound', id: 'doorLock' });
+    this.gameEvent('home:lock');
     this.gameEvent('warp:home');
   }
 
@@ -1285,7 +1350,9 @@ export class GameSession {
   private orderAt(shopId: string): void {
     const reg = this.cfg.items.shops[shopId]?.regular;
     if (reg) {
-      if ((this.story.get(reg.counter) ?? 0) < reg.minVisits) this.sim.bus.emit(reg.orderStimulus, shopId);
+      if ((this.story.get(reg.counter) ?? 0) < reg.minVisits) {
+        if (!this.perkAdd('orderFree')) this.sim.bus.emit(reg.orderStimulus, shopId);
+      }
       else if (!this.regularGreeted.has(shopId)) {
         this.regularGreeted.add(shopId);
         this.toast(reg.greetKey);
@@ -1571,13 +1638,14 @@ export class GameSession {
     }
     if (!ally) {
       this.sim.bus.emit(p.encounterStimulus, npc.id);
-      this.sim.bus.setContinuous('dialogue', 'dialogue', 1);
+      this.sim.bus.setContinuous('dialogue', 'dialogue', this.perkMul('dialogueDrainScale'));
     }
     this.phoneOpen = false;
     npc.beginDialogue();
     this.sim.life.recordAccept(npc.id);
     const practice = !this.practiced && !ally;
-    const battle = new DialogueBattle(this.cfg.dialogueRules, pool, {
+    const rules = this.cfg.dialogueRules;
+    const battle = new DialogueBattle({ ...rules, parryWindowSec: rules.parryWindowSec + this.perkAdd('parryBonusSec'), smileDropPerSec: rules.smileDropPerSec * this.perkMul('smileDropScale') }, pool, {
       minDurationSec: practice ? 0 : p.minDurationSec,
       baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec,
       ally,
@@ -2149,7 +2217,9 @@ export class GameSession {
 
     // NPC
     const percept = this.playerPercept();
-    const talkBlocked = this.isModal() && this.mode.kind !== 'seated';
+    // 버스를 기다리거나 지하철 역을 고르는 중엔 붙잡힐 수 있다 (말을 걸면 기다림을 그만둔다)
+    const interruptible = (this.mode.kind === 'bus' && this.mode.phase === 'waiting') || this.mode.kind === 'metroMenu';
+    const talkBlocked = this.isModal() && this.mode.kind !== 'seated' && !interruptible;
     const seatedFocus = this.mode.kind === 'seated';
     const far = this.cfg.balance.npcUpdateRange;
     for (const npc of this.npcs) {
@@ -2166,6 +2236,7 @@ export class GameSession {
       });
       for (const e of npc.drainEvents()) {
         if (e.type !== 'talk') continue;
+        if (interruptible) this.mode = { kind: 'free' };
         if (this.mode.kind === 'free') this.startDialogue(e.npc, e.fromBehind);
         else e.npc.endDialogue(5);
       }
@@ -2246,6 +2317,7 @@ export class GameSession {
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     // 자전거로 사람들 사이를 지나가면 더 조마조마하다
     if (p.biking) crowd *= b.bike.crowdScale;
+    crowd *= this.perkMul('crowdScale');
     // 지하철 안: 러시아워엔 더 빽빽하다
     if (this.mode.kind === 'metro') crowd = this.isRush() ? b.metro.crowdRush : b.metro.crowd;
     // 버스 안: 러시아워엔 빽빽하다
@@ -2273,7 +2345,7 @@ export class GameSession {
 
     // 이어폰은 청각만, 스트레스 내성(아이템)은 모든 자극을 줄인다
     const rs = this.buffs.resist.left > 0 ? this.buffs.resist.scale : 1;
-    const ear = p.earphones ? this.cfg.skills.earphones.auditoryMultiplier : 1;
+    const ear = p.earphones ? this.cfg.skills.earphones.auditoryMultiplier * this.perkMul('earphoneScale') : 1;
     const modifiers: ChannelModifiers = rs === 1 && ear === 1 ? NO_MODIFIERS : { auditory: ear * rs, visual: rs, social: rs };
     const ally = this.activeNpcs().some((n) => n.type === 'ally' && dist(n.pos, p.pos) < b.recovery.allyRange);
     let extra = 0;
@@ -2418,13 +2490,15 @@ export class GameSession {
     });
     const report = this.sim.report;
     this.reports = [...this.reports.slice(0, this.dayIndex), report];
+    // 깊은 잠: 다음 날 기운 상한 조금 더
+    night.nextMax = Math.min(this.cfg.balance.battery.max, night.nextMax + this.perkAdd('nightMaxBonus'));
     this.nextMax = night.nextMax;
     const collapsed = life.collapsed;
     if (collapsed) {
       this.mode = { kind: 'collapse', stat: collapsed, time: 0 };
       return;
     }
-    this.mode = { kind: 'night', breakdown: night.breakdown, settlement, nextMax: night.nextMax, report, lifeEnd: { ...life.all() }, moneyEnd: life.money };
+    this.mode = { kind: 'night', breakdown: night.breakdown, settlement, nextMax: night.nextMax, report, lifeEnd: { ...life.all() }, moneyEnd: life.money, perkChoices: this.perkChoices(), perkChosen: null };
   }
 
   private advanceDay(): void {

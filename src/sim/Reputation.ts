@@ -16,6 +16,8 @@ export class Reputation {
   private values: Record<string, number> = {};
   /** 오늘 바뀐 양 (밤 정산) */
   private today: Record<string, number> = {};
+  /** 오늘 이미 반영한 이벤트 (같은 일을 되풀이해 인상을 쌓지 못하게) */
+  private readonly eventsToday = new Set<string>();
 
   constructor(private readonly cfg: ReputationConfig) {
     this.reset();
@@ -64,7 +66,10 @@ export class Reputation {
 
   /** 게임 이벤트가 움직이는 인상 */
   onEvent(event: string): void {
-    for (const [person, d] of Object.entries(this.cfg.events[event] ?? {})) this.change(person, d);
+    const d = this.cfg.events[event];
+    if (!d || this.eventsToday.has(event)) return;
+    this.eventsToday.add(event);
+    for (const [person, v] of Object.entries(d)) this.change(person, v);
   }
 
   /** 인상 → 그 사람이 나를 알아보고 말을 거는 정도 (알아챔 배율) */
@@ -81,6 +86,7 @@ export class Reputation {
 
   newDay(): void {
     this.today = {};
+    this.eventsToday.clear();
   }
 
   snapshot(): Record<string, number> {
@@ -89,6 +95,7 @@ export class Reputation {
 
   restore(values: Record<string, number> | undefined): void {
     this.reset();
+    this.eventsToday.clear();
     for (const [k, v] of Object.entries(values ?? {})) if (k in this.values) this.values[k] = v;
   }
 }
