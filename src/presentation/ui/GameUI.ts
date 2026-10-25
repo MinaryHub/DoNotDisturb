@@ -611,6 +611,7 @@ export class GameUI {
     return `<div class="dlg ${ally ? 'dlg--ally' : ''}">
       ${m.practice && !b.ended ? `<div class="dlg__coach">💡 ${escapeHtml(this.tx(this.coachKey(m)))}</div>` : ''}
       <div class="dlg__who"><span class="dlg__face" style="background:${npc.profile.color}">${mood}</span>${escapeHtml(this.tx(npc.profile.displayTagKey))}</div>
+      ${npc.profile.talkStyle?.hintKey && !b.ended ? `<div class="dlg__style">${escapeHtml(this.tx(npc.profile.talkStyle.hintKey))}</div>` : ''}
       <div class="dlg__bubble" style="opacity:${volume.toFixed(2)};font-size:${(15 + volume * 4).toFixed(1)}px">${escapeHtml(npcText)}</div>
       ${shownMy ? `<div class="dlg__me">${escapeHtml(shownMy)}</div>` : ''}
       ${

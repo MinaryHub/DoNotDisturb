@@ -1249,6 +1249,13 @@ body.is-touch .hotbar {
   line-height: 1.6;
 }
 
+.dlg__style {
+  margin: -2px 0 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: #cfc6b4;
+}
+
 .rep {
   margin: 4px 0 0;
   padding: 0;

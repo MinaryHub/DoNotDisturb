@@ -1630,7 +1630,10 @@ export class GameSession {
   startDialogue(npc: Npc, fromBehind: boolean): void {
     if (this.mode.kind === 'dialogue' || this.mode.kind === 'speech') return;
     const p = npc.profile;
-    const pool = this.cfg.dialoguePools[p.dialogue]!;
+    const base = this.cfg.dialoguePools[p.dialogue]!;
+    // 말하는 방식: 대사 빠르기 (팀장님은 길게, 옆집은 빠르게)
+    const speed = p.talkStyle?.lineSpeed ?? 1;
+    const pool = speed === 1 ? base : { ...base, greeting: { ...base.greeting, durationSec: base.greeting.durationSec / speed }, lines: base.lines.map((l) => ({ ...l, durationSec: l.durationSec / speed })), flushRemark: { ...base.flushRemark, durationSec: base.flushRemark.durationSec / speed } };
     const ally = p.type === 'ally';
     if (fromBehind && !ally) {
       const chance = this.cfg.skills.earphones.backApproachTapChance * (this.player.earphones ? this.cfg.skills.earphones.ambushChanceMultiplier : 1);
@@ -1645,13 +1648,24 @@ export class GameSession {
     this.sim.life.recordAccept(npc.id);
     const practice = !this.practiced && !ally;
     const rules = this.cfg.dialogueRules;
-    const battle = new DialogueBattle({ ...rules, parryWindowSec: rules.parryWindowSec + this.perkAdd('parryBonusSec'), smileDropPerSec: rules.smileDropPerSec * this.perkMul('smileDropScale') }, pool, {
-      minDurationSec: practice ? 0 : p.minDurationSec,
-      baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec,
-      ally,
-      rng: () => this.rng(),
-      practice,
-    });
+    const ts = p.talkStyle ?? {};
+    const battle = new DialogueBattle(
+      {
+        ...rules,
+        parryWindowSec: rules.parryWindowSec * (ts.parryWindowScale ?? 1) + this.perkAdd('parryBonusSec'),
+        smileDropPerSec: rules.smileDropPerSec * (ts.smileDropScale ?? 1) * this.perkMul('smileDropScale'),
+        satisfactionPerReply: rules.satisfactionPerReply * (ts.satisfyScale ?? 1),
+        gapSec: rules.gapSec * (ts.gapScale ?? 1),
+      },
+      pool,
+      {
+        minDurationSec: practice ? 0 : p.minDurationSec,
+        baseDurationSec: practice ? Math.max(p.baseDurationSec, 20) : p.baseDurationSec,
+        ally,
+        rng: () => this.rng(),
+        practice,
+      },
+    );
     this.mode = { kind: 'dialogue', battle, npc, pool: p.dialogue, closer: null, closerTime: 0, myLine: null, myLineTime: 0, practice, smiling: false, wrongAge: 99 };
   }
 

@@ -165,6 +165,7 @@
 - 오선택: 대화 +10초, 홍조 상승, 종료 후 Rumination 발생
 - Boss: 최소 대화 시간 동안 패링·만족 이탈 불가 (초기값 40초 — 아래 '조정 기록')
 - 대사 데이터: `/data/dialogue/*.json` (NPC 유형별 대사 풀), 규칙: `/data/dialogueRules.json`
+- 말하는 방식 (게임성, 2026-10-25): `npcProfiles.json`의 `talkStyle`로 같은 규칙을 사람마다 다르게 — 틈 넓이(`parryWindowScale`)·대사 빠르기(`lineSpeed`)·대사 사이(`gapScale`)·만족 쉬움(`satisfyScale`)·미소 민감도(`smileDropScale`), 대화 위에 한 줄 안내(`hintKey`). 팀장님 틈 좁고 길게, 옆집 연달아 빠르게, 점원·미용사 미소에 민감, 어르신·402호·보호자·꽃집·아이 쉽게, 호객·시식·요가 강사 틈 넓게
 
 ### 5.7 신체화 디버프 (`SomaticController`, 강도 0~1 상태 머신)
 

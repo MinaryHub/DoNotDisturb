@@ -458,6 +458,20 @@ export const npcProfileSchema = z.object({
   approaches: z.boolean(),
   /** 눈인사만 하는 사람: 말을 걸지 않고, 눈이 마주치면 서로 고개만 끄덕인다. 시선 자극이 없다 (balance.nod) */
   nodOnly: z.boolean().optional(),
+  /**
+   * 말하는 방식: 같은 대화 규칙을 사람마다 다르게 (틈 넓이·대사 빠르기·대사 사이·만족 쉬움·미소에 민감함).
+   * hintKey: 대화 위에 한 줄로 '이 사람은 이렇게'
+   */
+  talkStyle: z
+    .object({
+      parryWindowScale: positive.optional(),
+      lineSpeed: positive.optional(),
+      gapScale: positive.optional(),
+      satisfyScale: positive.optional(),
+      smileDropScale: nonNegative.optional(),
+      hintKey: z.string().optional(),
+    })
+    .optional(),
   dialogue: z.string(),
   encounterStimulus: z.string(),
   baseDurationSec: positive,

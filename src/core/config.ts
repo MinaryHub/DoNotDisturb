@@ -272,6 +272,7 @@ export function crossCheck(cfg: GameConfig): string[] {
   for (const l of w.labels) needText(l.textKey, 'label');
   for (const [id, p] of Object.entries(cfg.npcProfiles)) {
     needText(p.displayTagKey, `npcProfile ${id}`);
+    if (p.talkStyle?.hintKey) needText(p.talkStyle.hintKey, `npcProfile ${id} talkStyle`);
     needStim(p.encounterStimulus, `npcProfile ${id}`);
     if (!has(cfg.dialoguePools, p.dialogue)) errors.push(`npcProfile ${id}: 대사 풀 없음 "${p.dialogue}" (data/dialogue/)`);
   }

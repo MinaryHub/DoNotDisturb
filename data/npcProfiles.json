@@ -22,7 +22,8 @@
     "dialogue": "neighbor",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 22,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "lineSpeed": 1.3, "gapScale": 0.5, "satisfyScale": 1.1, "hintKey": "talk.neighbor" }
   },
   "seoyun": {
     "type": "passerby",
@@ -73,7 +74,8 @@
     "dialogue": "upstairs",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 14,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "satisfyScale": 1.4, "smileDropScale": 0.5, "hintKey": "talk.upstairs" }
   },
   "manager": {
     "type": "acquaintance",
@@ -99,7 +101,8 @@
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 18,
     "minDurationSec": 0,
-    "leash": 7
+    "leash": 7,
+    "talkStyle": { "lineSpeed": 0.85, "hintKey": "talk.manager" }
   },
   "coworker": {
     "type": "acquaintance",
@@ -125,7 +128,8 @@
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 22,
     "minDurationSec": 0,
-    "leash": 12
+    "leash": 12,
+    "talkStyle": { "hintKey": "talk.coworker" }
   },
   "boss": {
     "type": "boss",
@@ -151,7 +155,8 @@
     "encounterStimulus": "bossTalk",
     "baseDurationSec": 40,
     "minDurationSec": 25,
-    "leash": 30
+    "leash": 30,
+    "talkStyle": { "parryWindowScale": 0.7, "lineSpeed": 0.8, "satisfyScale": 0.8, "hintKey": "talk.boss" }
   },
   "acquaintance": {
     "type": "boss",
@@ -176,7 +181,8 @@
     "dialogue": "acquaintance",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 30,
-    "minDurationSec": 20
+    "minDurationSec": 20,
+    "talkStyle": { "lineSpeed": 0.9, "satisfyScale": 0.9, "hintKey": "talk.acquaintance" }
   },
   "flyer": {
     "type": "hunter",
@@ -202,7 +208,8 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 12,
     "minDurationSec": 0,
-    "leash": 8
+    "leash": 8,
+    "talkStyle": { "parryWindowScale": 1.5, "satisfyScale": 0.6, "hintKey": "talk.flyer" }
   },
   "sampler": {
     "type": "hunter",
@@ -228,7 +235,8 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 12,
     "minDurationSec": 0,
-    "leash": 7
+    "leash": 7,
+    "talkStyle": { "parryWindowScale": 1.5, "satisfyScale": 0.6, "hintKey": "talk.sampler" }
   },
   "clerk": {
     "type": "stalker",
@@ -256,7 +264,8 @@
     "minDurationSec": 0,
     "stalkDistance": 3,
     "stareTriggerSec": 3,
-    "graceAfterParrySec": 30
+    "graceAfterParrySec": 30,
+    "talkStyle": { "smileDropScale": 2, "satisfyScale": 0.9, "hintKey": "talk.clerk" }
   },
   "cashier": {
     "type": "passerby",
@@ -386,11 +395,7 @@
     "type": "passerby",
     "displayTagKey": "tag.pharmacist",
     "color": "#f4f4f0",
-    "look": {
-      "accessory": "apron",
-      "accent": "#dfe7ec",
-      "hairStyle": "short"
-    },
+    "look": { "accessory": "apron", "accent": "#dfe7ec", "hairStyle": "short" },
     "walkSpeed": 0.5,
     "approachSpeed": 0.5,
     "viewDistance": 6,
@@ -415,10 +420,7 @@
     "type": "acquaintance",
     "displayTagKey": "tag.bookseller",
     "color": "#6c5b7b",
-    "look": {
-      "accessory": "glasses",
-      "hairStyle": "bun"
-    },
+    "look": { "accessory": "glasses", "hairStyle": "bun" },
     "walkSpeed": 0.7,
     "approachSpeed": 1.0,
     "viewDistance": 8,
@@ -443,11 +445,7 @@
     "type": "hunter",
     "displayTagKey": "tag.courier",
     "color": "#3d5a80",
-    "look": {
-      "hairStyle": "cap",
-      "accent": "#f2c94c",
-      "accessory": "none"
-    },
+    "look": { "hairStyle": "cap", "accent": "#f2c94c", "accessory": "none" },
     "walkSpeed": 1.6,
     "approachSpeed": 2.4,
     "viewDistance": 10,
@@ -467,16 +465,14 @@
     "encounterStimulus": "courierTalk",
     "baseDurationSec": 8,
     "minDurationSec": 0,
-    "leash": 14
+    "leash": 14,
+    "talkStyle": { "lineSpeed": 1.4, "parryWindowScale": 1.3, "hintKey": "talk.courier" }
   },
   "surveyor": {
     "type": "hunter",
     "displayTagKey": "tag.surveyor",
     "color": "#e0a26a",
-    "look": {
-      "accessory": "lanyard",
-      "hairStyle": "long"
-    },
+    "look": { "accessory": "lanyard", "hairStyle": "long" },
     "walkSpeed": 0.6,
     "approachSpeed": 2.4,
     "viewDistance": 8,
@@ -496,17 +492,14 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 15,
     "minDurationSec": 0,
-    "leash": 8
+    "leash": 8,
+    "talkStyle": { "lineSpeed": 0.85, "parryWindowScale": 1.2, "hintKey": "talk.surveyor" }
   },
   "kid": {
     "type": "acquaintance",
     "displayTagKey": "tag.kid",
     "color": "#f29e4c",
-    "look": {
-      "accessory": "backpack",
-      "accent": "#6fb3ff",
-      "hairStyle": "short"
-    },
+    "look": { "accessory": "backpack", "accent": "#6fb3ff", "hairStyle": "short" },
     "walkSpeed": 1.4,
     "approachSpeed": 2.2,
     "viewDistance": 9,
@@ -526,7 +519,8 @@
     "encounterStimulus": "kidGreeting",
     "baseDurationSec": 6,
     "minDurationSec": 0,
-    "radius": 0.24
+    "radius": 0.24,
+    "talkStyle": { "satisfyScale": 1.8, "smileDropScale": 0.3, "hintKey": "talk.kid" }
   },
   "regular": {
     "type": "passerby",
@@ -551,19 +545,13 @@
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 10,
     "minDurationSec": 0,
-    "look": {
-      "accessory": "phone"
-    }
+    "look": { "accessory": "phone" }
   },
   "promoter": {
     "type": "hunter",
     "displayTagKey": "tag.promoter",
     "color": "#5fb08c",
-    "look": {
-      "accessory": "lanyard",
-      "hairStyle": "cap",
-      "accent": "#2f8f6a"
-    },
+    "look": { "accessory": "lanyard", "hairStyle": "cap", "accent": "#2f8f6a" },
     "walkSpeed": 0.6,
     "approachSpeed": 2.6,
     "viewDistance": 8,
@@ -583,17 +571,14 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 12,
     "minDurationSec": 0,
-    "leash": 8
+    "leash": 8,
+    "talkStyle": { "parryWindowScale": 1.5, "satisfyScale": 0.6, "hintKey": "talk.promoter" }
   },
   "exColleague": {
     "type": "boss",
     "displayTagKey": "tag.exColleague",
     "color": "#7f8fb8",
-    "look": {
-      "accessory": "bag",
-      "hairStyle": "short",
-      "accent": "#3b4a78"
-    },
+    "look": { "accessory": "bag", "hairStyle": "short", "accent": "#3b4a78" },
     "walkSpeed": 1.0,
     "approachSpeed": 1.6,
     "viewDistance": 14,
@@ -618,11 +603,7 @@
     "type": "acquaintance",
     "displayTagKey": "tag.dogWalker",
     "color": "#c9a46b",
-    "look": {
-      "accessory": "none",
-      "hairStyle": "bun",
-      "accent": "#8a6b3a"
-    },
+    "look": { "accessory": "none", "hairStyle": "bun", "accent": "#8a6b3a" },
     "walkSpeed": 0.9,
     "approachSpeed": 1.6,
     "viewDistance": 9,
@@ -647,11 +628,7 @@
     "type": "passerby",
     "displayTagKey": "tag.mover",
     "color": "#9a8f80",
-    "look": {
-      "accessory": "none",
-      "hairStyle": "cap",
-      "accent": "#5a5248"
-    },
+    "look": { "accessory": "none", "hairStyle": "cap", "accent": "#5a5248" },
     "walkSpeed": 1.1,
     "approachSpeed": 1.1,
     "viewDistance": 7,
@@ -676,11 +653,7 @@
     "type": "passerby",
     "displayTagKey": "tag.busker",
     "color": "#d0739a",
-    "look": {
-      "accessory": "none",
-      "hairStyle": "long",
-      "accent": "#7a2f55"
-    },
+    "look": { "accessory": "none", "hairStyle": "long", "accent": "#7a2f55" },
     "walkSpeed": 0.5,
     "approachSpeed": 0.5,
     "viewDistance": 8,
@@ -727,7 +700,8 @@
     "minDurationSec": 0,
     "stalkDistance": 3,
     "stareTriggerSec": 3,
-    "graceAfterParrySec": 30
+    "graceAfterParrySec": 30,
+    "talkStyle": { "smileDropScale": 2, "satisfyScale": 0.9, "hintKey": "talk.hairdresser" }
   },
   "petOwner": {
     "type": "acquaintance",
@@ -752,7 +726,8 @@
     "dialogue": "petOwner",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 16,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "satisfyScale": 1.3, "hintKey": "talk.petOwner" }
   },
   "yogaTeacher": {
     "type": "hunter",
@@ -778,7 +753,8 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 12,
     "minDurationSec": 0,
-    "leash": 6
+    "leash": 6,
+    "talkStyle": { "parryWindowScale": 1.5, "satisfyScale": 0.6, "hintKey": "talk.yogaTeacher" }
   },
   "bankGreeter": {
     "type": "acquaintance",
@@ -803,7 +779,8 @@
     "dialogue": "bankGreeter",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 8,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "parryWindowScale": 1.4, "satisfyScale": 1.2, "hintKey": "talk.bankGreeter" }
   },
   "bakerSampler": {
     "type": "hunter",
@@ -829,7 +806,8 @@
     "encounterStimulus": "salesPitch",
     "baseDurationSec": 12,
     "minDurationSec": 0,
-    "leash": 8
+    "leash": 8,
+    "talkStyle": { "parryWindowScale": 1.5, "satisfyScale": 0.6, "hintKey": "talk.bakerSampler" }
   },
   "florist": {
     "type": "acquaintance",
@@ -854,7 +832,8 @@
     "dialogue": "florist",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 10,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "satisfyScale": 1.4, "smileDropScale": 0.4, "hintKey": "talk.florist" }
   },
   "elder": {
     "type": "acquaintance",
@@ -879,6 +858,7 @@
     "dialogue": "elder",
     "encounterStimulus": "smalltalk",
     "baseDurationSec": 18,
-    "minDurationSec": 0
+    "minDurationSec": 0,
+    "talkStyle": { "satisfyScale": 1.6, "smileDropScale": 0.5, "hintKey": "talk.elder" }
   }
 }
