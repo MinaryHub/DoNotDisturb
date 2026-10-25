@@ -335,6 +335,8 @@ export const presentationConfigSchema = z.object({
     pigeonReturnSec: positive,
     timeTint: z.array(z.object({ at: hhmm, color: z.string().regex(/^#[0-9a-fA-F]{6}$/), alpha: unit })),
   }),
+  /** 사람 그리기 (src/presentation/draw/people.ts) */
+  people: z.object({ visualScale: positive }),
   /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
   particles: z.object({
     /** 화면 칸 하나를 1초에 몇 번 들여다볼지. 아래 확률은 맞는 칸을 골랐을 때 생길 확률 */
@@ -388,7 +390,7 @@ export const npcProfileSchema = z.object({
     .object({
       skin: z.string().optional(),
       hair: z.string().optional(),
-      hairStyle: z.enum(['short', 'long', 'bun', 'bald', 'cap']).optional(),
+      hairStyle: z.enum(['short', 'long', 'bun', 'bald', 'cap', 'ponytail', 'curly']).optional(),
       accessory: z.enum(['none', 'bag', 'backpack', 'phone', 'apron', 'lanyard', 'glasses', 'tray', 'umbrella']).optional(),
       accent: z.string().optional(),
     })

@@ -17,7 +17,7 @@ import type { Settings } from './Settings';
 // 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
 //   월드 → 오프스크린 캔버스 → (채도·블러·앰버·색수차·늘림) 합성 → 심리 오버레이(비네팅·터널·홍조·암전)
 
-const PLAYER_LOOK_BASE = (top: string): Look => ({ skin: '#f0dac4', hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563', pattern: 'plain', shoes: '#f4f1ea' });
+const PLAYER_LOOK_BASE = (top: string, skin: string): Look => ({ skin, hair: '#3a2c25', hairStyle: 'short', top, accessory: 'none', accent: '#4b5563', pattern: 'hoodie', shoes: '#f4f1ea', bottom: '#3d4f6b', build: 1 });
 
 const UMBRELLAS = ['#3b6fb6', '#2f3e46', '#c0392b', '#f2c94c', '#5b7d63', '#e8e2d6', '#6c5b7b'];
 
@@ -59,6 +59,9 @@ export class Renderer {
   private outdoorness = 1;
   private readonly particles: Particles;
   private readonly canopies = new Canopies();
+  /** 보이는 방향: 몸이 확 돌지 않고 부드럽게 돈다 (id → 라디안) */
+  private readonly facings = new Map<string, number>();
+  private frameDt = 0;
   /** 이번 프레임 화면 안의 나무 칸 (중심) */
   private trees: { x: number; y: number }[] = [];
   /** 한숨·놀람 입자를 한 번만 내기 위한 직전 상태 */
@@ -131,6 +134,7 @@ export class Renderer {
 
   private drawWorld(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
     const ctx = this.wctx;
+    this.frameDt = dt;
     const cam = this.camera;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = this.cfg.tiles[0]!.color;
@@ -188,7 +192,7 @@ export class Renderer {
     this.canopies.drawShadows(ctx, this.trees, ps.time);
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
-    this.drawPlayer(s, ps);
+    this.drawPlayer(s, ps, st);
     this.updateParticles(s, ps, dt, viewRect, night, rainHere);
     this.particles.draw(ctx, ps.time);
     // 밤에는 수관도 어둡게 (단계별 색으로 미리 그린 그림을 쓴다)
@@ -239,6 +243,11 @@ export class Renderer {
       }
     }
     ctx.restore();
+  }
+
+  /** 사람을 충돌 반지름보다 조금 크게 그려 생김새가 보이게 */
+  private get peopleScale(): number {
+    return this.cfg.presentation.people.visualScale;
   }
 
   private get treeColor(): string {
@@ -761,7 +770,8 @@ export class Renderer {
         grey > 0.5
           ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: base.accessory === 'umbrella' ? 'umbrella' : 'none' }
           : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
-      drawPerson(ctx, a.pos.x, a.pos.y, look, { r, facing: Math.atan2(a.dir.y, a.dir.x), walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3 });
+      const facing = this.turned(`c${a.id}`, Math.atan2(a.dir.y, a.dir.x));
+      drawPerson(ctx, a.pos.x, a.pos.y, look, { r: r * this.peopleScale, facing, walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3, time: ps.time, seed: a.id, headTurn: Math.sin(ps.time * 0.5 + a.id) * 0.25 });
     }
   }
 
@@ -796,7 +806,27 @@ export class Renderer {
     const reach = n.gesture === 'reach' ? 0.45 : n.gesture === 'wave' ? 0.25 + 0.1 * Math.sin(ps.time * 10) : 0;
     let look = this.lookOf(n);
     if (s.raining && this.outdoorAt(n.pos)) look = { ...look, accessory: 'umbrella', accent: UMBRELLAS[hashOf(n.id) % UMBRELLAS.length]! };
-    drawPerson(ctx, x, y, look, { r, facing: n.facing, walkPhase: phase, walking, bob, reach });
+    const seed = hashOf(n.id) % 100;
+    const facing = this.turned(n.id, n.facing);
+    // 고개: 알아챘으면 나를 향해, 한가하면 가끔 두리번
+    const toMe = Math.atan2(s.player.pos.y - y, s.player.pos.x - x) - facing;
+    const wrapped = Math.atan2(Math.sin(toMe), Math.cos(toMe));
+    const headTurn = n.notice > 0.3 && n.state !== 'dialogue' ? Math.max(-1.1, Math.min(1.1, wrapped)) : walking ? 0 : Math.sin(ps.time * 0.35 + seed) * 0.6 * Math.max(0, Math.sin(ps.time * 0.13 + seed * 0.7));
+    drawPerson(ctx, x, y, look, {
+      r: r * this.peopleScale,
+      facing,
+      walkPhase: phase,
+      walking,
+      running: n.speed > 2.4,
+      bob,
+      reach,
+      time: ps.time,
+      seed,
+      headTurn,
+      talk: n.state === 'dialogue' ? 1 : 0,
+      laugh: n.gesture === 'laugh' ? 1 : 0,
+      seated: n.state === 'seated',
+    });
     if (n.gesture === 'reach') {
       const hx = x - fy * r * 0.98 + fx * (reach + r * 0.28 + 0.12);
       const hy = y + fx * r * 0.98 + fy * (reach + r * 0.28 + 0.12) + bob;
@@ -814,6 +844,14 @@ export class Renderer {
       ctx.restore();
     }
     void s;
+  }
+
+  /** 실제 방향을 따라 부드럽게 도는 '보이는 방향' */
+  private turned(id: string, target: number): number {
+    const prev = this.facings.get(id);
+    const next = prev === undefined ? target : lerpAngle(prev, target, Math.min(1, this.frameDt * 12));
+    this.facings.set(id, next);
+    return next;
   }
 
   private lookOf(n: Npc): Look {
@@ -874,7 +912,7 @@ export class Renderer {
     }
   }
 
-  private drawPlayer(s: GameSession, ps: PresentationState): void {
+  private drawPlayer(s: GameSession, ps: PresentationState, st: Settings): void {
     const ctx = this.wctx;
     const p = s.player;
     if (s.mode.kind === 'travel') return;
@@ -901,68 +939,28 @@ export class Renderer {
     // 흐물흐물: 옆으로 퍼지며 꺼지고, 잠깐 출렁인다
     const wobble = sink * (1 - sink * 0.6) * 0.08 * Math.sin(ps.burnoutTime * 9);
     ctx.scale(scale * (1 + sink * 0.35 + wobble), scale * (1 - sink * 0.35 - wobble));
-    // 후드티 (모자 부분은 등 뒤 반원)
-    const hoodie = s.player.hidden ? '#567a8f' : '#6c8fb2';
-    const fx = Math.cos(p.facing);
-    const fy = Math.sin(p.facing);
-    ctx.fillStyle = '#58799b';
-    ctx.beginPath();
-    ctx.ellipse(-fx * r * 0.55, -fy * r * 0.55, r * 0.42, r * 0.62, p.facing, 0, Math.PI * 2);
-    ctx.fill();
-    drawPerson(ctx, 0, 0, PLAYER_LOOK_BASE(hoodie), { r, facing: p.facing, walkPhase: p.walkPhase, walking: p.moving && ps.cover < 0.3, noHead: true });
-    // 얼굴: 홍조만큼 붉어진다
+    // 홍조만큼 얼굴이 붉어진다. 긴장하면 움츠리고, 진땀이 나면 떨린다
     const fl = ps.flush;
-    ctx.fillStyle = `rgb(${240 + fl * 10}, ${218 - fl * 90}, ${196 - fl * 90})`;
-    const look = ps.phone > 0.5 ? 0.12 : 0.3;
-    ctx.beginPath();
-    ctx.arc(fx * r * look, fy * r * look, r * 0.56, 0, Math.PI * 2);
-    ctx.fill();
-    // 머리카락 (뒤통수)
-    ctx.fillStyle = '#3a2c25';
-    ctx.beginPath();
-    ctx.arc(fx * r * (look - 0.08), fy * r * (look - 0.08), r * 0.58, p.facing + Math.PI * 0.45, p.facing + Math.PI * 1.55);
-    ctx.closePath();
-    ctx.fill();
-    if (!p.mask) {
-      ctx.fillStyle = '#2e2a30';
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        if (ps.eyes > 0.5) ctx.rect(fx * r * 0.62 - fy * side * 0.1 - 0.05, fy * r * 0.62 + fx * side * 0.1 - 0.012, 0.1, 0.024);
-        else ctx.arc(fx * r * 0.62 - fy * side * 0.1, fy * r * 0.62 + fx * side * 0.1, 0.045, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else {
-      ctx.fillStyle = '#e8edf0';
-      ctx.beginPath();
-      ctx.arc(fx * r * 0.5, fy * r * 0.5, r * 0.36, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#3d4250';
-      ctx.beginPath();
-      ctx.arc(-fx * r * 0.1, -fy * r * 0.1, r * 0.62, p.facing + Math.PI * 0.6, p.facing + Math.PI * 1.4);
-      ctx.fill();
-    }
-    if (p.earphones) {
-      ctx.fillStyle = '#f5f5f5';
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.arc(-fy * side * r * 0.62, fx * side * r * 0.62, 0.08, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    if (ps.cover > 0.3) {
-      ctx.fillStyle = '#f0d4bb';
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.arc(fx * r * 0.5 - fy * side * r * 0.55, fy * r * 0.5 + fx * side * r * 0.55, 0.1, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    if (ps.phone > 0.3) {
-      ctx.fillStyle = '#20232b';
-      ctx.fillRect(fx * r * 0.95 - 0.1, fy * r * 0.95 - 0.13, 0.2, 0.26);
-      ctx.fillStyle = `rgba(160, 210, 255, ${0.8 * ps.phone})`;
-      ctx.fillRect(fx * r * 0.95 - 0.07, fy * r * 0.95 - 0.1, 0.14, 0.2);
-    }
+    const skin = `#${[240 + fl * 10, 218 - fl * 70, 196 - fl * 70].map((v) => Math.round(Math.min(255, v)).toString(16).padStart(2, '0')).join('')}`;
+    const hoodie = s.player.hidden ? '#567a8f' : '#6c8fb2';
+    drawPerson(ctx, 0, 0, PLAYER_LOOK_BASE(hoodie, skin), {
+      r: r * this.peopleScale,
+      facing: this.turned('player', p.facing),
+      walkPhase: p.walkPhase,
+      walking: p.moving && ps.cover < 0.3,
+      running: p.running && p.moving,
+      time: ps.time,
+      seed: 7,
+      blush: fl,
+      eyesClosed: ps.eyes > 0.5,
+      mask: p.mask,
+      earphones: p.earphones,
+      coverFace: ps.cover > 0.3,
+      phoneHold: ps.phone,
+      hunch: Math.min(1, ps.stress * 0.9 + ps.danger * 0.4),
+      tremble: st.shake ? ps.sweat : 0,
+      faceless: false,
+    });
     // 우산 (내 표정이 보이도록 반투명)
     if (s.raining && p.inventory.gear.includes('umbrella') && this.outdoorAt(p.pos)) drawUmbrella(ctx, 0, 0, r, p.facing, '#3b6fb6', 0.78);
     // 진땀

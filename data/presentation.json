@@ -51,6 +51,7 @@
       { "at": "20:00", "color": "#5a6aa8", "alpha": 0.1 }
     ]
   },
+  "people": { "visualScale": 1.15 },
   "particles": {
     "samplesPerTileSec": 0.6,
     "leaf": 0.12,
