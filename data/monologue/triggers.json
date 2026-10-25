@@ -119,5 +119,5 @@
   {"key": "mono.snack.enter", "when": {"area": "snackBar"}, "cooldownSec": 600},
   {"key": "mono.florist.enter", "when": {"area": "florist"}, "cooldownSec": 600},
   {"key": "mono.elder.near", "when": {"npcProfile": "elder", "distMax": 9, "visible": true}, "cooldownSec": 300},
-  {"key": "mono.festival", "when": {"event": "happening:streamFestival"}, "once": true}
+  {"key": "mono.festival", "when": {"area": "stream", "day": "day4"}, "once": true}
 ]

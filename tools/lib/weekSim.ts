@@ -90,6 +90,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     // 전화·문자
     for (const ev of day.phone) {
       const contact = game.life.contacts[ev.contact]!;
+      if (contact.muted) continue;
       const must = mandatoryCalls.includes(ev.contact);
       const important = IMPORTANT.includes(ev.contact) || !!contact.ally;
       let how: CallHow | MessageHow;

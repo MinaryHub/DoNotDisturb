@@ -26,8 +26,8 @@
     "stimulus": "checkoutTalk", "audience": 1, "objectiveEvent": "done:checkout", "introKey": "speech.checkout.intro"
   },
   "pitch": {
-    "chunks": ["안녕하세요,", "기획팀", "신규 프로젝트", "소개드리겠습니다.", "핵심은", "세 가지입니다.", "자세한 일정은", "다음 장에", "있습니다."],
-    "chunksEn": ["Hello,", "from Planning,", "I'll introduce", "our new project.", "The core", "comes down to three things.", "The detailed schedule", "is on", "the next slide."],
+    "chunks": ["안녕하세요,", "기획팀", "신규 프로젝트 '채움'", "소개드리겠습니다.", "핵심은", "세 가지입니다.", "자세한 일정은", "다음 장에", "있습니다."],
+    "chunksEn": ["Hello,", "from Planning,", "I'll introduce", "our new project, Chaeum.", "The core", "comes down to three things.", "The detailed schedule", "is on", "the next slide."],
     "stimulus": "pitchSpeech", "audience": 9, "objectiveEvent": "done:pitch", "introKey": "speech.pitch.intro", "next": "pitchQna"
   },
   "pitchQna": {

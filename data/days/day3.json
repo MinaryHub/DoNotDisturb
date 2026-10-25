@@ -112,6 +112,27 @@
       "if": [
         "seoyun>=2"
       ]
+    },
+    {
+      "at": "11:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.f.friday",
+      "jitterMin": 10
+    },
+    {
+      "at": "17:30",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.f.smoke",
+      "jitterMin": 10
+    },
+    {
+      "at": "22:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.f.snack",
+      "jitterMin": 10
     }
   ],
   "npcs": [
@@ -426,5 +447,19 @@
       }
     },
     "minutesPerSecond": 1.5
+  },
+  "interactAt": {
+    "lobbyBoard": {
+      "monologue": "mono.notice.lobby.f"
+    },
+    "officeBoard": {
+      "monologue": "mono.notice.office.f"
+    },
+    "subwayAd": {
+      "monologue": "mono.notice.ad.f"
+    },
+    "snackTv": {
+      "monologue": "mono.notice.tv.f"
+    }
   }
 }

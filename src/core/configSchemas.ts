@@ -249,6 +249,8 @@ const contactSchema = z.object({
   unread: lifeDelta,
   escalation: z.string().optional(),
   ally: z.boolean().optional(),
+  /** 알림을 꺼 둔 단톡방: 와도 울리지 않고 화면을 가리지 않으며, 안 읽어도 아무 일 없다. 폰을 열면 읽을 수 있다 */
+  muted: z.boolean().optional(),
 });
 
 export const lifeConfigSchema = z.object({

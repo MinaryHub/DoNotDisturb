@@ -39,6 +39,36 @@
       "count": 7,
       "speed": 0.85,
       "zone": "park"
+    },
+    {
+      "id": "festivalN",
+      "from": [
+        316.5,
+        6
+      ],
+      "to": [
+        316.5,
+        130
+      ],
+      "width": 1.6,
+      "count": 14,
+      "speed": 0.7,
+      "zone": "stream"
+    },
+    {
+      "id": "festivalS",
+      "from": [
+        319.5,
+        130
+      ],
+      "to": [
+        319.5,
+        6
+      ],
+      "width": 1.6,
+      "count": 12,
+      "speed": 0.7,
+      "zone": "stream"
     }
   ],
   "areaStimuli": [
@@ -54,6 +84,16 @@
       "if": [
         "!upstairs.resolved"
       ]
+    },
+    {
+      "area": "stream",
+      "id": "festivalNoise",
+      "intensity": 1
+    },
+    {
+      "area": "streamSouth",
+      "id": "festivalNoise",
+      "intensity": 1
     }
   ],
   "stalls": [
@@ -128,6 +168,42 @@
         2
       ],
       "color": "#b56576"
+    },
+    {
+      "rect": [
+        312,
+        26,
+        2,
+        4
+      ],
+      "color": "#e0a26a"
+    },
+    {
+      "rect": [
+        312,
+        36,
+        2,
+        4
+      ],
+      "color": "#6c8fb2"
+    },
+    {
+      "rect": [
+        312,
+        90,
+        2,
+        4
+      ],
+      "color": "#b56576"
+    },
+    {
+      "rect": [
+        312,
+        112,
+        2,
+        4
+      ],
+      "color": "#84a98c"
     }
   ],
   "objectives": [
@@ -241,6 +317,37 @@
       "contact": "boss",
       "textKey": "phone.boss.thanks",
       "jitterMin": 15
+    },
+    {
+      "at": "10:40",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.s.festival",
+      "jitterMin": 10
+    },
+    {
+      "at": "12:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.s.upstairs",
+      "jitterMin": 10,
+      "if": [
+        "upstairs.resolved"
+      ]
+    },
+    {
+      "at": "15:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.s.florist",
+      "jitterMin": 10
+    },
+    {
+      "at": "20:30",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.s.lanterns",
+      "jitterMin": 10
     }
   ],
   "npcs": [
@@ -487,6 +594,9 @@
       "if": [
         "!upstairs.resolved"
       ]
+    },
+    {
+      "textKey": "note.sat.festival"
     }
   ],
   "blocked": [
@@ -494,5 +604,16 @@
       "interactable": "bankTeller",
       "toastKey": "bank.closed"
     }
-  ]
+  ],
+  "interactAt": {
+    "lobbyBoard": {
+      "monologue": "mono.notice.lobby.s"
+    },
+    "snackTv": {
+      "monologue": "mono.notice.tv.s"
+    },
+    "libraryBoard": {
+      "monologue": "mono.notice.library.s"
+    }
+  }
 }

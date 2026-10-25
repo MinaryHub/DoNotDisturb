@@ -47,6 +47,18 @@
     "homeMemo": {
       "labelKey": "interact.writeNote",
       "monologue": "mono.upstairs.note"
+    },
+    "lobbyBoard": {
+      "monologue": "mono.notice.lobby.t"
+    },
+    "officeBoard": {
+      "monologue": "mono.notice.office.t"
+    },
+    "subwayAd": {
+      "monologue": "mono.notice.ad.t"
+    },
+    "snackTv": {
+      "monologue": "mono.notice.tv.t"
     }
   },
   "objectives": [
@@ -173,6 +185,27 @@
       "contact": "mom",
       "textKey": "phone.mom.thu",
       "jitterMin": 20
+    },
+    {
+      "at": "09:10",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.t.rebuild",
+      "jitterMin": 10
+    },
+    {
+      "at": "12:30",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.t.rebuild2",
+      "jitterMin": 10
+    },
+    {
+      "at": "20:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.t.festival",
+      "jitterMin": 10
     }
   ],
   "npcs": [

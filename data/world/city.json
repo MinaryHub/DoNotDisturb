@@ -552,7 +552,8 @@
     { "id": "snackSeat", "kind": "soloMeal", "at": [207, 113.6], "labelKey": "interact.snackSeat", "price": 6000 },
     { "id": "snackMenu", "kind": "flavor", "at": [218.5, 126.5], "labelKey": "interact.menu", "monologue": "mono.snack.menu" },
     { "id": "floristCounter", "kind": "shop", "at": [231, 118.4], "labelKey": "interact.florist", "shop": "florist" },
-    { "id": "plazaBench", "kind": "bench", "at": [246.5, 103.4], "labelKey": "interact.bench" }
+    { "id": "plazaBench", "kind": "bench", "at": [246.5, 103.4], "labelKey": "interact.bench" },
+    { "id": "snackTv", "kind": "flavor", "at": [219.5, 110.6], "labelKey": "interact.tv", "monologue": "mono.snack.tv" }
   ],
 
   "portals": [

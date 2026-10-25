@@ -157,6 +157,27 @@
       "if": [
         "!jiu.answered"
       ]
+    },
+    {
+      "at": "10:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.w.library",
+      "jitterMin": 10
+    },
+    {
+      "at": "14:20",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.w.catFound",
+      "jitterMin": 10
+    },
+    {
+      "at": "18:00",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.w.bus",
+      "jitterMin": 10
     }
   ],
   "npcs": [
@@ -421,5 +442,19 @@
       7
     ],
     "pingTimeoutSec": 4
+  },
+  "interactAt": {
+    "lobbyBoard": {
+      "monologue": "mono.notice.lobby.w"
+    },
+    "officeBoard": {
+      "monologue": "mono.notice.office.w"
+    },
+    "snackTv": {
+      "monologue": "mono.notice.tv.w"
+    },
+    "libraryBoard": {
+      "monologue": "mono.notice.library.w"
+    }
   }
 }

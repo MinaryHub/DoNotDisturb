@@ -1692,8 +1692,10 @@ export class GameSession {
           if (this.sim.somatic.active('sweat')) this.fx.push({ type: 'rumble' });
           break;
         case 'message':
+          // 알림을 꺼 둔 단톡방은 조용히 쌓인다
+          if (this.cfg.life.contacts[e.message.contactId]?.muted) break;
           this.sim.bus.emit('textMessage');
-          if (phone.unread.length >= 3) this.gameEvent('phone:unread3');
+          if (this.loudUnread() >= 3) this.gameEvent('phone:unread3');
           break;
         case 'callResolved':
           this.resolveContact(e.call.contactId, e.how, e.call.textKey);
@@ -1706,6 +1708,11 @@ export class GameSession {
           break;
       }
     }
+  }
+
+  /** 알림이 울리는(꺼 두지 않은) 안 읽은 메시지 수 */
+  loudUnread(): number {
+    return this.phone.unread.filter((m) => !this.cfg.life.contacts[m.contactId]?.muted).length;
   }
 
   /** 피할 수 없는 전화 (그 전화를 받는 것이 필수 목표) */
@@ -1732,7 +1739,7 @@ export class GameSession {
 
   private resolveContact(contactId: string, how: CallHow | MessageHow, textKey: string): void {
     const contact = this.cfg.life.contacts[contactId];
-    if (!contact) return;
+    if (!contact || contact.muted) return;
     const report = this.sim.report;
     if (how === 'answered') report.callsAnswered++;
     if (how === 'declined' || how === 'missed') report.callsAvoided++;

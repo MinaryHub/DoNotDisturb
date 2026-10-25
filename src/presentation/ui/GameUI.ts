@@ -267,7 +267,7 @@ export class GameUI {
       const dots = c.escalation ? `${'●'.repeat(k)}${'○'.repeat(max - k)}` : '●'.repeat(k);
       rows.push(`<li class="${c.escalation && k >= max - 1 ? 'memo__pending--hot' : ''}">${escapeHtml(this.tx(c.nameKey))} <span class="memo__dots">${dots}</span></li>`);
     }
-    const unread = s.phone.unread.length;
+    const unread = s.loudUnread();
     if (unread > 0) rows.push(`<li>${escapeHtml(this.tx('memo.unread', { n: unread }))}</li>`);
     return rows.length ? `<div class="memo__pending"><b>${escapeHtml(this.tx('memo.pending'))}</b><ul>${rows.join('')}</ul></div>` : '';
   }
@@ -408,7 +408,7 @@ export class GameUI {
     const phone = s.phone;
     const contactName = (id: string) => this.tx(this.cfg.life.contacts[id]?.nameKey ?? id);
     // 안 읽은 알림이 화면 오른쪽 아래를 가린다
-    const unread = phone.messages.filter((m) => !m.read && !m.resolved);
+    const unread = phone.messages.filter((m) => !m.read && !m.resolved && !this.cfg.life.contacts[m.contactId]?.muted);
     show(this.notifs, playing && !s.phoneOpen && unread.length > 0);
     setHtml(
       this.notifs,

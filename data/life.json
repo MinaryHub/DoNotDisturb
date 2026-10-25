@@ -24,6 +24,17 @@
       "reply": { "income": 4 }, "readIgnored": { "income": -7 }, "unread": { "income": -9 },
       "escalation": "bossVisit"
     },
+    "townChat": {
+      "nameKey": "contact.townChat",
+      "answerStimulus": "textMessage",
+      "muted": true,
+      "answer": {},
+      "avoid": {},
+      "texted": {},
+      "reply": {},
+      "readIgnored": {},
+      "unread": {}
+    },
     "seoyun": {
       "nameKey": "contact.seoyun",
       "answerStimulus": "textMessage",

@@ -112,6 +112,27 @@
         "phone.mom.dinner.3"
       ],
       "jitterMin": 20
+    },
+    {
+      "at": "08:40",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.d1.notice",
+      "jitterMin": 10
+    },
+    {
+      "at": "12:10",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.d1.cat",
+      "jitterMin": 10
+    },
+    {
+      "at": "19:40",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.d1.sunset",
+      "jitterMin": 10
     }
   ],
   "npcs": [
@@ -352,5 +373,22 @@
       7
     ],
     "pingTimeoutSec": 4
+  },
+  "interactAt": {
+    "lobbyBoard": {
+      "monologue": "mono.notice.lobby.d1"
+    },
+    "officeBoard": {
+      "monologue": "mono.notice.office.d1"
+    },
+    "subwayAd": {
+      "monologue": "mono.notice.ad.d1"
+    },
+    "snackTv": {
+      "monologue": "mono.notice.tv.d1"
+    },
+    "libraryBoard": {
+      "monologue": "mono.notice.library.d1"
+    }
   }
 }
