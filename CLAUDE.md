@@ -51,6 +51,7 @@
 | 테스트 | Vitest | sim 계층 + DOM 없는 GameSession 시나리오 |
 | 데스크톱 패키징 | Tauri (Phase 4) | Steamworks 연동은 이후 Phase |
 
+- 웹 배포 (2026-10-25): https://apps.kimserv.com/donotdisturb/ . Vercel 프로젝트 `donotdisturb`(이 저장소, `vercel.json`이 `BASE_PATH=/donotdisturb/`로 빌드)에 `vercel deploy --prod`. `apps.kimserv.com` 도메인은 라우터 프로젝트 `apps-kimserv`(`/Users/smic/apps-kimserv`)가 갖고 하위 경로마다 각 프로젝트로 넘긴다(`/dotty/`, `/donotdisturb/`). 진행 저장·설정은 브라우저 `localStorage`라 사람(브라우저)마다 따로 플레이한다
 - 의존성은 안정 버전으로 정확히 고정(`^` 없이)하고, 위 목록 외 라이브러리를 추가할 때는 이유를 설명하고 승인을 받는다.
 - 3D 판에서 쓰던 Three.js·postprocessing·Rapier·recast-navigation·@gltf-transform은 2D 전환과 함께 제거했다.
 
