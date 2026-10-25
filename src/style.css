@@ -746,6 +746,11 @@ kbd {
   letter-spacing: -1px;
 }
 
+.gauge__drain--up {
+  color: #9fe08a;
+  font-size: 12px;
+}
+
 .gauge--alert .gauge__bar {
   animation: gauge-throb 0.9s ease-in-out infinite;
 }

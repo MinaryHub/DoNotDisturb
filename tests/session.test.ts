@@ -342,12 +342,12 @@ describe('에너지 보충 음식', () => {
     // 집은 저절로도 회복되니, 아무것도 안 먹은 날과 견준다
     const base = newDay();
     base.sim.energy.debugSet({ battery: 40 });
-    step(base, 5.1);
+    step(base, 3.1);
     const s = newDay();
     s.player.inventory.consumables['lunchbox'] = 1;
     s.sim.energy.debugSet({ battery: 40 });
     press(s, { useItem: 0 });
-    step(s, 5);
+    step(s, 3);
     press(s, { move: { x: 1, y: 0 } });
     expect(s.itemBreak).toBeNull();
     expect(s.player.inventory.consumables['lunchbox']).toBe(0);
@@ -372,5 +372,18 @@ describe('에너지 보충 음식', () => {
     expect(s.usesLeft('fidget')).toBe(0);
     press(s, { useItem: 0 });
     expect(s.itemBreak).toBeNull();
+  });
+});
+
+describe('목표가 닫히는 시각', () => {
+  it('퇴근 시간이 지나도록 업무를 못 했으면 놓치고, 침대 목표를 막지 않는다', () => {
+    const s = newDay();
+    s.objectives.fire('answered:mgmtOffice');
+    const income = s.sim.life.get('income');
+    s.clock.skipTo(18 * 60 + 31);
+    step(s, 0.1);
+    for (const id of ['commute', 'meeting', 'work']) expect(s.objectives.get(id)!.missed).toBe(true);
+    expect(s.objectives.visible().map((o) => o.def.id)).toEqual(['home']);
+    expect(s.sim.life.get('income')).toBeLessThan(income);
   });
 });

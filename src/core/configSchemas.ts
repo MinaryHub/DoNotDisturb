@@ -618,6 +618,10 @@ export const daySchema = z.object({
       deadline: hhmm.optional(),
       late: lifeDelta.optional(),
       lateStimulus: z.string().optional(),
+      /** 이 시각이 지나면 못 하고 넘어간다 (퇴근 시간이 지난 업무 등). 뒤따르는 목표는 더 막지 않는다 */
+      closes: hhmm.optional(),
+      /** 놓쳤을 때 생활 지표 (없으면 필수 목표만 mandatorySkipped) */
+      missed: lifeDelta.optional(),
       endsDay: z.boolean().optional(),
       /** 지도·화면 가장자리 화살표가 가리킬 곳: 상호작용 id 또는 영역 id */
       marker: z.string().optional(),

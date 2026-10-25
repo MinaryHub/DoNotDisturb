@@ -24,7 +24,8 @@
       "late": {
         "income": -8
       },
-      "marker": "officeFloor"
+      "marker": "officeFloor",
+      "closes": "18:00"
     },
     {
       "id": "meeting",
@@ -34,7 +35,8 @@
       "requires": [
         "commute"
       ],
-      "marker": "meetingSeat"
+      "marker": "meetingSeat",
+      "closes": "18:00"
     },
     {
       "id": "work",
@@ -43,7 +45,11 @@
       "requires": [
         "meeting"
       ],
-      "marker": "officeDesk"
+      "marker": "officeDesk",
+      "closes": "18:30",
+      "missed": {
+        "income": -12
+      }
     },
     {
       "id": "home",

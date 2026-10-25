@@ -366,7 +366,7 @@ export class GameSession {
     const latest = parseTime(r.latestTime);
     if (wake >= latest) {
       this.clock.skipTo(latest);
-      for (const o of this.objectives.list) if (o.def.mandatory && !o.done) this.sim.life.apply(this.cfg.life.rewards.mandatorySkipped);
+      for (const o of this.objectives.list) if (o.def.mandatory && !o.done && !o.missed) this.sim.life.apply(this.cfg.life.rewards.mandatorySkipped);
       this.toast('respawn.late');
       this.endDay();
       return;
@@ -1845,6 +1845,14 @@ export class GameSession {
     // 목표 마감
     this.objectives.checkDeadlines(this.clock.minutes);
     for (const e of this.objectives.drainEvents()) {
+      if (e.type === 'missed') {
+        const d = e.objective.def;
+        const delta = d.missed ?? (d.mandatory ? this.cfg.life.rewards.mandatorySkipped : null);
+        if (delta) this.sim.life.apply(delta);
+        this.toast('obj.missed', { obj: this.cfg.text[d.textKey] ?? d.id });
+        this.gameEvent(`missed:${d.id}`);
+        continue;
+      }
       if (e.type === 'late') {
         if (e.objective.def.late) this.sim.life.apply(e.objective.def.late);
         if (e.objective.def.lateStimulus) {

@@ -172,8 +172,12 @@ export class GameUI {
     this.energyFill.style.width = `${(this.energyShown * 100).toFixed(1)}%`;
     this.energyFill.style.background = color;
     this.energyRow.classList.toggle('gauge--alert', pct <= tiers.critical);
+    // 혼자만의 틈으로 차는 중이면 ▲ (누가 보고 있어 멈췄으면 ‖)
+    const b = s.itemBreak;
     const d = snap.drainPerSec;
-    setText(this.drainEl, d >= 1.2 ? '▼▼▼' : d >= 0.6 ? '▼▼' : d >= 0.2 ? '▼' : '');
+    const eating = !!b && (this.cfg.items.consumables.find((c) => c.id === b.id)?.effects.battery ?? 0) > 0;
+    setText(this.drainEl, eating ? (b.paused ? '‖' : '▲') : d >= 1.2 ? '▼▼▼' : d >= 0.6 ? '▼▼' : d >= 0.2 ? '▼' : '');
+    this.drainEl.classList.toggle('gauge__drain--up', eating && !b.paused);
   }
 
   /** 하루 시작 화면: 오늘만의 작은 사건 */

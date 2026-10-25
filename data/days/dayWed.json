@@ -18,7 +18,8 @@
       "late": {
         "income": -8
       },
-      "marker": "officeFloor"
+      "marker": "officeFloor",
+      "closes": "12:00"
     },
     {
       "id": "work",
@@ -27,7 +28,11 @@
       "requires": [
         "commute"
       ],
-      "marker": "officeDesk"
+      "marker": "officeDesk",
+      "closes": "13:30",
+      "missed": {
+        "income": -8
+      }
     },
     {
       "id": "pharmacy",

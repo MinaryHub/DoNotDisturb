@@ -17,9 +17,10 @@
       "useKey": "use.snack",
       "icon": "snack",
       "effects": {
-        "battery": 8
+        "battery": 8,
+        "stress": 4
       },
-      "breakSec": 8,
+      "breakSec": 4,
       "quiet": true
     },
     {
@@ -29,9 +30,9 @@
       "icon": "tumbler",
       "effects": {
         "battery": 8,
-        "stress": 6
+        "stress": 8
       },
-      "breakSec": 15,
+      "breakSec": 6,
       "quiet": true
     },
     {
@@ -63,7 +64,7 @@
         "stress": 20,
         "battery": 4
       },
-      "breakSec": 12,
+      "breakSec": 8,
       "quiet": true
     },
     {
@@ -82,9 +83,10 @@
       "useKey": "use.gimbap",
       "icon": "rice",
       "effects": {
-        "battery": 10
+        "battery": 10,
+        "stress": 5
       },
-      "breakSec": 12,
+      "breakSec": 6,
       "quiet": true
     },
     {
@@ -93,9 +95,10 @@
       "useKey": "use.sandwich",
       "icon": "sandwich",
       "effects": {
-        "battery": 12
+        "battery": 12,
+        "stress": 5
       },
-      "breakSec": 15,
+      "breakSec": 7,
       "quiet": true
     },
     {
@@ -104,9 +107,10 @@
       "useKey": "use.bread",
       "icon": "bread",
       "effects": {
-        "battery": 8
+        "battery": 8,
+        "stress": 4
       },
-      "breakSec": 10,
+      "breakSec": 5,
       "quiet": true
     },
     {
@@ -115,9 +119,10 @@
       "useKey": "use.banana",
       "icon": "banana",
       "effects": {
-        "battery": 5
+        "battery": 5,
+        "stress": 2
       },
-      "breakSec": 6,
+      "breakSec": 3,
       "quiet": true
     },
     {
@@ -126,9 +131,10 @@
       "useKey": "use.lunchbox",
       "icon": "box",
       "effects": {
-        "battery": 18
+        "battery": 18,
+        "stress": 10
       },
-      "breakSec": 25,
+      "breakSec": 10,
       "quiet": true
     },
     {
@@ -140,7 +146,7 @@
         "stress": 25,
         "battery": 6
       },
-      "breakSec": 20,
+      "breakSec": 12,
       "quiet": true,
       "usesPerDay": 2
     },

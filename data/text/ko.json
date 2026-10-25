@@ -568,5 +568,6 @@
   "break.watched": "누가 보는 것 같아 손이 멈췄다. 조용해지면 마저 하자.",
   "break.stopped": "하던 걸 멈췄다. 먹은 만큼만.",
   "break.interrupted": "말을 걸어와서 하던 걸 멈췄다.",
-  "use.enoughToday": "오늘은 이걸로 충분히 했다."
+  "use.enoughToday": "오늘은 이걸로 충분히 했다.",
+  "obj.missed": "'{obj}' — 시간이 지나 버렸다. 오늘은 여기까지. 내일 다시."
 }

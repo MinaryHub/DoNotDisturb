@@ -9,18 +9,21 @@ export interface ObjectiveState {
   done: boolean;
   /** 마감을 넘겨 페널티를 이미 받았는지 */
   late: boolean;
+  /** 닫히는 시각(closes)이 지나 못 하고 넘어갔는지. 뒤따르는 목표는 막지 않는다 */
+  missed: boolean;
 }
 
 export type ObjectiveEvent =
   | { type: 'completed'; objective: ObjectiveState }
-  | { type: 'late'; objective: ObjectiveState };
+  | { type: 'late'; objective: ObjectiveState }
+  | { type: 'missed'; objective: ObjectiveState };
 
 export class Objectives {
   readonly list: ObjectiveState[];
   private readonly events: ObjectiveEvent[] = [];
 
   constructor(day: DayDef) {
-    this.list = day.objectives.map((def) => ({ def, progress: 0, done: false, late: false }));
+    this.list = day.objectives.map((def) => ({ def, progress: 0, done: false, late: false, missed: false }));
   }
 
   get(id: string): ObjectiveState | undefined {
@@ -31,9 +34,15 @@ export class Objectives {
     return this.get(id)?.done ?? false;
   }
 
-  /** 선행 목표가 모두 끝나 지금 진행할 수 있는지 */
+  /** 끝났거나 놓쳐서 더는 붙잡지 않는 목표 */
+  resolved(id: string): boolean {
+    const o = this.get(id);
+    return !!o && (o.done || o.missed);
+  }
+
+  /** 선행 목표가 모두 끝나(또는 놓쳐) 지금 진행할 수 있는지 */
   available(o: ObjectiveState): boolean {
-    return !o.done && (o.def.requires ?? []).every((r) => this.isDone(r));
+    return !o.done && !o.missed && (o.def.requires ?? []).every((r) => this.resolved(r));
   }
 
   /** 화면에 보여줄 목표 (진행 가능 + 미완료, 선택 목표 포함) */
@@ -58,9 +67,14 @@ export class Objectives {
     }
   }
 
-  /** 마감 시각 확인 */
+  /** 마감 시각 확인 (늦으면 페널티, 닫히면 놓침) */
   checkDeadlines(minutes: number): void {
     for (const o of this.list) {
+      if (!o.done && !o.missed && o.def.closes && minutes >= parseTime(o.def.closes)) {
+        o.missed = true;
+        this.events.push({ type: 'missed', objective: o });
+        continue;
+      }
       if (o.done || o.late || !o.def.deadline) continue;
       if (minutes >= parseTime(o.def.deadline)) {
         o.late = true;
