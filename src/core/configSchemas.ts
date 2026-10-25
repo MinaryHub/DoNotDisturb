@@ -115,6 +115,8 @@ export const balanceConfigSchema = z.object({
   bike: z.object({ fare: nonNegative, speedMultiplier: positive, crowdScale: positive }),
   /** 이만큼(맨해튼 거리, 칸)보다 먼 NPC는 갱신하지 않는다 (넓은 도시 성능) */
   npcUpdateRange: positive,
+  /** 난이도 '나는 이만큼 지친다': 자극이 마음을 올리는 배율, 첫날 아침 기운 */
+  difficulty: z.array(z.object({ id: z.string(), nameKey: z.string(), descKey: z.string(), stimulusScale: positive, batteryStart: positive })).min(1),
   /** 연차: 한 주에 쓸 수 있는 날 수 (하루 시작 화면에서 [L]) */
   leave: z.object({ perWeek: z.number().int().min(0) }),
   /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
@@ -974,6 +976,32 @@ export const perksSchema = z.object({
 });
 export type PerksConfig = z.infer<typeof perksSchema>;
 export type PerkEffects = PerksConfig['list'][number]['effects'];
+
+/**
+ * 한 주의 작은 승리 (data/achievements.json). metric: report.<기록>(한 주 합), event.<게임 이벤트>(한 주 횟수), story.<셈>, quiet(찾은 조용한 곳), leave(쓴 연차), rep.overall(사회적 평판).
+ * min 이상이면 그날 밤 얻는다. max가 있거나 weekEnd면 주간 리포트에서만 판정
+ */
+export const achievementsSchema = z.object({
+  list: z.array(z.object({ id: z.string(), metric: z.string(), nameKey: z.string(), descKey: z.string(), min: z.number().optional(), max: z.number().optional(), weekEnd: z.boolean().optional() })),
+});
+export type AchievementsConfig = z.infer<typeof achievementsSchema>;
+
+/** 이번 주의 조건 (data/weekConditions.json): 새 캠페인마다 하나를 뽑아 한 주 내내 (비 오는 날·막힌 시설·군중 배율·추가 연락) */
+export const weekConditionsSchema = z.object({
+  list: z.array(
+    z.object({
+      id: z.string(),
+      weight: nonNegative,
+      nameKey: z.string(),
+      noteKey: z.string(),
+      rainDays: z.array(z.string()).optional(),
+      blocked: z.array(z.object({ interactable: z.string(), toastKey: z.string() })).optional(),
+      crowdScale: positive.optional(),
+      phone: z.array(daySchema.shape.phone.element).optional(),
+    }),
+  ),
+});
+export type WeekConditionsConfig = z.infer<typeof weekConditionsSchema>;
 
 export const monologueTriggersSchema = z.array(
   z.object({

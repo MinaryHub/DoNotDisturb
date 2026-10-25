@@ -1200,7 +1200,7 @@ body.is-touch .hotbar {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 10px 10px 8px 26px;
+  padding: 10px 10px 8px 30px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
@@ -1216,8 +1216,11 @@ body.is-touch .hotbar {
 
 .perk__card kbd {
   position: absolute;
-  top: 8px;
-  left: 9px;
+  top: 10px;
+  left: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -1254,6 +1257,40 @@ body.is-touch .hotbar {
   font-size: 12px;
   font-style: italic;
   color: #cfc6b4;
+}
+
+.ach__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ach {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0.45;
+  font-size: 12px;
+}
+
+.ach span {
+  grid-row: span 2;
+  font-size: 16px;
+}
+
+.ach small {
+  opacity: 0.8;
+}
+
+.ach--got {
+  opacity: 1;
+  background: rgba(255, 209, 102, 0.12);
 }
 
 .rep {

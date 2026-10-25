@@ -107,14 +107,24 @@ function boot(): void {
   let screen: 'title' | 'game' = 'title';
   let savedDay = -1;
   const save = readSave();
-  ui.showTitle(save ? t(cfg.text, cfg.days[save.dayIndex]?.titleKey ?? '') : null);
+  // 난이도 '나는 이만큼 지친다': 타이틀에서 [D]로 고르고 이 브라우저에 기억한다 (새로 시작할 때 적용)
+  const readDifficulty = (): string => {
+    try {
+      return localStorage.getItem('dnd.difficulty') ?? 'normal';
+    } catch {
+      return 'normal';
+    }
+  };
+  let difficulty = readDifficulty();
+  const titleDay = save ? t(cfg.text, cfg.days[save.dayIndex]?.titleKey ?? '') : null;
+  ui.showTitle(titleDay, difficulty);
 
   /** vacation: 휴가 모드 (해야 할 일 없이 돌아다니기, 캠페인 저장은 건드리지 않는다) */
   const start = (fresh: boolean, vacation = false) => {
     audio.resume();
     // 씨앗: 같은 요일도 할 때마다 마주치는 사람·사건이 조금씩 다르다 (?seed=N으로 고정 가능)
     const seed = params.has('seed') ? Number(params.get('seed')) >>> 0 : Math.floor(Math.random() * 2 ** 32);
-    session = new GameSession(cfg, fresh || vacation ? undefined : (readSave() ?? undefined), { seed, vacation, practiced: vacation });
+    session = new GameSession(cfg, fresh || vacation ? undefined : (readSave() ?? undefined), { seed, vacation, practiced: vacation, difficulty });
     if (params.has('day')) session.startDay(Math.min(cfg.days.length - 1, Number(params.get('day')) || 0));
     renderer = new Renderer(canvas, cfg, session.world.map);
     renderer.resize();
@@ -228,6 +238,16 @@ function boot(): void {
           writeSave(null);
           start(true);
         } else if (input.codePressed('KeyV') && cfg.vacationDay) start(false, true);
+        else if (input.codePressed('KeyD')) {
+          const ids = cfg.balance.difficulty.map((d) => d.id);
+          difficulty = ids[(ids.indexOf(difficulty) + 1) % ids.length]!;
+          try {
+            localStorage.setItem('dnd.difficulty', difficulty);
+          } catch {
+            // 무시
+          }
+          ui.showTitle(titleDay, difficulty);
+        }
         if (input.wasPressed('options')) ui.toggleOptions();
         input.endFrame(frameDt);
         return;

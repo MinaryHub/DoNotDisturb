@@ -59,6 +59,11 @@
     "crowdScale": 1.4
   },
   "npcUpdateRange": 90,
+  "difficulty": [
+    { "id": "mild", "nameKey": "diff.mild", "descKey": "diff.mild.desc", "stimulusScale": 0.8, "batteryStart": 100 },
+    { "id": "normal", "nameKey": "diff.normal", "descKey": "diff.normal.desc", "stimulusScale": 1, "batteryStart": 100 },
+    { "id": "deep", "nameKey": "diff.deep", "descKey": "diff.deep.desc", "stimulusScale": 1.25, "batteryStart": 88 }
+  ],
   "leave": {
     "perWeek": 1
   },

@@ -91,7 +91,7 @@ export class TouchControls {
     if (ctx.optionsOpen) return { main: [{ code: 'KeyO', label: 'touch.close', big: true }], top: [], stick: false };
     if (ctx.screen === 'title' || !ctx.session) {
       const vacation: Btn[] = this.cfg.vacationDay ? [{ code: 'KeyV', label: 'touch.vacation' }] : [];
-      return { main: [{ code: 'Enter', label: 'touch.start', big: true }, { code: 'KeyN', label: 'touch.newGame' }, ...vacation], top: [settings, full], stick: false };
+      return { main: [{ code: 'Enter', label: 'touch.start', big: true }, { code: 'KeyN', label: 'touch.newGame' }, ...vacation, { code: 'KeyD', label: 'touch.difficulty' }], top: [settings, full], stick: false };
     }
     // 지도: [M]은 주변 ↔ 도시 전체, 닫기는 Esc
     if (ctx.mapOpen) return { main: [{ code: 'Escape', label: 'touch.close', big: true }, { code: 'KeyM', label: 'touch.mapZoom' }], top: [], stick: false };

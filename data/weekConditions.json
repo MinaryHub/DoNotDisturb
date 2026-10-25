@@ -1,0 +1,10 @@
+{
+  "list": [
+    { "id": "normal", "weight": 3, "nameKey": "week.normal", "noteKey": "week.normal.note" },
+    { "id": "rainy", "weight": 1, "nameKey": "week.rainy", "noteKey": "week.rainy.note", "rainDays": ["day2", "dayThu", "day4"] },
+    { "id": "elevator", "weight": 1, "nameKey": "week.elevator", "noteKey": "week.elevator.note", "blocked": [{ "interactable": "elevator3F", "toastKey": "hap.elevatorCheck.toast" }, { "interactable": "elevator1F", "toastKey": "hap.elevatorCheck.toast" }] },
+    { "id": "quiet", "weight": 1, "nameKey": "week.quiet", "noteKey": "week.quiet.note", "crowdScale": 0.7 },
+    { "id": "busy", "weight": 1, "nameKey": "week.busy", "noteKey": "week.busy.note", "crowdScale": 1.3 },
+    { "id": "jiu", "weight": 1, "nameKey": "week.jiu", "noteKey": "week.jiu.note", "phone": [{ "at": "12:10", "kind": "message", "contact": "friend", "textKey": "week.jiu.msg", "jitterMin": 40 }] }
+  ]
+}

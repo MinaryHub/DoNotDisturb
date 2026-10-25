@@ -194,7 +194,9 @@ export class GameUI {
 
   // ───────────────────────── 타이틀 ─────────────────────────
 
-  showTitle(continueDay: string | null): void {
+  /** difficulty: 새로 시작할 때의 '나는 이만큼 지친다' (balance.difficulty의 id) */
+  showTitle(continueDay: string | null, difficulty = 'normal'): void {
+    const diff = this.cfg.balance.difficulty.find((d) => d.id === difficulty) ?? this.cfg.balance.difficulty[0]!;
     show(this.root, false);
     show(this.screen, true, 'flex');
     this.screen.dataset['kind'] = 'title';
@@ -206,6 +208,7 @@ export class GameUI {
         <p class="screen__cta">${escapeHtml(continueDay ? this.tx('screen.continue', { day: continueDay }) : this.tx('screen.start'))}</p>
         ${continueDay ? `<p class="screen__hint">${escapeHtml(this.tx('screen.newGame'))}</p>` : ''}
         ${this.cfg.vacationDay ? `<p class="screen__hint screen__vacation">${escapeHtml(this.tx('screen.vacation'))}</p>` : ''}
+        <p class="screen__hint">${escapeHtml(this.tx('diff.title', { name: this.tx(diff.nameKey) }))} — ${escapeHtml(this.tx(diff.descKey))}</p>
         <p class="screen__warn">${escapeHtml(this.tx('screen.photosensitive'))}</p>
       </div>`,
     );
@@ -966,6 +969,18 @@ export class GameUI {
     return `<h3>${escapeHtml(this.tx('perk.title'))}</h3><div class="perk">${cards}</div>`;
   }
 
+  /** 주간 리포트: 작은 승리 도장 (얻은 것은 밝게) + 이번 주의 조건 */
+  private achievementsHtml(s: GameSession): string {
+    const stamps = this.cfg.achievements.list
+      .map((a) => {
+        const got = s.achieved.has(a.id);
+        return `<li class="ach ${got ? 'ach--got' : ''}" title="${escapeHtml(this.tx(a.descKey))}"><span>${got ? '🏅' : '○'}</span><b>${escapeHtml(this.tx(a.nameKey))}</b><small>${escapeHtml(this.tx(a.descKey))}</small></li>`;
+      })
+      .join('');
+    const week = s.weekCondition ? `<p class="rep__tier">${escapeHtml(this.tx(s.weekCondition.nameKey))}</p>` : '';
+    return `<h3>${escapeHtml(this.tx('ach.title'))} (${s.achieved.size}/${this.cfg.achievements.list.length})</h3>${week}<ul class="ach__list">${stamps}</ul>`;
+  }
+
   /** 주간 리포트: 익힌 기술 */
   private perksHtml(s: GameSession): string {
     const items = this.cfg.perks.list.filter((k) => s.perks.has(k.id)).map((k) => `<li><b>${escapeHtml(this.tx(k.nameKey))}</b> — ${escapeHtml(this.tx(k.descKey))}</li>`);
@@ -1030,6 +1045,7 @@ export class GameUI {
       <p class="rep__overall">${escapeHtml(this.tx('quiet.mapCount', { n: s.quietFound.size, max: this.cfg.quietSpots.spots.length }))}</p>
       ${this.peopleHtml(s)}
       ${this.perksHtml(s)}
+      ${this.achievementsHtml(s)}
       ${this.epilogueHtml(s)}
       <p class="screen__comfort">${escapeHtml(this.tx('report.comfort.2'))}</p>
       <p class="screen__cta">${escapeHtml(this.tx('final.restart'))}</p>

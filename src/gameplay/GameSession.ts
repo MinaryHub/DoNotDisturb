@@ -178,6 +178,13 @@ export interface SaveState {
   quiet?: string[];
   /** 익힌 내향인의 기술 */
   perks?: string[];
+  /** 난이도 (balance.difficulty의 id) */
+  difficulty?: string;
+  /** 이번 주의 조건 (weekConditions의 id) */
+  weekCondition?: string;
+  /** 얻은 작은 승리, 한 주 동안 센 이벤트 */
+  achievements?: string[];
+  weekEvents?: Record<string, number>;
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -244,7 +251,7 @@ export class GameSession {
   private readonly regularGreeted = new Set<string>();
 
   private nextMax: number;
-  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number>; leaveUsed: number; reputation: Record<string, number> };
+  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number>; leaveUsed: number; reputation: Record<string, number>; achieved: string[]; weekEvents: Record<string, number> };
   private rngState = 12345;
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
@@ -265,6 +272,14 @@ export class GameSession {
   vacationDayCount = 1;
   /** 익힌 내향인의 기술 (data/perks.json) */
   readonly perks = new Set<string>();
+  /** 난이도 '나는 이만큼 지친다' */
+  readonly difficulty: GameConfig['balance']['difficulty'][number];
+  /** 이번 주의 조건 (새 캠페인마다) */
+  weekCondition: WeekCondition | null = null;
+  /** 얻은 작은 승리 */
+  readonly achieved = new Set<string>();
+  /** 한 주 동안 센 이벤트 (작은 승리 판정) */
+  private weekEvents: Record<string, number> = {};
   /** 오늘 새로 찾은 조용한 곳 수 (기술 고르기) */
   private quietToday = 0;
   /** 조용한 곳 도감: 찾은 곳 (날이 바뀌어도, 다시 해도 남는다) */
@@ -293,10 +308,11 @@ export class GameSession {
   constructor(
     readonly cfg: GameConfig,
     save?: SaveState,
-    options: { seed?: number; practiced?: boolean; vacation?: boolean } = {},
+    options: { seed?: number; practiced?: boolean; vacation?: boolean; difficulty?: string } = {},
   ) {
     this.seed = options.seed ?? null;
     this.vacation = !!options.vacation && !!cfg.vacationDay;
+    this.difficulty = cfg.balance.difficulty.find((d) => d.id === (save?.difficulty ?? options.difficulty)) ?? cfg.balance.difficulty.find((d) => d.id === 'normal') ?? cfg.balance.difficulty[0]!;
     if (options.practiced) this.practiced = true;
     this.world = buildWorld(cfg.world, cfg.tiles);
     this.sim = new Simulation(simConfigOf(cfg), cfg.stimuli);
@@ -306,7 +322,7 @@ export class GameSession {
     this.busRoute = cfg.world.bus ? new BusRoute(cfg.world.bus, cfg.balance.bus) : null;
     this.reputation = new Reputation(cfg.reputation);
     this.clock = new GameClock(0);
-    this.nextMax = cfg.balance.battery.start;
+    this.nextMax = this.difficulty.batteryStart;
     if (save) {
       this.dayIndex = Math.min(save.dayIndex, cfg.days.length - 1);
       this.sim.life.restore(save.life);
@@ -319,8 +335,36 @@ export class GameSession {
       this.reputation.restore(save.reputation);
       for (const q of save.quiet ?? []) this.quietFound.add(q);
       for (const k of save.perks ?? []) this.perks.add(k);
+      for (const a of save.achievements ?? []) this.achieved.add(a);
+      this.weekEvents = { ...(save.weekEvents ?? {}) };
+      this.weekCondition = this.cfg.weekConditions.list.find((w) => w.id === save.weekCondition) ?? null;
     }
+    // 새 캠페인: 이번 주의 조건을 뽑는다 (씨앗이 있을 때만, 휴가 모드는 없음)
+    if (!save && this.seed !== null && !this.vacation) this.weekCondition = this.rollWeekCondition();
     this.startDay(this.dayIndex);
+  }
+
+  /** 이번 주의 조건을 오늘에 얹는다: 비 오는 날, 막힌 시설, 추가 연락, 시작 화면 한 줄 */
+  private applyWeekCondition(): void {
+    const w = this.weekCondition;
+    if (!w || this.vacation) return;
+    const d = this.day;
+    this.day = {
+      ...d,
+      weather: w.rainDays?.includes(d.id) ? 'rain' : d.weather,
+      blocked: [...(d.blocked ?? []), ...(w.blocked ?? [])],
+      phone: [...d.phone, ...(w.phone ?? [])],
+      notes: [{ textKey: w.noteKey }, ...(d.notes ?? [])],
+    };
+  }
+
+  /** 이번 주의 조건: 가중치로 하나 */
+  private rollWeekCondition(): WeekCondition | null {
+    const list = this.cfg.weekConditions.list;
+    const total = list.reduce((a, w) => a + w.weight, 0);
+    let x = mixRandom(this.seed ?? 0) * total;
+    for (const w of list) if ((x -= w.weight) <= 0) return w;
+    return null;
   }
 
   rng(): number {
@@ -346,7 +390,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation, quiet: [...this.quietFound], perks: [...this.perks] };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed, reputation: this.dayStart.reputation, quiet: [...this.quietFound], perks: [...this.perks], difficulty: this.difficulty.id, weekCondition: this.weekCondition?.id, achievements: [...this.dayStart.achieved], weekEvents: { ...this.dayStart.weekEvents } };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -360,12 +404,13 @@ export class GameSession {
     const ambient = (this.cfg.world.ambient ?? []).filter((a) => (a.chance === undefined ? true : this.seed !== null ? this.rng() < a.chance : a.chance >= 1));
     this.day = { ...composed.day, npcs: [...composed.day.npcs, ...ambient.map(({ chance: _c, ...a }) => a)] };
     this.happenings = composed.happenings;
+    this.applyWeekCondition();
     this.quietToday = 0;
     this.offerFavors();
     this.sim.life.clearLedger();
     this.ledgerSeen = 0;
     this.lastWhyToast.clear();
-    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed, reputation: this.reputation.snapshot() };
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed, reputation: this.reputation.snapshot(), achieved: [...this.achieved], weekEvents: { ...this.weekEvents } };
     this.reputation.newDay();
     this.onLeave = false;
     this.sim.startDay(this.nextMax);
@@ -431,6 +476,42 @@ export class GameSession {
     this.area = this.world.map.areaAt(spawn.x, spawn.y);
     this.mode = { kind: 'dayIntro' };
     this.lastTier = 'stable';
+  }
+
+  /** 작은 승리에 쓰이는 이벤트 이름 (그것만 센다) */
+  private get trackedEvents(): Set<string> {
+    return (this.trackedCache ??= new Set(this.cfg.achievements.list.filter((a) => a.metric.startsWith('event.')).map((a) => a.metric.slice(6))));
+  }
+  private trackedCache: Set<string> | null = null;
+
+  /** 작은 승리의 값: 한 주 기록·이벤트·이야기 셈·도감·연차·평판 */
+  achievementValue(metric: string): number {
+    if (metric.startsWith('report.')) {
+      const key = metric.slice(7) as keyof DayReport;
+      return this.reports.reduce((a, r) => {
+        const v = r[key] as unknown;
+        return a + (typeof v === 'number' ? v : Array.isArray(v) ? v.length : 0);
+      }, 0);
+    }
+    if (metric.startsWith('event.')) return this.weekEvents[metric.slice(6)] ?? 0;
+    if (metric.startsWith('story.')) return this.story.get(metric.slice(6)) ?? 0;
+    if (metric === 'quiet') return this.quietFound.size;
+    if (metric === 'leave') return this.leaveUsed;
+    if (metric === 'rep.overall') return this.reputation.overall;
+    return 0;
+  }
+
+  /** 밤마다 조건을 채운 작은 승리를 얻는다. weekEnd·max 조건은 주간 리포트에서만 */
+  private checkAchievements(weekEnd: boolean): void {
+    for (const a of this.cfg.achievements.list) {
+      if (this.achieved.has(a.id)) continue;
+      if ((a.weekEnd || a.max !== undefined) && !weekEnd) continue;
+      const v = this.achievementValue(a.metric);
+      if (a.min !== undefined && v < a.min) continue;
+      if (a.max !== undefined && v > a.max) continue;
+      this.achieved.add(a.id);
+      this.toast('ach.toast', { name: this.cfg.text[a.nameKey] ?? a.id });
+    }
   }
 
   /** 익힌 기술의 효과: 배율은 곱하고 */
@@ -596,6 +677,9 @@ export class GameSession {
     this.story = storyFromSave(this.dayStart.story);
     this.leaveUsed = this.dayStart.leaveUsed;
     this.reputation.restore(this.dayStart.reputation);
+    this.achieved.clear();
+    for (const a of this.dayStart.achieved) this.achieved.add(a);
+    this.weekEvents = { ...this.dayStart.weekEvents };
     this.startDay(this.dayIndex);
   }
 
@@ -672,7 +756,10 @@ export class GameSession {
           this.leaveUsed = 0;
           this.reputation.reset();
           this.perks.clear();
-          this.nextMax = this.cfg.balance.battery.start;
+          this.achieved.clear();
+          this.weekEvents = {};
+          if (this.seed !== null) this.weekCondition = this.rollWeekCondition();
+          this.nextMax = this.difficulty.batteryStart;
           this.startDay(0);
         }
         return;
@@ -2331,7 +2418,7 @@ export class GameSession {
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     // 자전거로 사람들 사이를 지나가면 더 조마조마하다
     if (p.biking) crowd *= b.bike.crowdScale;
-    crowd *= this.perkMul('crowdScale');
+    crowd *= this.perkMul('crowdScale') * (this.weekCondition?.crowdScale ?? 1);
     // 지하철 안: 러시아워엔 더 빽빽하다
     if (this.mode.kind === 'metro') crowd = this.isRush() ? b.metro.crowdRush : b.metro.crowd;
     // 버스 안: 러시아워엔 빽빽하다
@@ -2358,7 +2445,7 @@ export class GameSession {
       (this.mode.kind === 'elevator' && this.mode.phase !== 'waiting' && this.mode.companion !== null) || (this.mode.kind === 'bus' && this.mode.phase === 'riding' && this.mode.awkward);
 
     // 이어폰은 청각만, 스트레스 내성(아이템)은 모든 자극을 줄인다
-    const rs = this.buffs.resist.left > 0 ? this.buffs.resist.scale : 1;
+    const rs = (this.buffs.resist.left > 0 ? this.buffs.resist.scale : 1) * this.difficulty.stimulusScale;
     const ear = p.earphones ? this.cfg.skills.earphones.auditoryMultiplier * this.perkMul('earphoneScale') : 1;
     const modifiers: ChannelModifiers = rs === 1 && ear === 1 ? NO_MODIFIERS : { auditory: ear * rs, visual: rs, social: rs };
     const ally = this.activeNpcs().some((n) => n.type === 'ally' && dist(n.pos, p.pos) < b.recovery.allyRange);
@@ -2459,6 +2546,7 @@ export class GameSession {
 
   /** 게임 이벤트: 목표·독백·이벤트 전화로 퍼진다 */
   gameEvent(event: string): void {
+    if (this.trackedEvents.has(event)) this.weekEvents[event] = (this.weekEvents[event] ?? 0) + 1;
     for (const m of marksFor(this.cfg.story, event, this.day.id)) {
       const i = this.cfg.story.marks.indexOf(m);
       if (m.oncePerDay && this.marksToday.has(i)) continue;
@@ -2504,6 +2592,7 @@ export class GameSession {
     });
     const report = this.sim.report;
     this.reports = [...this.reports.slice(0, this.dayIndex), report];
+    if (!this.vacation) this.checkAchievements(false);
     // 깊은 잠: 다음 날 기운 상한 조금 더
     night.nextMax = Math.min(this.cfg.balance.battery.max, night.nextMax + this.perkAdd('nightMaxBonus'));
     this.nextMax = night.nextMax;
@@ -2522,6 +2611,7 @@ export class GameSession {
       return;
     }
     if (this.dayIndex + 1 >= this.cfg.days.length) {
+      this.checkAchievements(true);
       this.mode = { kind: 'final', reports: this.reports };
       return;
     }
@@ -2545,6 +2635,13 @@ export class GameSession {
     return n.profile;
   }
 }
+
+/** 씨앗 하나로 0~1 (이번 주의 조건 뽑기) */
+function mixRandom(seed: number): number {
+  return mix(seed, 99, 7) / 4294967296;
+}
+
+type WeekCondition = GameConfig['weekConditions']['list'][number];
 
 /** 씨앗·하루·시도 횟수 → 난수 상태 */
 function mix(seed: number, day: number, attempt: number): number {

@@ -26,6 +26,10 @@ import {
   quietSpotsSchema,
   favorsSchema,
   perksSchema,
+  achievementsSchema,
+  weekConditionsSchema,
+  type AchievementsConfig,
+  type WeekConditionsConfig,
   type PerksConfig,
   type QuietSpotsConfig,
   type FavorsConfig,
@@ -70,6 +74,8 @@ export interface GameConfig {
   quietSpots: QuietSpotsConfig;
   favors: FavorsConfig;
   perks: PerksConfig;
+  achievements: AchievementsConfig;
+  weekConditions: WeekConditionsConfig;
   stimuli: StimulusTableConfig;
   somatic: SomaticFileConfig;
   life: LifeConfig;
@@ -137,6 +143,8 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     quietSpots: parseConfig(quietSpotsSchema, j('quietSpots.json'), 'data/quietSpots.json'),
     favors: parseConfig(favorsSchema, j('favors.json'), 'data/favors.json'),
     perks: parseConfig(perksSchema, j('perks.json'), 'data/perks.json'),
+    achievements: parseConfig(achievementsSchema, j('achievements.json'), 'data/achievements.json'),
+    weekConditions: parseConfig(weekConditionsSchema, j('weekConditions.json'), 'data/weekConditions.json'),
     stimuli: parseConfig(stimulusTableSchema, j('stimuli.json'), 'data/stimuli.json'),
     somatic: parseConfig(somaticConfigSchema, j('somatic.json'), 'data/somatic.json'),
     life: parseConfig(lifeConfigSchema, j('life.json'), 'data/life.json'),
@@ -342,6 +350,16 @@ export function crossCheck(cfg: GameConfig): string[] {
   for (const t of rep.tiers) needText(t.key, 'reputation tier');
   for (const q of cfg.quietSpots.spots) needText(q.nameKey, `quiet ${q.id}`);
   for (const k of cfg.perks.list) for (const key of [k.nameKey, k.descKey]) needText(key, `perk ${k.id}`);
+  for (const a of cfg.achievements.list) {
+    for (const key of [a.nameKey, a.descKey]) needText(key, `achievement ${a.id}`);
+    if (!/^(report\.\w+|event\.[\w:]+|story\.[\w.]+|quiet|leave|rep\.overall)$/.test(a.metric)) errors.push(`achievement ${a.id}: 알 수 없는 metric "${a.metric}"`);
+  }
+  for (const wc of cfg.weekConditions.list) {
+    for (const key of [wc.nameKey, wc.noteKey]) needText(key, `weekCondition ${wc.id}`);
+    checkBlocked(wc.blocked ?? [], `weekCondition ${wc.id}`);
+    checkPhone(wc.phone ?? [], `weekCondition ${wc.id}`);
+  }
+  for (const dl of cfg.balance.difficulty) for (const key of [dl.nameKey, dl.descKey]) needText(key, `difficulty ${dl.id}`);
   for (const f of cfg.favors.list) {
     const where = `favor ${f.id}`;
     needText(f.offerKey, where);

@@ -1,0 +1,18 @@
+{
+  "list": [
+    { "id": "silence", "metric": "report.silenceSec", "nameKey": "ach.silence", "descKey": "ach.silence.desc", "min": 30 },
+    { "id": "parryArtist", "metric": "report.parried", "nameKey": "ach.parryArtist", "descKey": "ach.parryArtist.desc", "min": 5 },
+    { "id": "endured", "metric": "report.smalltalkEndured", "nameKey": "ach.endured", "descKey": "ach.endured.desc", "min": 8 },
+    { "id": "invisible", "metric": "report.smalltalkAvoided", "nameKey": "ach.invisible", "descKey": "ach.invisible.desc", "min": 10 },
+    { "id": "allMandatory", "metric": "report.mandatoryDone", "nameKey": "ach.allMandatory", "descKey": "ach.allMandatory.desc", "min": 6 },
+    { "id": "helper", "metric": "report.favorsDone", "nameKey": "ach.helper", "descKey": "ach.helper.desc", "min": 3 },
+    { "id": "regular", "metric": "story.cafe", "nameKey": "ach.regular", "descKey": "ach.regular.desc", "min": 3 },
+    { "id": "nodFriend", "metric": "story.seoyun", "nameKey": "ach.nodFriend", "descKey": "ach.nodFriend.desc", "min": 3 },
+    { "id": "quietCollector", "metric": "quiet", "nameKey": "ach.quietCollector", "descKey": "ach.quietCollector.desc", "min": 6 },
+    { "id": "subwayRider", "metric": "event.metro:board", "nameKey": "ach.subwayRider", "descKey": "ach.subwayRider.desc", "min": 2 },
+    { "id": "cyclist", "metric": "event.bike:ride", "nameKey": "ach.cyclist", "descKey": "ach.cyclist.desc", "min": 3 },
+    { "id": "dayOff", "metric": "leave", "nameKey": "ach.dayOff", "descKey": "ach.dayOff.desc", "min": 1 },
+    { "id": "noWarp", "metric": "event.warp:home", "nameKey": "ach.noWarp", "descKey": "ach.noWarp.desc", "max": 0, "weekEnd": true },
+    { "id": "wellLiked", "metric": "rep.overall", "nameKey": "ach.wellLiked", "descKey": "ach.wellLiked.desc", "min": 60, "weekEnd": true }
+  ]
+}
