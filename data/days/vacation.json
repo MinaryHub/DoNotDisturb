@@ -1,0 +1,256 @@
+{
+  "id": "vacation",
+  "weekdayKey": "weekday.vacation",
+  "titleKey": "vacation.title",
+  "introKey": "vacation.intro",
+  "start": "09:30",
+  "spawn": "playerWeekend",
+  "flags": {
+    "weeklyEval": false,
+    "monthEnd": false
+  },
+  "notes": [
+    {
+      "textKey": "vacation.note"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "station",
+      "textKey": "vacation.obj.station",
+      "on": "enter:centralStation",
+      "optional": true,
+      "marker": "centralStation"
+    },
+    {
+      "id": "market",
+      "textKey": "vacation.obj.market",
+      "on": "enter:traditionalMarket",
+      "optional": true,
+      "marker": "traditionalMarket"
+    },
+    {
+      "id": "library",
+      "textKey": "vacation.obj.library",
+      "on": "enter:univLibrary",
+      "optional": true,
+      "marker": "univLibrary"
+    },
+    {
+      "id": "river",
+      "textKey": "vacation.obj.river",
+      "on": "enter:riverPark",
+      "optional": true,
+      "marker": "riverKiosk"
+    },
+    {
+      "id": "dept",
+      "textKey": "vacation.obj.dept",
+      "on": "enter:deptStore",
+      "optional": true,
+      "marker": "deptStore"
+    },
+    {
+      "id": "home",
+      "textKey": "vacation.obj.home",
+      "on": "interact:bed",
+      "endsDay": true,
+      "marker": "bed"
+    }
+  ],
+  "phone": [
+    {
+      "at": "11:00",
+      "kind": "message",
+      "contact": "mom",
+      "textKey": "vacation.phone.mom",
+      "jitterMin": 40
+    },
+    {
+      "at": "15:00",
+      "kind": "message",
+      "contact": "friend",
+      "textKey": "vacation.phone.friend",
+      "jitterMin": 60
+    },
+    {
+      "at": "10:20",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.d1.sunset",
+      "jitterMin": 120
+    },
+    {
+      "at": "13:30",
+      "kind": "message",
+      "contact": "townChat",
+      "textKey": "phone.town.d2.eggs",
+      "jitterMin": 90
+    }
+  ],
+  "npcs": [
+    {
+      "id": "manager",
+      "profile": "manager",
+      "at": "manager"
+    },
+    {
+      "id": "flyer",
+      "profile": "flyer",
+      "at": "flyer"
+    },
+    {
+      "id": "flyer2",
+      "profile": "flyer",
+      "at": "flyer2"
+    },
+    {
+      "id": "barista",
+      "profile": "staff",
+      "at": "barista"
+    },
+    {
+      "id": "convClerk",
+      "profile": "cashier",
+      "at": "convClerk"
+    },
+    {
+      "id": "parkWalker",
+      "profile": "neighbor",
+      "at": "parkWalker",
+      "path": "parkLoop",
+      "chance": 0.8
+    },
+    {
+      "id": "cat",
+      "profile": "cat",
+      "at": "cat"
+    },
+    {
+      "id": "pharmacist",
+      "profile": "pharmacist",
+      "at": "pharmacist"
+    },
+    {
+      "id": "bookseller",
+      "profile": "bookseller",
+      "at": "bookseller",
+      "path": "bookAisle",
+      "from": "10:00"
+    },
+    {
+      "id": "laundryRegular",
+      "profile": "regular",
+      "at": "laundryRegular",
+      "chance": 0.6
+    },
+    {
+      "id": "kid",
+      "profile": "kid",
+      "at": "eastWalker",
+      "path": "eastLaneLoop"
+    },
+    {
+      "id": "librarian",
+      "profile": "bookseller",
+      "at": "librarian",
+      "from": "09:00",
+      "to": "20:00"
+    },
+    {
+      "id": "libraryReader",
+      "profile": "regular",
+      "at": "libraryReader",
+      "from": "10:00",
+      "to": "18:00",
+      "chance": 0.7
+    },
+    {
+      "id": "hairdresser",
+      "profile": "hairdresser",
+      "at": "hairdresser",
+      "from": "10:00",
+      "to": "20:00"
+    },
+    {
+      "id": "vetClerk",
+      "profile": "staff",
+      "at": "vetClerk",
+      "from": "09:30",
+      "to": "19:00"
+    },
+    {
+      "id": "petOwner",
+      "profile": "petOwner",
+      "at": "petOwner",
+      "from": "10:00",
+      "to": "18:00",
+      "chance": 0.7
+    },
+    {
+      "id": "yogaTeacher",
+      "profile": "yogaTeacher",
+      "at": "yogaTeacher",
+      "from": "10:00",
+      "to": "21:00"
+    },
+    {
+      "id": "streamWalker",
+      "profile": "dogWalker",
+      "at": "streamWalker",
+      "path": "streamWalk",
+      "chance": 0.6
+    },
+    {
+      "id": "baker",
+      "profile": "staff",
+      "at": "baker",
+      "from": "07:30",
+      "to": "21:00"
+    },
+    {
+      "id": "snackOwner",
+      "profile": "staff",
+      "at": "snackOwner",
+      "from": "10:30",
+      "to": "21:00"
+    },
+    {
+      "id": "snackGuest",
+      "profile": "regular",
+      "at": "snackGuest",
+      "from": "11:30",
+      "to": "14:00",
+      "chance": 0.6
+    },
+    {
+      "id": "florist",
+      "profile": "florist",
+      "at": "florist",
+      "from": "10:00",
+      "to": "20:00"
+    },
+    {
+      "id": "plazaSitter",
+      "profile": "regular",
+      "at": "plazaSitter",
+      "chance": 0.5
+    },
+    {
+      "id": "neighbor",
+      "profile": "neighbor",
+      "at": "neighbor302",
+      "path": "aptHall",
+      "from": "10:00",
+      "to": "12:00"
+    },
+    {
+      "id": "friend",
+      "profile": "friend",
+      "at": "friendCafe",
+      "from": "14:00",
+      "to": "18:00",
+      "chance": 0.5
+    }
+  ]
+}

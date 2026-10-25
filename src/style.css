@@ -1081,6 +1081,10 @@ body.is-touch .hotbar {
   color: #f2c94c;
 }
 
+.screen__vacation {
+  color: #b9e3a5;
+}
+
 .screen__leave {
   margin: -8px 0 14px;
   color: #cfd9c4;

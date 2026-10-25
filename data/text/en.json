@@ -1024,5 +1024,19 @@
   "interact.gen.veg": "Vegetable stall",
   "interact.gen.bowl": "Bowl shop",
   "interact.gen.hotteok": "Buy hotteok",
-  "district.haeoreum": "Haeoreum-dong"
+  "district.haeoreum": "Haeoreum-dong",
+  "screen.vacation": "[V] Vacation mode — no work, no obligations, wander Hanbit City freely",
+  "weekday.vacation": "Vacation day {n}",
+  "vacation.title": "A day off",
+  "vacation.intro": "Turned off the alarm and closed my eyes again. Forget work. Nothing to do today. Go wherever, and head home when tired.",
+  "vacation.note": "No bills or rent on vacation. Just mind your energy. ([M] map, go far by subway, bus or bike)",
+  "vacation.obj.station": "(Optional) Look around Hanbit Central Station",
+  "vacation.obj.market": "(Optional) Stroll the Haeoreum Traditional Market",
+  "vacation.obj.library": "(Optional) Rest at Hanbit University Library",
+  "vacation.obj.river": "(Optional) Walk in Hanbit River Park",
+  "vacation.obj.dept": "(Optional) Browse Hanbit Department Store",
+  "vacation.obj.home": "Head home and lie down when you're tired",
+  "vacation.phone.mom": "Heard you're on vacation? Eat well and rest. No need to reply.",
+  "vacation.phone.friend": "Happy vacation 🎉 The riverside kiosk ice cream is supposedly good. A nice place to go alone.",
+  "touch.vacation": "Vacation"
 }

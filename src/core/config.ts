@@ -74,6 +74,8 @@ export interface GameConfig {
   tiles: TileDef[];
   world: WorldDef;
   days: DayDef[];
+  /** 휴가 모드의 하루 (campaign.json의 vacation) */
+  vacationDay?: DayDef;
   monologueTriggers: MonologueTrigger[];
   monologue: Record<string, string>;
   text: TextTable;
@@ -141,6 +143,7 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
       parseConfig(worldPartSchema, j('world/landmarks.json'), 'data/world/landmarks.json'),
     ),
     days,
+    vacationDay: campaign.vacation ? parseConfig(daySchema, raw.days[campaign.vacation], `data/days/${campaign.vacation}.json`) : undefined,
     monologueTriggers: parseConfig(monologueTriggersSchema, j('monologue/triggers.json'), 'data/monologue/triggers.json'),
     monologue: { ...parseKeyTextCsv(raw.monologueCsv), ...(lang === 'en' && raw.monologueCsvEn ? parseKeyTextCsv(raw.monologueCsvEn) : {}) },
     text: {
@@ -271,7 +274,7 @@ export function crossCheck(cfg: GameConfig): string[] {
     needStim(c.answerStimulus, `contact ${id}`);
     if (c.escalation) needStim(c.escalation, `contact ${id} escalation`);
   }
-  for (const d of cfg.days) {
+  for (const d of [...cfg.days, ...(cfg.vacationDay ? [cfg.vacationDay] : [])]) {
     const where = `day ${d.id}`;
     for (const k of [d.weekdayKey, d.titleKey, d.introKey]) needText(k, where);
     if (!has(w.spawns, d.spawn)) errors.push(`${where}: 스폰 없음 "${d.spawn}"`);

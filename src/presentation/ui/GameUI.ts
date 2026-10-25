@@ -201,6 +201,7 @@ export class GameUI {
         <p class="screen__body">${escapeHtml(this.tx('screen.subtitle'))}</p>
         <p class="screen__cta">${escapeHtml(continueDay ? this.tx('screen.continue', { day: continueDay }) : this.tx('screen.start'))}</p>
         ${continueDay ? `<p class="screen__hint">${escapeHtml(this.tx('screen.newGame'))}</p>` : ''}
+        ${this.cfg.vacationDay ? `<p class="screen__hint screen__vacation">${escapeHtml(this.tx('screen.vacation'))}</p>` : ''}
         <p class="screen__warn">${escapeHtml(this.tx('screen.photosensitive'))}</p>
       </div>`,
     );
@@ -300,7 +301,7 @@ export class GameUI {
 
   private updateMemo(s: GameSession): void {
     const day = s.day;
-    setText(this.memoHead, `${this.tx(day.weekdayKey)}  ${s.clock.label}`);
+    setText(this.memoHead, `${this.tx(day.weekdayKey, { n: s.vacationDayCount })}  ${s.clock.label}`);
     const items = s.objectives.visible().map((o) => {
       const tags: string[] = [];
       if (o.def.mandatory) tags.push(`<span class="memo__tag memo__tag--must">${escapeHtml(this.tx('obj.mandatory'))}</span>`);
@@ -846,7 +847,7 @@ export class GameUI {
     switch (m.kind) {
       case 'dayIntro':
         html = `<div class="screen__box">
-          <p class="screen__kicker">${escapeHtml(this.tx(s.day.weekdayKey))} · ${escapeHtml(formatTime(s.clock.minutes))}</p>
+          <p class="screen__kicker">${escapeHtml(this.tx(s.day.weekdayKey, { n: s.vacationDayCount }))} · ${escapeHtml(formatTime(s.clock.minutes))}</p>
           <h1 class="screen__title">${escapeHtml(this.tx(s.day.titleKey))}</h1>
           <p class="screen__body">${escapeHtml(this.tx(s.day.introKey))}</p>
           ${this.happeningsHtml(s)}
@@ -919,7 +920,7 @@ export class GameUI {
     const night = m.breakdown.map((b) => `<li>${escapeHtml(this.tx(b.key))} <b>${b.delta > 0 ? '+' : ''}${b.delta}</b></li>`).join('');
     const comfort = this.tx(`report.comfort.${s.dayIndex % 4}`);
     return `<div class="screen__box screen__box--report">
-      <p class="screen__kicker">${escapeHtml(this.tx('night.title', { weekday: this.tx(s.day.weekdayKey) }))}</p>
+      <p class="screen__kicker">${escapeHtml(this.tx('night.title', { weekday: this.tx(s.day.weekdayKey, { n: s.vacationDayCount }) }))}</p>
       <p class="screen__body">${escapeHtml(this.tx('night.body'))}</p>
       <table class="report">${this.reportRows(r)}</table>
       <h3>${escapeHtml(this.tx('report.life'))}</h3>

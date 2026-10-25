@@ -819,7 +819,8 @@ export type DayDef = z.infer<typeof daySchema>;
 export type BusRouteDef = NonNullable<WorldDef['bus']>;
 export type ObjectiveDef = DayDef['objectives'][number];
 
-export const campaignSchema = z.object({ days: z.array(z.string()).min(1) });
+/** 캠페인 순서. vacation: 휴가 모드에서 날마다 되풀이하는 하루 (해야 할 일 없이 돌아다니기) */
+export const campaignSchema = z.object({ days: z.array(z.string()).min(1), vacation: z.string().optional() });
 
 /**
  * 작은 사건 (data/happenings.json). 같은 요일이어도 하루를 시작할 때마다 몇 개를 골라 그날에 섞는다.

@@ -90,7 +90,8 @@ export class TouchControls {
     const full: Btn = { code: '#fullscreen', label: 'touch.fullscreen' };
     if (ctx.optionsOpen) return { main: [{ code: 'KeyO', label: 'touch.close', big: true }], top: [], stick: false };
     if (ctx.screen === 'title' || !ctx.session) {
-      return { main: [{ code: 'Enter', label: 'touch.start', big: true }, { code: 'KeyN', label: 'touch.newGame' }], top: [settings, full], stick: false };
+      const vacation: Btn[] = this.cfg.vacationDay ? [{ code: 'KeyV', label: 'touch.vacation' }] : [];
+      return { main: [{ code: 'Enter', label: 'touch.start', big: true }, { code: 'KeyN', label: 'touch.newGame' }, ...vacation], top: [settings, full], stick: false };
     }
     if (ctx.mapOpen) return { main: [{ code: 'KeyM', label: 'touch.close', big: true }], top: [], stick: false };
     const s = ctx.session;

@@ -1024,5 +1024,19 @@
   "interact.gen.veg": "채소 가게",
   "interact.gen.bowl": "그릇 가게",
   "interact.gen.hotteok": "호떡 사기",
-  "district.haeoreum": "해오름동"
+  "district.haeoreum": "해오름동",
+  "screen.vacation": "[V] 휴가 모드 — 회사도 의무도 없이, 한빛시를 마음대로 돌아다니기",
+  "weekday.vacation": "휴가 {n}일째",
+  "vacation.title": "오늘은 휴가",
+  "vacation.intro": "알람을 끄고 다시 눈을 감았다. 회사는 잊자. 오늘은 해야 할 일이 하나도 없다. 가고 싶은 데로 가고, 지치면 집으로.",
+  "vacation.note": "휴가에는 생활비·월세 정산이 없다. 기운만 챙기자. ([M] 지도, 지하철·버스·자전거로 멀리)",
+  "vacation.obj.station": "(선택) 한빛 중앙역 구경하기",
+  "vacation.obj.market": "(선택) 해오름 전통시장 걸어 보기",
+  "vacation.obj.library": "(선택) 한빛대학교 도서관에서 쉬기",
+  "vacation.obj.river": "(선택) 한빛강 공원 산책",
+  "vacation.obj.dept": "(선택) 한빛백화점 둘러보기",
+  "vacation.obj.home": "지치면 집에 돌아가 눕기",
+  "vacation.phone.mom": "휴가라며? 밥 잘 챙겨 먹고, 푹 쉬어. 연락 안 해도 돼.",
+  "vacation.phone.friend": "휴가 축하해 🎉 강변 매점 아이스크림 맛있대. 혼자 가도 좋은 데야.",
+  "touch.vacation": "휴가 모드"
 }

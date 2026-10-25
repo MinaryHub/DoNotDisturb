@@ -254,6 +254,10 @@ export class GameSession {
   itemBreak: { id: string; time: number; dur: number; paused: boolean } | null = null;
   /** 첫 대화는 연습 (규칙을 하나씩 알려 준다) */
   private practiced = false;
+  /** 휴가 모드: 해야 할 일 없이 날마다 같은 휴가 하루를 되풀이한다 (정산·저장 없음) */
+  readonly vacation: boolean;
+  /** 휴가 며칠째 */
+  vacationDayCount = 1;
   /** 변화 씨앗. 없으면(테스트) 매번 같은 기본 하루 */
   private readonly seed: number | null;
   /** 같은 날을 다시 할 때마다 다른 하루가 되도록 */
@@ -271,9 +275,10 @@ export class GameSession {
   constructor(
     readonly cfg: GameConfig,
     save?: SaveState,
-    options: { seed?: number; practiced?: boolean } = {},
+    options: { seed?: number; practiced?: boolean; vacation?: boolean } = {},
   ) {
     this.seed = options.seed ?? null;
+    this.vacation = !!options.vacation && !!cfg.vacationDay;
     if (options.practiced) this.practiced = true;
     this.world = buildWorld(cfg.world, cfg.tiles);
     this.sim = new Simulation(simConfigOf(cfg), cfg.stimuli);
@@ -329,7 +334,8 @@ export class GameSession {
   startDay(index: number): void {
     this.dayIndex = index;
     if (this.seed !== null) this.rngState = mix(this.seed, index, this.attempt++);
-    const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
+    const def = this.vacation ? this.cfg.vacationDay! : this.cfg.days[index]!;
+    const composed = composeDay(def, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
     // 넓은 도시의 동네 사람들: 날마다 길을 오간다 (확률이 있으면 씨앗으로, 테스트는 확률 없는 사람만)
     const ambient = (this.cfg.world.ambient ?? []).filter((a) => (a.chance === undefined ? true : this.seed !== null ? this.rng() < a.chance : a.chance >= 1));
     this.day = { ...composed.day, npcs: [...composed.day.npcs, ...ambient.map(({ chance: _c, ...a }) => a)] };
@@ -2312,7 +2318,8 @@ export class GameSession {
     this.phone.endDay();
     for (const e of this.phone.drainEvents()) if (e.type === 'messageResolved') this.resolveContact(e.message.contactId, e.how, e.message.textKey);
     for (const o of this.objectives.skippedOptional()) if (o.def.skip) life.apply(o.def.skip, 'skipped', o.def.textKey);
-    const settlement = settleDay(this.cfg.life.settlement, life, this.day.flags);
+    // 휴가: 생활비·하루 소모·월세 같은 정산은 잠시 잊는다
+    const settlement = this.vacation ? [] : settleDay(this.cfg.life.settlement, life, this.day.flags);
     const night = nightRecovery(this.cfg.life.night, {
       stressAtBed: this.sim.energy.load,
       ruminations: this.sim.bus.activeRuminations,
@@ -2333,6 +2340,11 @@ export class GameSession {
   }
 
   private advanceDay(): void {
+    if (this.vacation) {
+      this.vacationDayCount++;
+      this.startDay(0);
+      return;
+    }
     if (this.dayIndex + 1 >= this.cfg.days.length) {
       this.mode = { kind: 'final', reports: this.reports };
       return;
