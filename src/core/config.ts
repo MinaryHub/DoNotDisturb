@@ -199,6 +199,15 @@ export function crossCheck(cfg: GameConfig): string[] {
     if (it.kind === 'shop' && !(it.shop && has(cfg.items.shops, it.shop))) errors.push(`interactable ${it.id}: 상점 없음 "${it.shop ?? ''}" (data/items.json)`);
     if (it.kind === 'chore' && !(it.chore && has(cfg.chores, it.chore))) errors.push(`interactable ${it.id}: 생활 행동 없음 "${it.chore ?? ''}" (data/chores.json)`);
   }
+  if (w.bus) {
+    needText(w.bus.routeKey, 'bus');
+    for (const [id, st] of Object.entries(w.bus.stops)) needText(st.nameKey, `bus stop ${id}`);
+  }
+  for (const it of w.interactables) {
+    if (it.kind !== 'busStop') continue;
+    if (!w.bus) errors.push(`interactable ${it.id}: city.json에 bus 노선이 없습니다`);
+    else if (!it.target || !has(w.bus.stops, it.target)) errors.push(`interactable ${it.id}: 버스 정류장 없음 "${it.target ?? ''}"`);
+  }
   const itemIds = new Set(cfg.items.consumables.map((c) => c.id));
   for (const c of cfg.items.consumables) {
     needText(c.nameKey, `item ${c.id}`);

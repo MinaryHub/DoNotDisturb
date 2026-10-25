@@ -646,6 +646,10 @@ export class GameUI {
     const m = s.mode;
     let text = '';
     if (m.kind === 'elevator') text = m.phase === 'waiting' ? this.tx('elevator.waiting') : m.phase === 'closing' ? this.tx('elevator.ride') : `▼ ▲  ${m.companion ? '…' : ''}`;
+    else if (m.kind === 'bus') {
+      const dest = this.tx(s.cfg.world.bus?.stops[m.to]?.nameKey ?? m.to);
+      text = m.phase === 'waiting' ? this.tx('bus.waiting', { dest, min: Math.ceil(s.busWaitMin()) }) : this.tx(m.awkward ? 'bus.ridingAwkward' : 'bus.riding', { dest });
+    }
     else if (m.kind === 'selfCheckout') text = `${this.tx('checkout.self.waiting')} ${Math.round((m.timer / m.total) * 100)}%`;
     else if (m.kind === 'priceTag') text = `${this.tx('priceTag.hint')}  ${'▮'.repeat(Math.round(m.progress * 10))}${'▯'.repeat(10 - Math.round(m.progress * 10))}`;
     else if (m.kind === 'peephole') text = this.tx('peephole.view');

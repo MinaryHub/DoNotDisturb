@@ -668,5 +668,17 @@
   "tag.petOwner": "[반려동물 대화 유발자]",
   "tag.yogaTeacher": "[무료 체험 권유자]",
   "obj.readingRoom": "(선택) 도서관 열람실 들르기",
-  "obj.stream": "(선택) 해오름천 걷기"
+  "obj.stream": "(선택) 해오름천 걷기",
+  "bus.route": "7",
+  "bus.stop.west": "햇살아파트",
+  "bus.stop.middle": "무한상사 앞",
+  "bus.stop.east": "해오름천",
+  "interact.bus.toEast": "버스 기다리기 → 해오름천 방면",
+  "interact.bus.toMiddle": "버스 기다리기 → 무한상사 앞",
+  "interact.bus.toWest": "버스 기다리기 → 햇살아파트 방면",
+  "bus.waiting": "🚏 {dest} 방면 7번 · {min}분 뒤 도착 (움직이면 그만 기다림)",
+  "bus.riding": "🚌 7번 버스 · {dest}에서 내림",
+  "bus.ridingAwkward": "🚌 7번 버스 · {dest}에서 내림 · 앞자리에 아는 얼굴…",
+  "bus.board": "교통카드 삑. −{fare}원",
+  "bus.acquaintance": "앞자리에 옆 팀 사람이 앉아 있다. 서로 못 본 척."
 }

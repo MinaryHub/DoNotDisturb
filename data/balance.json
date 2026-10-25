@@ -36,6 +36,15 @@
     "calmSec": 8,
     "stressPerSec": 5
   },
+  "bus": {
+    "intervalMin": 10,
+    "tilesPerMin": 11,
+    "dwellMin": 1.2,
+    "fare": 1450,
+    "crowd": 0.45,
+    "crowdRush": 1.1,
+    "acquaintanceChance": 0.15
+  },
   "nod": {
     "range": 5,
     "calm": 12

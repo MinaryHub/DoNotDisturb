@@ -487,7 +487,14 @@
     { "id": "streamBench2", "kind": "bench", "at": [315.4, 96.5], "labelKey": "interact.streamBench" },
     { "id": "streamSign", "kind": "flavor", "at": [317.5, 6.5], "labelKey": "interact.streamSign", "monologue": "mono.stream.sign" },
     { "id": "yogaMat", "kind": "bench", "at": [270, 88.5], "labelKey": "interact.yogaMat" },
-    { "id": "yogaBoard", "kind": "flavor", "at": [276, 82.5], "labelKey": "interact.board", "monologue": "mono.yoga.board" }
+    { "id": "yogaBoard", "kind": "flavor", "at": [276, 82.5], "labelKey": "interact.board", "monologue": "mono.yoga.board" },
+
+    { "id": "busW_mid", "kind": "busStop", "at": [18, 71.2], "labelKey": "interact.bus.toMiddle", "target": "middle" },
+    { "id": "busW_east", "kind": "busStop", "at": [22, 71.2], "labelKey": "interact.bus.toEast", "target": "east" },
+    { "id": "busM_east", "kind": "busStop", "at": [140, 71.2], "labelKey": "interact.bus.toEast", "target": "east" },
+    { "id": "busM_west", "kind": "busStop", "at": [140, 62.4], "labelKey": "interact.bus.toWest", "target": "west" },
+    { "id": "busE_mid", "kind": "busStop", "at": [302, 62.4], "labelKey": "interact.bus.toMiddle", "target": "middle" },
+    { "id": "busE_west", "kind": "busStop", "at": [306, 62.4], "labelKey": "interact.bus.toWest", "target": "west" }
   ],
 
   "portals": [
@@ -500,6 +507,7 @@
   ],
 
   "elevator": { "car": [193.5, 145.5], "carArea": "elevatorCar", "fronts": { "elevator3F": [177, 149.6], "elevator1F": [11, 32.8] } },
+  "bus": { "routeKey": "bus.route", "fromX": -14, "toX": 354, "laneEastY": 68, "laneWestY": 65.6, "curbSouthY": 71.2, "curbNorthY": 62.4, "stops": { "west": { "x": 20, "nameKey": "bus.stop.west" }, "middle": { "x": 140, "nameKey": "bus.stop.middle" }, "east": { "x": 304, "nameKey": "bus.stop.east" } } },
 
   "spawns": {
     "player": [130.6, 146.5],
@@ -807,7 +815,14 @@
     { "kind": "bin", "at": [313.5, 40.5] },
     { "kind": "hydrant", "at": [294.5, 30.5] },
     { "kind": "recycleGreen", "at": [291, 94] },
-    { "kind": "recycleBlue", "at": [291, 95.2] }
+    { "kind": "recycleBlue", "at": [291, 95.2] },
+
+    { "kind": "busStop", "at": [20, 72.9] },
+    { "kind": "busStop", "at": [140, 72.9] },
+    { "kind": "busStop", "at": [140, 60.7], "rot": 3.1416 },
+    { "kind": "busStop", "at": [304, 60.7], "rot": 3.1416 },
+    { "kind": "busStop", "at": [20, 60.7], "rot": 3.1416 },
+    { "kind": "busStop", "at": [304, 72.9] }
   ],
 
   "labels": [

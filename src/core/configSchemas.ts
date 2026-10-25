@@ -90,6 +90,19 @@ export const balanceConfigSchema = z.object({
   work: z.object({ pressureStressPerSec: nonNegative, pendingPingStressPerSec: nonNegative, bossPingMultiplier: positive, afternoonStress: nonNegative }),
   /** 조급함: 달리면 차오르고(fullAfterSec), 걸으면 천천히 가라앉는다(calmSec). 차 있는 만큼 스트레스가 오른다 */
   hurry: z.object({ fullAfterSec: positive, calmSec: positive, stressPerSec: nonNegative }),
+  /**
+   * 마을버스: intervalMin분마다 양 끝에서 출발, 1분에 tilesPerMin칸, 정류장마다 dwellMin분. 요금 fare.
+   * 타고 있는 동안 군중 밀도 crowd(러시아워 crowdRush), acquaintanceChance 확률로 아는 사람이 같이 탄다(어색한 침묵)
+   */
+  bus: z.object({
+    intervalMin: positive,
+    tilesPerMin: positive,
+    dwellMin: nonNegative,
+    fare: nonNegative,
+    crowd: nonNegative,
+    crowdRush: nonNegative,
+    acquaintanceChance: unit,
+  }),
   /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
   nod: z.object({ range: positive, calm: nonNegative }),
   recovery: z.object({
@@ -538,6 +551,7 @@ export const interactableKinds = [
   'priceTag',
   'clothesPick',
   'seat',
+  'busStop',
 ] as const;
 export type InteractableKind = (typeof interactableKinds)[number];
 
@@ -590,6 +604,22 @@ export const worldDefSchema = z.object({
     }),
   ),
   elevator: z.object({ car: vec2, carArea: z.string(), fronts: z.record(z.string(), vec2) }),
+  /**
+   * 마을버스 노선 (대로를 따라 동서로). 버스는 fromX ↔ toX를 달리고, 동쪽 방면은 laneEastY, 서쪽 방면은 laneWestY 차로.
+   * 정류장(busStop 상호작용)의 target은 내릴 정류장 id. 내리는 자리는 방향에 맞는 보도(curbSouthY/curbNorthY)
+   */
+  bus: z
+    .object({
+      routeKey: z.string(),
+      fromX: z.number(),
+      toX: z.number(),
+      laneEastY: z.number(),
+      laneWestY: z.number(),
+      curbSouthY: z.number(),
+      curbNorthY: z.number(),
+      stops: z.record(z.string(), z.object({ x: z.number(), nameKey: z.string() })),
+    })
+    .optional(),
   spawns: z.record(z.string(), vec2),
   paths: z.record(z.string(), z.object({ points: z.array(vec2).min(1), loop: z.boolean() })),
   crowdLanes: z.array(crowdLaneSchema),
@@ -597,7 +627,7 @@ export const worldDefSchema = z.object({
   props: z
     .array(
       z.object({
-        kind: z.enum(['lamp', 'bin', 'bike', 'aircon', 'pot', 'hydrant', 'manhole', 'recycleGreen', 'recycleBlue', 'recycleYellow', 'catBowl']),
+        kind: z.enum(['lamp', 'bin', 'bike', 'aircon', 'pot', 'hydrant', 'manhole', 'recycleGreen', 'recycleBlue', 'recycleYellow', 'catBowl', 'busStop']),
         at: vec2,
         rot: z.number().optional(),
       }),
@@ -715,6 +745,7 @@ export const daySchema = z.object({
     .optional(),
 });
 export type DayDef = z.infer<typeof daySchema>;
+export type BusRouteDef = NonNullable<WorldDef['bus']>;
 export type ObjectiveDef = DayDef['objectives'][number];
 
 export const campaignSchema = z.object({ days: z.array(z.string()).min(1) });

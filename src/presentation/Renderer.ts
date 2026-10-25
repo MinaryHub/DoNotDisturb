@@ -6,6 +6,7 @@ import { inRect, type Rect, type TileMap, type Vec2 } from '../world/TileMap';
 import { Camera2D } from './Camera2D';
 import { parseTime } from '../sim/DayCycle';
 import { drawProp } from './draw/props';
+import { drawBus } from './draw/bus';
 import { isSolid, paintDeco, paintFloor, paintFloorLight } from './draw/tiles';
 import { Pigeons, Roofs, drawCloudShadows, timeTint } from './draw/ambient';
 import { Particles } from './draw/particles';
@@ -179,6 +180,7 @@ export class Renderer {
     const night = this.nightLevel(s);
     this.drawCeilingLights(viewRect, night);
     this.drawProps(night, ps.time);
+    if (onGround) this.drawBuses(s, night);
     const rainHere = s.raining && onGround;
     if (rainHere) this.drawPuddles(ps.time);
     if (night > 0.01 && onGround) this.drawNight(s, night);
@@ -390,6 +392,19 @@ export class Renderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.light, 0, 0);
     ctx.restore();
+  }
+
+  /** 대로를 달리는 마을버스 (시간표 그대로). 타고 있으면 내 자리를 창가에 표시 */
+  private drawBuses(s: GameSession, night: number): void {
+    const route = s.cfg.world.bus;
+    if (!route) return;
+    const label = t(this.cfg.text, route.routeKey);
+    const m = s.mode;
+    for (const b of s.busesOnRoad()) {
+      if (Math.abs(b.x - this.camera.x) > 50 || Math.abs(b.y - this.camera.y) > 30) continue;
+      const ride = m.kind === 'bus' && m.phase === 'riding' && m.dir === b.dir && m.depart === b.depart;
+      drawBus(this.wctx, b, label, night, ride);
+    }
   }
 
   private drawProps(night: number, time: number): void {
@@ -915,7 +930,7 @@ export class Renderer {
   private drawPlayer(s: GameSession, ps: PresentationState, st: Settings): void {
     const ctx = this.wctx;
     const p = s.player;
-    if (s.mode.kind === 'travel') return;
+    if (s.mode.kind === 'travel' || (s.mode.kind === 'bus' && s.mode.phase === 'riding')) return;
     const { x, y } = p.pos;
     const r = this.cfg.player.radius;
     // 번아웃: 주저앉는다

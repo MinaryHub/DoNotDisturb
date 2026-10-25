@@ -13,7 +13,8 @@ export type PropKind =
   | 'recycleGreen'
   | 'recycleBlue'
   | 'recycleYellow'
-  | 'catBowl';
+  | 'catBowl'
+  | 'busStop';
 
 function circle(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
   g.beginPath();
@@ -149,6 +150,42 @@ export function drawProp(g: CanvasRenderingContext2D, kind: PropKind, x: number,
       g.fillRect(x - 0.38, y - 0.3, 0.76, 0.14);
       g.fillStyle = 'rgba(255,255,255,0.85)';
       circle(g, x, y + 0.06, 0.08);
+      break;
+    }
+    case 'busStop': {
+      // 버스 정류장: 유리 지붕 쉼터 + 긴 의자 + 노선 표지판 (rot = π면 길 건너편을 향한다)
+      g.save();
+      g.translate(x, y);
+      g.rotate(rot);
+      g.fillStyle = 'rgba(0,0,0,0.16)';
+      g.fillRect(-1.55, -0.38, 3.2, 0.9);
+      g.fillStyle = '#5a6270';
+      g.fillRect(-1.6, 0.28, 3.2, 0.08);
+      g.fillStyle = '#9b7a55';
+      g.fillRect(-1.1, 0.02, 2.2, 0.22);
+      g.fillStyle = 'rgba(190, 215, 230, 0.42)';
+      g.fillRect(-1.6, -0.5, 3.2, 0.86);
+      g.strokeStyle = 'rgba(70, 80, 95, 0.8)';
+      g.lineWidth = 0.05;
+      g.strokeRect(-1.6, -0.5, 3.2, 0.86);
+      g.fillStyle = '#3f9a5c';
+      g.fillRect(-1.5, 0.3, 0.8, 0.06);
+      // 표지판 기둥과 노선 번호 원
+      g.fillStyle = '#4a4f58';
+      circle(g, 1.95, -0.3, 0.07);
+      g.fillStyle = '#3f9a5c';
+      circle(g, 1.95, -0.62, 0.24);
+      g.fillStyle = '#ffffff';
+      circle(g, 1.95, -0.62, 0.13);
+      g.fillStyle = '#3f9a5c';
+      g.fillRect(1.92, -0.69, 0.06, 0.15);
+      g.restore();
+      if (night > 0.2) {
+        g.fillStyle = `rgba(255, 236, 190, ${night * 0.18})`;
+        g.beginPath();
+        g.ellipse(x, y, 2.2, 1.0, 0, 0, Math.PI * 2);
+        g.fill();
+      }
       break;
     }
     case 'catBowl': {

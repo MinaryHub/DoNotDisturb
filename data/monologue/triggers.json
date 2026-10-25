@@ -109,5 +109,9 @@
   {"key": "mono.stream.enter", "when": {"area": "streamSouth"}, "cooldownSec": 600},
   {"key": "mono.salon.enter", "when": {"area": "salon"}, "cooldownSec": 600},
   {"key": "mono.vet.enter", "when": {"area": "vet"}, "cooldownSec": 600},
-  {"key": "mono.yoga.enter", "when": {"area": "yoga"}, "cooldownSec": 600}
+  {"key": "mono.yoga.enter", "when": {"area": "yoga"}, "cooldownSec": 600},
+  {"key": "mono.bus.wait", "when": {"event": "bus:wait"}, "cooldownSec": 300},
+  {"key": "mono.bus.board", "when": {"event": "bus:board"}, "cooldownSec": 300},
+  {"key": "mono.bus.rush", "when": {"event": "bus:rush"}, "cooldownSec": 300},
+  {"key": "mono.bus.awkward", "when": {"event": "bus:awkward"}, "cooldownSec": 60}
 ]

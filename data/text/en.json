@@ -668,5 +668,17 @@
   "tag.petOwner": "[Pet-talk starter]",
   "tag.yogaTeacher": "[Free-trial recruiter]",
   "obj.readingRoom": "(Optional) Stop by the library reading room",
-  "obj.stream": "(Optional) Walk along Haeoreum Stream"
+  "obj.stream": "(Optional) Walk along Haeoreum Stream",
+  "bus.route": "7",
+  "bus.stop.west": "Sunshine Apts",
+  "bus.stop.middle": "Muhan Corp.",
+  "bus.stop.east": "Haeoreum Stream",
+  "interact.bus.toEast": "Wait for the bus → toward Haeoreum Stream",
+  "interact.bus.toMiddle": "Wait for the bus → Muhan Corp.",
+  "interact.bus.toWest": "Wait for the bus → toward Sunshine Apts",
+  "bus.waiting": "🚏 No. 7 toward {dest} · arrives in {min} min (move to stop waiting)",
+  "bus.riding": "🚌 Bus No. 7 · getting off at {dest}",
+  "bus.ridingAwkward": "🚌 Bus No. 7 · getting off at {dest} · a familiar face in the seat ahead…",
+  "bus.board": "Card tap, beep. −{fare} won",
+  "bus.acquaintance": "Someone from the next team is sitting in front. You both pretend not to notice."
 }

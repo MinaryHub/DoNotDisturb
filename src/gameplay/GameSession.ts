@@ -17,6 +17,7 @@ import { buildWorld, inHide, safeAt, type World } from '../world/World';
 import { GrillGame, PIANO_MELODY, PianoGame, WorkGame } from './minigames';
 import { composeDay } from './DayComposer';
 import { applyMark, marksFor, storyFromSave } from './Story';
+import { BusRoute, type BusDir, type BusOnRoad } from './Bus';
 import { MonologueDirector } from './Monologue';
 import { Objectives } from './Objectives';
 
@@ -119,6 +120,8 @@ export type Mode =
   | { kind: 'piano'; game: PianoGame; doneTime: number }
   | { kind: 'travel'; portal: PortalDef; target: PortalDef; timer: number; total: number }
   | { kind: 'elevator'; phase: 'waiting' | 'closing' | 'riding'; timer: number; from: string; to: string; companion: Npc | null; presses: number }
+  /** 마을버스: 정류장에서 기다리다(waiting) 타고 간다(riding). awkward = 아는 사람이 같이 탔다 */
+  | { kind: 'bus'; phase: 'waiting' | 'riding'; dir: BusDir; fromX: number; to: string; depart: number; awkward: boolean }
   | { kind: 'selfCheckout'; timer: number; total: number }
   | { kind: 'rest'; what: 'bench' | 'window' | 'books'; time: number }
   | { kind: 'laundry'; time: number }
@@ -163,6 +166,8 @@ export class GameSession {
   readonly sim: Simulation;
   readonly phone: Phone;
   readonly monologue: MonologueDirector;
+  /** 마을버스 시간표 (city.json에 노선이 없으면 null) */
+  readonly busRoute: BusRoute | null;
   crowd: Crowd;
   clock: GameClock;
   /** 오늘의 하루 (기본 하루 + 작은 사건, DayComposer) */
@@ -246,6 +251,7 @@ export class GameSession {
     this.phone = new Phone({ ringSec: 12, replyWaitSec: 25, maxVisible: 4 });
     this.monologue = new MonologueDirector(cfg.monologueTriggers, cfg.monologue, () => this.rng());
     this.crowd = new Crowd(cfg.world.crowdLanes, () => this.rng());
+    this.busRoute = cfg.world.bus ? new BusRoute(cfg.world.bus, cfg.balance.bus) : null;
     this.clock = new GameClock(0);
     this.nextMax = cfg.balance.battery.start;
     if (save) {
@@ -609,6 +615,9 @@ export class GameSession {
       case 'elevator':
         this.updateElevator(dt, c, m);
         break;
+      case 'bus':
+        this.updateBus(c, m);
+        break;
       case 'selfCheckout':
         m.timer += dt;
         if (Math.floor(m.timer * 2) !== Math.floor((m.timer - dt) * 2)) this.fx.push({ type: 'sound', id: 'beep' });
@@ -829,6 +838,9 @@ export class GameSession {
       }
       case 'elevator':
         this.callElevator(it);
+        break;
+      case 'busStop':
+        this.waitBus(it);
         break;
       case 'flavor': {
         const mono = this.day.interactAt?.[it.id]?.monologue ?? it.monologue;
@@ -1103,6 +1115,80 @@ export class GameSession {
   private teleport(to: Vec2): void {
     this.player.pos.x = to.x;
     this.player.pos.y = to.y;
+  }
+
+  // ───────────────────────── 마을버스 ─────────────────────────
+
+  /** 지금 도로 위의 버스 (연출용) */
+  busesOnRoad(): BusOnRoad[] {
+    return this.busRoute ? this.busRoute.busesAt(this.clock.minutes) : [];
+  }
+
+  private isRush(): boolean {
+    return this.cfg.balance.clock.rushHours.some(([a, b]) => this.clock.minutes >= parseTime(a) && this.clock.minutes < parseTime(b));
+  }
+
+  /** 정류장에서 다음 버스를 기다린다. 움직이면 그만 기다린다 */
+  private waitBus(it: InteractableDef): void {
+    const route = this.busRoute;
+    if (!route || !it.target) return;
+    const stops = this.cfg.world.bus!.stops;
+    const fromX = Object.values(stops).reduce((best, st) => (Math.abs(st.x - it.at[0]) < Math.abs(best - it.at[0]) ? st.x : best), Infinity);
+    const toX = route.stopX(it.target);
+    const dir: BusDir = toX > fromX ? 1 : -1;
+    const next = route.nextAt(dir, fromX, this.clock.minutes);
+    this.mode = { kind: 'bus', phase: 'waiting', dir, fromX, to: it.target, depart: next.depart, awkward: false };
+    this.player.facing = dir === 1 ? -Math.PI / 2 : Math.PI / 2;
+    this.gameEvent('bus:wait');
+  }
+
+  /** 기다릴 남은 분 (UI) */
+  busWaitMin(): number {
+    const m = this.mode;
+    if (m.kind !== 'bus' || !this.busRoute) return 0;
+    return Math.max(0, this.busRoute.reachesAt(m.dir, m.depart, m.fromX) - this.clock.minutes);
+  }
+
+  private updateBus(c: Controls, m: Extract<Mode, { kind: 'bus' }>): void {
+    const route = this.busRoute!;
+    const b = this.cfg.balance.bus;
+    const now = this.clock.minutes;
+    if (m.phase === 'waiting') {
+      if (Math.hypot(c.move.x, c.move.y) > 0.3 || c.cancel) {
+        this.mode = { kind: 'free' };
+        return;
+      }
+      if (now < route.reachesAt(m.dir, m.depart, m.fromX)) return;
+      // 버스 도착: 교통카드 삑
+      if (!this.pay(b.fare)) {
+        this.mode = { kind: 'free' };
+        return;
+      }
+      this.fx.push({ type: 'sound', id: 'beep' });
+      this.toast('bus.board', { fare: b.fare.toLocaleString(this.cfg.lang === 'en' ? 'en-US' : 'ko-KR') });
+      m.phase = 'riding';
+      m.awkward = this.rng() < b.acquaintanceChance;
+      this.gameEvent('bus:board');
+      if (this.isRush()) this.gameEvent('bus:rush');
+      if (m.awkward) {
+        this.toast('bus.acquaintance');
+        this.gameEvent('bus:awkward');
+      }
+      return;
+    }
+    // 타고 가는 동안 버스와 함께 움직인다 (카메라가 따라간다)
+    const toX = route.stopX(m.to);
+    const bus = route.busAt(m.dir, m.depart, now);
+    if (bus) {
+      this.player.pos.x = bus.x;
+      this.player.pos.y = bus.y;
+    }
+    if (!bus || now >= route.reachesAt(m.dir, m.depart, toX)) {
+      this.teleport(route.alightAt(m.dir, toX));
+      this.fx.push({ type: 'sound', id: 'chime' });
+      this.mode = { kind: 'free' };
+      this.gameEvent(`bus:arrive:${m.to}`);
+    }
   }
 
   private callElevator(it: InteractableDef): void {
@@ -1761,7 +1847,7 @@ export class GameSession {
     }
 
     // 군중
-    const rush = this.cfg.balance.clock.rushHours.some(([a, b]) => this.clock.minutes >= parseTime(a) && this.clock.minutes < parseTime(b));
+    const rush = this.isRush();
     this.crowd.setDensity(rush ? this.cfg.balance.clock.rushCrowdMultiplier : 1);
     this.crowd.update(dt, p.pos, this.cfg.player.radius);
     if (this.mode.kind === 'free' && !p.lockedSafe) this.crowdInteractions();
@@ -1789,7 +1875,7 @@ export class GameSession {
       phonePretend: p.phonePretend || this.phoneOpen,
       eyesClosed: p.eyesClosed,
       hidden: p.hidden,
-      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech',
+      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech' || (this.mode.kind === 'bus' && this.mode.phase === 'riding'),
     };
   }
 
@@ -1828,6 +1914,8 @@ export class GameSession {
     const near = this.crowd.countNear(p.pos, b.crowdDensity.radius);
     let crowd = Math.min(b.crowdDensity.max, near * b.crowdDensity.perAgent);
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
+    // 버스 안: 러시아워엔 빽빽하다
+    if (this.mode.kind === 'bus' && this.mode.phase === 'riding') crowd = this.isRush() ? b.bus.crowdRush : b.bus.crowd;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
     // 사람이 많을수록 긴장이 오른다. 빽빽하면 그동안 가라앉지 않는다
     if (crowd > 0 && !p.lockedSafe) this.sim.energy.addMood('tension', crowd * b.crowdDensity.stressPerSec * dt, crowd >= b.crowdDensity.sustainFrom);
@@ -1845,7 +1933,8 @@ export class GameSession {
     bus.setContinuous('eye', 'eyeContact', eye);
 
     // 어색한 침묵: 좁은 공간 + 지인
-    const awkwardPair = this.mode.kind === 'elevator' && this.mode.phase !== 'waiting' && this.mode.companion !== null;
+    const awkwardPair =
+      (this.mode.kind === 'elevator' && this.mode.phase !== 'waiting' && this.mode.companion !== null) || (this.mode.kind === 'bus' && this.mode.phase === 'riding' && this.mode.awkward);
 
     const modifiers: ChannelModifiers = p.earphones ? { ...NO_MODIFIERS, auditory: this.cfg.skills.earphones.auditoryMultiplier } : NO_MODIFIERS;
     const ally = this.activeNpcs().some((n) => n.type === 'ally' && dist(n.pos, p.pos) < b.recovery.allyRange);

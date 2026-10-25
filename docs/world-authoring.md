@@ -73,6 +73,11 @@
 ### 생활 행동 (`kind: "chore"`)
 `chore`에 `data/chores.json`의 id. 하루 한 번, 효과(배터리·스트레스·증상)와 생활 지표 변화, 시계 진행(`minutes`).
 
+### 마을버스 (`bus`, `kind: "busStop"`)
+`bus`에 노선(차로 `laneEastY`/`laneWestY`, 내리는 보도 `curbSouthY`/`curbNorthY`, 정류장 `stops{ id: { x, nameKey } }`)을 적고,
+정류장마다 `busStop` 상호작용을 방향별로 둔다. `target`은 내릴 정류장 id. 동쪽 방면은 남쪽 보도, 서쪽 방면은 북쪽 보도에서 탄다.
+시간표·요금·차 안 군중은 `balance.json`의 `bus`. 쉼터 그림은 소품 `busStop`(`rot: 3.1416`이면 길 건너편을 향함).
+
 ### 간판 (`labels`)
 `{ "at": [x, y], "textKey": "sign.cafe", "color": "#5b7d63" }` — `color`가 있으면 색 간판, 없으면 어두운 이름표.
 
