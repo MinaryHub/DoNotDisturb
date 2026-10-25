@@ -87,7 +87,7 @@ describe('GameSession: 월요일 하루 진행', () => {
   it('이웃이 알아채고 다가와 말을 건다 (시야 콘 + 접근)', () => {
     const s = newDay();
     s.player.pos.x = 160;
-    s.player.pos.y = 150;
+    s.player.pos.y = 470;
     let talked = false;
     for (let i = 0; i < 60 * 20 && !talked; i++) {
       s.step(dt, NO_CONTROLS);

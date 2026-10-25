@@ -27,8 +27,8 @@ describe('월드 타일맵', () => {
     const home = map.reachableFrom(world.spawns['player']!);
     const ground = map.reachableFrom({ x: 17.5, y: 33.5 });
     const at = (set: Uint8Array, x: number, y: number) => set[Math.floor(y) * map.width + Math.floor(x)] === 1;
-    expect(at(home, 184, 150.5), '집 → 3층 계단').toBe(true);
-    expect(at(home, 177, 149.6), '집 → 3층 엘리베이터 앞').toBe(true);
+    expect(at(home, 184, 470.5), '집 → 3층 계단').toBe(true);
+    expect(at(home, 177, 469.6), '집 → 3층 엘리베이터 앞').toBe(true);
     for (const id of ['officeDesk', 'meetingSeat', 'item_tofu', 'item_egg', 'item_onion', 'item_ramen', 'checkoutNormal', 'checkoutSelf', 'seatCorner', 'returnCounter', 'clothesPick', 'soloSeat', 'convShop', 'parkBench']) {
       const it = world.interactables.find((i) => i.id === id)!;
       expect(at(ground, it.at[0], it.at[1]), id).toBe(true);
@@ -36,8 +36,8 @@ describe('월드 타일맵', () => {
     for (const s of world.safes) expect(at(ground, s.rect[0] + 0.5, s.rect[1] + 0.5), s.id).toBe(true);
     expect(at(ground, 31.5, 61), '지하철 서쪽 입구').toBe(true);
     expect(at(ground, 177.5, 61), '지하철 동쪽 입구').toBe(true);
-    const subway = map.reachableFrom({ x: 6, y: 150 });
-    expect(at(subway, 118, 150), '환승 통로 관통').toBe(true);
+    const subway = map.reachableFrom({ x: 6, y: 470 });
+    expect(at(subway, 118, 470), '환승 통로 관통').toBe(true);
   });
 
   it('벽은 시선을 막고 유리창은 막지 않는다', () => {
@@ -64,8 +64,8 @@ describe('월드 타일맵', () => {
   });
 
   it('충돌 이동은 벽을 넘지 않는다', () => {
-    const p = { x: 130.6, y: 146.5 };
+    const p = { x: 130.6, y: 466.5 };
     for (let i = 0; i < 200; i++) map.moveCircle(p, 0, -0.1, 0.32);
-    expect(p.y).toBeGreaterThan(143);
+    expect(p.y).toBeGreaterThan(463);
   });
 });

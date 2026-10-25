@@ -770,10 +770,11 @@ export class GameUI {
     };
     const target = this.markerTarget(s);
     if (target) dot(target.x, target.y, '#ffd166', 9);
-    for (const n of s.activeNpcs()) if (n.type !== 'passerby' && n.type !== 'pet' && n.pos.y < 140) dot(n.pos.x, n.pos.y, n.type === 'ally' ? '#f2c94c' : '#e0645a', 5);
+    const groundH = this.cfg.world.layers.find((l) => l.id === 'ground')?.rect[3] ?? 140;
+    for (const n of s.activeNpcs()) if (n.type !== 'passerby' && n.type !== 'pet' && n.pos.y < groundH) dot(n.pos.x, n.pos.y, n.type === 'ally' ? '#f2c94c' : '#e0645a', 5);
     const p = s.player.pos;
     // 지하·3층(섬 영역)에 있으면 입구 위치로 표시
-    const shown = p.y < 140 ? p : s.area?.id === 'subway' ? { x: p.x < 60 ? 31.5 : 177.5, y: 61 } : { x: 22, y: 44 };
+    const shown = p.y < groundH ? p : s.area?.id === 'subway' ? { x: p.x < 60 ? 31.5 : 177.5, y: 61 } : { x: 22, y: 44 };
     dot(shown.x, shown.y, '#fff7d6', 8);
     dot(shown.x, shown.y, '#3f78c9', 5);
   }

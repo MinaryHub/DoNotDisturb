@@ -1289,9 +1289,11 @@ export class Renderer {
   buildMinimap(scale: number): HTMLCanvasElement {
     const c = document.createElement('canvas');
     c.width = this.map.width * scale;
-    c.height = 140 * scale;
+    // 지상 층만 (지하·아파트 층은 따로 떨어져 있다)
+    const groundH = this.cfg.world.layers.find((l) => l.id === 'ground')?.rect[3] ?? this.map.height;
+    c.height = groundH * scale;
     const g = c.getContext('2d')!;
-    for (let y = 0; y < 140; y++) {
+    for (let y = 0; y < groundH; y++) {
       for (let x = 0; x < this.map.width; x++) {
         g.fillStyle = this.map.def(x, y).color;
         g.fillRect(x * scale, y * scale, scale, scale);
@@ -1301,7 +1303,7 @@ export class Renderer {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     for (const l of this.cfg.world.labels) {
-      if (l.at[1] >= 140) continue;
+      if (l.at[1] >= groundH) continue;
       const text = t(this.cfg.text, l.textKey);
       const w = g.measureText(text).width + scale * 2;
       g.fillStyle = 'rgba(30,28,34,0.8)';
