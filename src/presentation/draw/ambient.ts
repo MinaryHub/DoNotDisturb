@@ -8,6 +8,7 @@ import { hashOf, shade } from './people';
 
 type AmbientConfig = PresentationConfig['ambient'];
 
+const AWNINGS = ['#c0533f', '#3f6e8c', '#4f7d55', '#d39b3a', '#7a5c8c'];
 const ROOF_COLORS = ['#8f7465', '#6f7f8c', '#7b866c', '#958570', '#7a7488', '#8c6e68'];
 
 interface Building {
@@ -24,6 +25,10 @@ type RoofDetail = 'ac' | 'vent' | 'tank' | 'solar' | 'hatch' | 'stain';
 
 export class Roofs {
   private readonly buildings: Building[] = [];
+  /** 건물 정면 높이 (칸). 0이면 지붕만 */
+  facadeHeight = 0;
+  /** 정면에 문을 그릴 칸인지 (렌더러가 타일 지도로 채운다) */
+  isDoor: (tx: number, ty: number) => boolean = () => false;
 
   constructor(
     world: WorldDef,
@@ -42,7 +47,7 @@ export class Roofs {
       const h = hashOf(rects.map((r) => r.join(',')).join('|'));
       const details: Building['details'] = [];
       for (const r of rects) {
-        const n = Math.floor((r[2] * r[3]) / 70);
+        const n = Math.floor((r[2] * r[3]) / 45);
         for (let k = 0; k < n; k++) {
           const hk = hashOf(`${h}:${r.join(',')}:${k}`);
           details.push({
@@ -54,6 +59,70 @@ export class Roofs {
       }
       this.buildings.push({ rects, outer: rects.map((r) => grow(r, 1)), color: ROOF_COLORS[h % ROOF_COLORS.length]!, alpha: 1, details });
     }
+  }
+
+  private drawFacade(g: CanvasRenderingContext2D, b: Building): Rect[] {
+    const H = this.facadeHeight;
+    const wall = shade(b.color, -0.32);
+    const lit: Rect[] = [];
+    for (const r of b.outer) {
+      const cols = facadeColumns(b, r);
+      if (!cols.length) continue;
+      const top = r[1] + r[3] - H;
+      for (const x of cols) {
+        const grad = g.createLinearGradient(0, top, 0, top + H);
+        grad.addColorStop(0, shade(wall, 0.08));
+        grad.addColorStop(1, shade(wall, -0.12));
+        g.fillStyle = grad;
+        g.fillRect(x, top, 1.02, H);
+        const h = hashOf(`${x}:${top}`);
+        if (this.isDoor(x, r[1] + r[3] - 1)) {
+          // 출입문: 유리문과 차양
+          const awning = AWNINGS[hashOf(b.color + r.join(',')) % AWNINGS.length]!;
+          g.fillStyle = '#3d4650';
+          g.fillRect(x + 0.08, top + H * 0.2, 0.86, H * 0.8);
+          g.fillStyle = 'rgba(190, 215, 230, 0.75)';
+          g.fillRect(x + 0.14, top + H * 0.26, 0.74, H * 0.74);
+          g.fillStyle = 'rgba(255, 255, 255, 0.35)';
+          g.fillRect(x + 0.18, top + H * 0.3, 0.12, H * 0.6);
+          lit.push([x + 0.14, top + H * 0.26, 0.74, H * 0.74]);
+          for (let k = 0; k < 4; k++) {
+            g.fillStyle = k % 2 ? '#f4efe6' : awning;
+            g.fillRect(x - 0.15 + k * 0.325, top - 0.02, 0.33, 0.3);
+          }
+          g.fillStyle = 'rgba(0, 0, 0, 0.18)';
+          g.fillRect(x - 0.15, top + 0.28, 1.3, 0.06);
+          continue;
+        }
+        // 창: 칸마다 하나, 해시로 몇 개는 벽
+        if (h % 5 !== 0 && x > r[0] && x < r[0] + r[2] - 1) {
+          const wx = x + 0.2;
+          const wy = top + H * 0.22;
+          const ww = 0.6;
+          const wh = H * 0.48;
+          g.fillStyle = '#9fb3c4';
+          g.fillRect(wx, wy, ww, wh);
+          // 하늘이 비친 유리: 위는 밝게
+          g.fillStyle = 'rgba(255, 255, 255, 0.28)';
+          g.fillRect(wx, wy, ww, wh * 0.35);
+          g.fillStyle = 'rgba(40, 50, 60, 0.35)';
+          g.fillRect(wx + ww * 0.48, wy, 0.03, wh);
+          g.fillStyle = shade(wall, 0.25);
+          g.fillRect(wx - 0.04, wy + wh, ww + 0.08, 0.05);
+          if ((h >>> 3) % 3 !== 0) lit.push([wx, wy, ww, wh]);
+        }
+      }
+      // 처마: 지붕 끝 밝은 선, 바닥 쪽 어두운 띠
+      const x0 = cols[0]!;
+      const x1 = cols[cols.length - 1]! + 1;
+      g.fillStyle = shade(b.color, 0.18);
+      g.fillRect(x0, top - 0.06, x1 - x0, 0.08);
+      g.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      g.fillRect(x0, top + 0.02, x1 - x0, 0.06);
+      g.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      g.fillRect(x0, top + H - 0.1, x1 - x0, 0.1);
+    }
+    return lit;
   }
 
   /** 플레이어가 서 있는 건물(문간 포함)은 지붕을 걷는다 */
@@ -98,6 +167,13 @@ export class Roofs {
         }
       }
       g.stroke();
+      // 자갈·방수 도막의 잔결
+      const pat = g.createPattern(gravel(), 'repeat');
+      if (pat) {
+        pat.setTransform(new DOMMatrix().scale(1 / 24));
+        g.fillStyle = pat;
+        g.fill(path);
+      }
       // 햇빛 방향 명암: 왼쪽 위는 밝게, 오른쪽 아래는 어둡게
       for (const r of b.outer) {
         const grad = g.createLinearGradient(r[0], r[1], r[0] + r[2], r[1] + r[3]);
@@ -117,13 +193,51 @@ export class Roofs {
       // 얼룩은 바닥에 깔고, 설비는 그 위에
       for (const d of b.details) if (d.kind === 'stain') drawRoofDetail(g, d.kind, d.x, d.y);
       for (const d of b.details) if (d.kind !== 'stain') drawRoofDetail(g, d.kind, d.x, d.y);
+      const lit = this.facadeHeight > 0 ? this.drawFacade(g, b) : [];
       if (night > 0.01) {
         g.fillStyle = `rgba(12, 16, 42, ${night * 0.55})`;
         g.fill(path);
+        // 밤: 불 켜진 창은 어둠 위로 따뜻하게 빛나고 아래 길에 빛이 번진다
+        for (const w of lit) {
+          g.fillStyle = `rgba(255, 214, 140, ${0.85 * night})`;
+          g.fillRect(w[0], w[1], w[2], w[3]);
+          const cx = w[0] + w[2] / 2;
+          const cy = w[1] + w[3];
+          const grad = g.createRadialGradient(cx, cy, 0, cx, cy, 1.6);
+          grad.addColorStop(0, `rgba(255, 200, 120, ${0.22 * night})`);
+          grad.addColorStop(1, 'rgba(255, 200, 120, 0)');
+          g.fillStyle = grad;
+          g.fillRect(cx - 1.6, cy - 0.2, 3.2, 1.8);
+        }
       }
       g.restore();
     }
   }
+}
+
+/** 건물 정면: 지붕 아래쪽 띠를 벽으로 칠하고 창을 낸다 (탑다운에 높이감). 밤에 켜질 창 목록을 돌려준다 */
+function facadeColumns(b: Building, r: Rect): number[] {
+  // 아래에 같은 건물이 이어지는 칸은 정면이 아니다
+  const bottom = r[1] + r[3];
+  const cols: number[] = [];
+  for (let x = r[0]; x < r[0] + r[2]; x++) if (!b.outer.some((o) => o !== r && inRect(o, x + 0.5, bottom + 0.2))) cols.push(x);
+  return cols;
+}
+
+let gravelTile: HTMLCanvasElement | null = null;
+/** 지붕 잔결: 밝고 어두운 점을 흩뿌린 반투명 타일 (24px = 1칸) */
+function gravel(): HTMLCanvasElement {
+  if (gravelTile) return gravelTile;
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const g = c.getContext('2d')!;
+  for (let i = 0; i < 900; i++) {
+    const h = hashOf(`g${i}`);
+    g.fillStyle = h % 2 ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.08)';
+    g.fillRect(h % 96, (h >>> 8) % 96, 1 + ((h >>> 16) % 2), 1);
+  }
+  gravelTile = c;
+  return c;
 }
 
 function drawRoofDetail(g: CanvasRenderingContext2D, kind: RoofDetail, x: number, y: number): void {

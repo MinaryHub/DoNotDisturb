@@ -397,22 +397,13 @@ export function paintDeco(g: CanvasRenderingContext2D, d: TileDef, n: TileNeighb
       break;
     }
     case 'tree': {
-      // 겹친 수관: 그림자 → 잎 덩어리 → 볕 받은 잎 → 하이라이트
-      g.fillStyle = 'rgba(0,0,0,0.2)';
-      circle(g, x + 0.62, y + 0.68, 0.52);
-      g.fillStyle = shade(d.color, -0.18);
-      circle(g, x + 0.5, y + 0.5, 0.52);
-      for (let i = 0; i < 6; i++) {
-        const k = hash2(tx, ty, 60 + i);
-        const a = (i / 6) * Math.PI * 2 + (k % 10) * 0.1;
-        g.fillStyle = i % 2 ? d.color : shade(d.color, -0.06);
-        circle(g, x + 0.5 + Math.cos(a) * 0.26, y + 0.5 + Math.sin(a) * 0.26, 0.2 + (k % 4) * 0.02);
-      }
-      g.fillStyle = shade(d.color, 0.1);
-      circle(g, x + 0.42, y + 0.42, 0.24);
-      g.fillStyle = shade(d.color, 0.22);
-      circle(g, x + 0.36, y + 0.34, 0.12);
-      circle(g, x + 0.56, y + 0.3, 0.07);
+      // 줄기와 뿌리 그늘만. 수관은 렌더러가 사람 위에 따로 그린다 (draw/trees.ts)
+      g.fillStyle = 'rgba(0,0,0,0.18)';
+      circle(g, x + 0.55, y + 0.6, 0.22);
+      g.fillStyle = '#6b4f3a';
+      circle(g, x + 0.5, y + 0.55, 0.14);
+      g.fillStyle = '#7d5d45';
+      circle(g, x + 0.47, y + 0.52, 0.08);
       break;
     }
     case 'plant': {
@@ -685,7 +676,30 @@ export function paintFloor(g: CanvasRenderingContext2D, d: TileDef, n: TileNeigh
         }
         break;
       }
-      // 잔디·수풀: 두 톤 풀잎 다발
+      // 잔디·수풀: 칸 경계 없이 이어지는 얼룩(부드러운 잡음). 잘게 나눠 계단이 보이지 않게
+      const N = 8;
+      for (let sy = 0; sy < N; sy++) {
+        for (let sx = 0; sx < N; sx++) {
+          const v = smoothNoise(tx + (sx + 0.5) / N, ty + (sy + 0.5) / N);
+          g.fillStyle = v > 0 ? `rgba(255, 255, 220, ${v * 0.07})` : `rgba(20, 40, 10, ${-v * 0.08})`;
+          g.fillRect(x + sx / N, y + sy / N, 1 / N + 0.01, 1 / N + 0.01);
+        }
+      }
+      if (d.id === 'bush') {
+        // 수풀: 둥근 잎 덩어리가 겹친다
+        for (let i = 0; i < 3; i++) {
+          const k = hash2(tx, ty, 40 + i);
+          const px = x + 0.2 + (k % 60) / 100;
+          const py = y + 0.2 + ((k >>> 7) % 60) / 100;
+          g.fillStyle = 'rgba(0, 0, 0, 0.12)';
+          circle(g, px + 0.05, py + 0.07, 0.3);
+          g.fillStyle = shade(d.color, -0.08 + (k % 3) * 0.06);
+          circle(g, px, py, 0.3);
+          g.fillStyle = shade(d.color, 0.14);
+          circle(g, px - 0.08, py - 0.09, 0.12);
+        }
+      }
+      // 두 톤 풀잎 다발
       for (let i = 0; i < 4; i++) {
         const k = hash2(tx, ty, 20 + i);
         if (k % 3 === 0) continue;
@@ -833,4 +847,9 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.arcTo(x, y, x + w, y, r);
   g.closePath();
   g.fill();
+}
+
+/** 칸 경계에서 끊기지 않는 낮은 주파수 얼룩 (-1~1) */
+function smoothNoise(x: number, y: number): number {
+  return (Math.sin(x * 0.37 + Math.sin(y * 0.21) * 2.1) + Math.sin(y * 0.43 + Math.sin(x * 0.17) * 1.7) + Math.sin((x + y) * 0.9) * 0.4) / 2.4;
 }

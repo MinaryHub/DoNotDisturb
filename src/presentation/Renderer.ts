@@ -8,7 +8,9 @@ import { parseTime } from '../sim/DayCycle';
 import { drawProp } from './draw/props';
 import { isSolid, paintDeco, paintFloor, paintFloorLight } from './draw/tiles';
 import { Pigeons, Roofs, drawCloudShadows, timeTint } from './draw/ambient';
-import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, type Accessory, type Look } from './draw/people';
+import { Particles } from './draw/particles';
+import { Canopies } from './draw/trees';
+import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, shade, type Accessory, type Look } from './draw/people';
 import type { PresentationState } from './PresentationState';
 import type { Settings } from './Settings';
 
@@ -55,6 +57,15 @@ export class Renderer {
   private readonly pigeons: Pigeons;
   /** 바깥에 있는 정도 (시간대 빛깔을 실내에서는 약하게) */
   private outdoorness = 1;
+  private readonly particles: Particles;
+  private readonly canopies = new Canopies();
+  /** 이번 프레임 화면 안의 나무 칸 (중심) */
+  private trees: { x: number; y: number }[] = [];
+  /** 한숨·놀람 입자를 한 번만 내기 위한 직전 상태 */
+  private lastMode = '';
+  private lastTrauma = 0;
+  /** 필름 결: 미리 만든 잡음 타일 */
+  private grain: HTMLCanvasElement | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -69,6 +80,12 @@ export class Renderer {
     const ground = cfg.world.layers.find((l) => l.id === 'ground') ?? cfg.world.layers[0]!;
     this.roofs = new Roofs(cfg.world, ground.rect, cfg.presentation.ambient);
     this.pigeons = new Pigeons(cfg.presentation.ambient);
+    this.roofs.facadeHeight = cfg.presentation.particles.facadeHeight;
+    this.roofs.isDoor = (x, y) => {
+      const id = map.def(x, y).id;
+      return id === 'door' || id === 'doorClosed';
+    };
+    this.particles = new Particles(cfg.presentation.particles);
   }
 
   resize(): void {
@@ -156,6 +173,7 @@ export class Renderer {
     const viewRect: Rect = [v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0];
     this.drawStalls(s);
     const night = this.nightLevel(s);
+    this.drawCeilingLights(viewRect, night);
     this.drawProps(night, ps.time);
     const rainHere = s.raining && onGround;
     if (rainHere) this.drawPuddles(ps.time);
@@ -166,9 +184,15 @@ export class Renderer {
     const others = s.crowd.agents.filter((a) => a.active).map((a) => a.pos);
     this.pigeons.update(dt, s.player.pos, s.player.running, others);
     if (onGround) this.pigeons.draw(ctx, viewRect, ps.time, false);
+    this.collectTrees();
+    this.canopies.drawShadows(ctx, this.trees, ps.time);
     this.drawCrowd(s, ps);
     for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
     this.drawPlayer(s, ps);
+    this.updateParticles(s, ps, dt, viewRect, night, rainHere);
+    this.particles.draw(ctx, ps.time);
+    // 밤에는 수관도 어둡게 (단계별 색으로 미리 그린 그림을 쓴다)
+    this.canopies.draw(ctx, this.trees, shade(this.treeColor, -Math.round(night * 6) / 10), ps.time, s.player.pos);
     this.drawItemBreak(s, ps);
     // 지붕: 바깥에서는 건물 안이 보이지 않는다. 들어서는 순간 그 건물만 걷힌다
     this.roofs.update(dt, s.player.pos);
@@ -186,6 +210,70 @@ export class Renderer {
     if (rainHere) this.drawRain(ps.time);
     this.updateRings(s, ps, st, dt);
     ctx.restore();
+  }
+
+  /** 실내 천장 조명: 방마다 일정 간격의 따뜻한 빛 웅덩이. 밤일수록 또렷하다 */
+  private drawCeilingLights(view: Rect, night: number): void {
+    const ctx = this.wctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'soft-light';
+    const a = 0.22 + night * 0.25;
+    for (const ar of this.cfg.world.areas) {
+      if (ar.kind === 'outdoor') continue;
+      const [rx, ry, rw, rh] = ar.rect;
+      if (rx > view[0] + view[2] || ry > view[1] + view[3] || rx + rw < view[0] || ry + rh < view[1]) continue;
+      if (!this.visible({ x: rx + 0.5, y: ry + 0.5 }) || this.roofs.covers({ x: rx + rw / 2, y: ry + rh / 2 })) continue;
+      const nx = Math.max(1, Math.round(rw / 5));
+      const ny = Math.max(1, Math.round(rh / 5));
+      const rad = Math.min(3.2, Math.max(rw / nx, rh / ny) * 0.75);
+      for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < ny; j++) {
+          const x = rx + (i + 0.5) * (rw / nx);
+          const y = ry + (j + 0.5) * (rh / ny);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+          g.addColorStop(0, `rgba(255, 236, 200, ${a})`);
+          g.addColorStop(1, 'rgba(255, 236, 200, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  private get treeColor(): string {
+    return this.cfg.tiles.find((t) => t.id === 'tree')?.color ?? '#4f7a4b';
+  }
+
+  private collectTrees(): void {
+    this.trees = [];
+    const v = this.camera.visibleTiles(2);
+    for (let y = Math.max(0, v.y0); y <= Math.min(this.map.height - 1, v.y1); y++) {
+      for (let x = Math.max(0, v.x0); x <= Math.min(this.map.width - 1, v.x1); x++) {
+        if (this.map.def(x, y).id === 'tree' && this.visible({ x, y })) this.trees.push({ x: x + 0.5, y: y + 0.5 });
+      }
+    }
+  }
+
+  private updateParticles(s: GameSession, ps: PresentationState, dt: number, view: Rect, night: number, raining: boolean): void {
+    const p = s.player;
+    // 대화가 끝나면 한숨, 기습이면 머리 둘레로 놀람 선
+    if (this.lastMode === 'dialogue' && s.mode.kind !== 'dialogue') this.particles.sigh(p.pos, p.facing);
+    this.lastMode = s.mode.kind;
+    if (ps.trauma > 0.6 && ps.trauma - this.lastTrauma > 0.3) this.particles.startle(p.pos);
+    this.lastTrauma = ps.trauma;
+    const map = this.map;
+    this.particles.update(dt, {
+      view,
+      player: { pos: p.pos, facing: p.facing, running: p.running, moving: p.moving },
+      runners: s.activeNpcs().filter((n) => n.state === 'approach' && this.visible(n.pos)).map((n) => n.pos),
+      night,
+      raining,
+      sanctuary: ps.sanctuary,
+      tileAt: (x, y) => (map.inBounds(x, y) ? map.def(x, y).id : 'void'),
+      outdoorAt: (x, y) => this.outdoorAt({ x, y }),
+      inLayer: (x, y) => this.visible({ x, y }) && !this.roofs.covers({ x, y }),
+    });
   }
 
   /** 지붕 아래 목표 지점: 지붕 위에 표식만 올려 둔다 */
@@ -996,6 +1084,36 @@ export class Renderer {
       ctx.globalCompositeOperation = 'source-over';
     }
     ctx.restore();
+    this.finish(ps, st, W, H);
+  }
+
+  /** 마무리: 늘 깔리는 은은한 가장자리 어둠과 필름 결 (깜빡임을 끄면 결이 멈춘다) */
+  private finish(ps: PresentationState, st: Settings, W: number, H: number): void {
+    const ctx = this.ctx;
+    const pc = this.cfg.presentation.particles;
+    if (pc.vignette > 0) {
+      const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+      g.addColorStop(0, 'rgba(10, 8, 20, 0)');
+      g.addColorStop(1, `rgba(10, 8, 20, ${pc.vignette})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (pc.grain > 0) {
+      if (!this.grain) this.grain = makeGrain(160);
+      const pat = ctx.createPattern(this.grain, 'repeat');
+      if (pat) {
+        const step = st.flash ? Math.floor(ps.time * 12) : 0;
+        const ox = (step * 53) % 160;
+        const oy = (step * 97) % 160;
+        ctx.save();
+        ctx.globalAlpha = pc.grain;
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.translate(-ox, -oy);
+        ctx.fillStyle = pat;
+        ctx.fillRect(ox, oy, W, H);
+        ctx.restore();
+      }
+    }
   }
 
   // ───────────────────────── 심리 오버레이 ─────────────────────────
@@ -1163,6 +1281,23 @@ export class Renderer {
     }
     return c;
   }
+}
+
+function makeGrain(size: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255;
+    img.data[i] = v;
+    img.data[i + 1] = v;
+    img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
 }
 
 function lerpAngle(a: number, b: number, k: number): number {

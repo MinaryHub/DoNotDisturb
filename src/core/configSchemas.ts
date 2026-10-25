@@ -335,6 +335,25 @@ export const presentationConfigSchema = z.object({
     pigeonReturnSec: positive,
     timeTint: z.array(z.object({ at: hhmm, color: z.string().regex(/^#[0-9a-fA-F]{6}$/), alpha: unit })),
   }),
+  /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
+  particles: z.object({
+    /** 화면 칸 하나를 1초에 몇 번 들여다볼지. 아래 확률은 맞는 칸을 골랐을 때 생길 확률 */
+    samplesPerTileSec: nonNegative,
+    leaf: unit,
+    steam: unit,
+    smoke: unit,
+    mote: unit,
+    splash: unit,
+    dustPerStep: z.number().int().min(0),
+    embersPerSec: nonNegative,
+    fireflies: z.number().int().min(0),
+    /** 화면 가장자리 은은한 어둠 (늘 깔림) */
+    vignette: unit,
+    /** 필름 결 */
+    grain: unit,
+    /** 건물 정면 높이 (칸): 지붕 아래로 벽과 창이 보인다 */
+    facadeHeight: nonNegative,
+  }),
   audio: z.object({
     masterVolume: unit,
     murmurGain: nonNegative,
@@ -743,3 +762,4 @@ export function parseConfig<T extends z.ZodType>(schema: T, data: unknown, sourc
   if (!result.success) throw new Error(`설정 파일 오류 (${source}): ${formatZodError(result.error)}`);
   return result.data;
 }
+export type ParticlesConfig = PresentationConfig['particles'];

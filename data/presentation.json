@@ -51,6 +51,20 @@
       { "at": "20:00", "color": "#5a6aa8", "alpha": 0.1 }
     ]
   },
+  "particles": {
+    "samplesPerTileSec": 0.6,
+    "leaf": 0.12,
+    "steam": 0.25,
+    "smoke": 0.9,
+    "mote": 0.05,
+    "splash": 0.9,
+    "dustPerStep": 2,
+    "embersPerSec": 2.5,
+    "fireflies": 14,
+    "vignette": 0.22,
+    "grain": 0.035,
+    "facadeHeight": 1.1
+  },
   "audio": {
     "masterVolume": 0.8,
     "murmurGain": 0.32,
