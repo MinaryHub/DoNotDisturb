@@ -1478,6 +1478,23 @@ body.is-touch .hotbar {
   font-weight: 700;
 }
 
+.map__zoom {
+  order: -1;
+  margin: -2px 0 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 236, 224, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.map__zoom:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .map__hint {
   margin-top: 10px;
   font-size: 12px;
@@ -1876,4 +1893,193 @@ body.is-touch .hint {
 
 .shop__out {
   opacity: 0.45;
+}
+
+/* ───────── 스플래시: 알림이 하나씩 흐려지고 달(방해 금지)이 떠오른다, 언어 고르기 ───────── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 38%, #2b2a35 0%, #14141a 55%, #0b0b0f 100%);
+  color: var(--ink);
+  overflow: auto;
+  transition: opacity 0.38s ease;
+}
+
+.splash--out {
+  opacity: 0;
+}
+
+.splash__box {
+  width: min(560px, 100%);
+  text-align: center;
+}
+
+.splash__mark {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 26px;
+}
+
+.splash__moon {
+  position: absolute;
+  inset: 26px;
+  border-radius: 50%;
+  box-shadow: inset -20px -6px 0 0 var(--warm);
+  filter: drop-shadow(0 0 18px rgba(255, 209, 102, 0.35));
+  opacity: 0;
+  transform: rotate(-18deg) scale(0.9);
+  animation: splash-moon var(--splash-fade) ease-out 0.35s forwards;
+}
+
+/* 알림 거품: 시끄러운 세상이 조용해진다 */
+.splash__ping {
+  position: absolute;
+  width: 34px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(243, 236, 224, 0.16);
+  border: 1px solid rgba(243, 236, 224, 0.28);
+  animation: splash-ping var(--splash-fade) ease-in forwards;
+}
+
+.splash__ping::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hot);
+}
+
+.splash__ping--1 { left: -6px; top: 18px; animation-delay: 0s; }
+.splash__ping--2 { right: -10px; top: 34px; animation-delay: 0.12s; }
+.splash__ping--3 { left: 4px; bottom: 16px; animation-delay: 0.24s; }
+.splash__ping--4 { right: 0; bottom: 6px; animation-delay: 0.36s; }
+
+@keyframes splash-ping {
+  0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(0, -10px) scale(0.85); filter: blur(2px); }
+}
+
+@keyframes splash-moon {
+  to { opacity: 1; transform: rotate(-18deg) scale(1); }
+}
+
+.splash__titles,
+.splash__taglines,
+.splash__pick {
+  opacity: 0;
+  animation: splash-rise 0.7s ease-out forwards;
+}
+
+.splash__titles { animation-delay: 0.5s; }
+.splash__taglines { animation-delay: 0.75s; }
+.splash__pick { animation-delay: var(--splash-fade); }
+
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.splash__title {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.25;
+  transition: font-size 0.2s ease, color 0.2s ease;
+}
+
+/* 고른 언어의 제목이 크게, 다른 언어는 작게 */
+.splash__title { font-size: 20px; color: var(--ink-dim); }
+.splash[data-lang='ko'] .splash__title--ko,
+.splash[data-lang='en'] .splash__title--en { font-size: 38px; color: var(--ink); }
+.splash[data-lang='ko'] .splash__titles,
+.splash[data-lang='en'] .splash__titles { display: flex; flex-direction: column; gap: 4px; }
+.splash[data-lang='en'] .splash__title--en { order: -1; }
+
+.splash__taglines {
+  margin: 16px 0 34px;
+}
+
+.splash__tagline {
+  margin: 2px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cfc6b4;
+}
+
+.splash__choose {
+  margin: 0 0 12px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--warm);
+}
+
+.splash__langs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.splash__lang {
+  min-width: 150px;
+  min-height: 52px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(243, 236, 224, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.splash__lang kbd {
+  font-size: 12px;
+}
+
+.splash__lang:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.splash__lang.on {
+  border-color: var(--warm);
+  background: rgba(255, 209, 102, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.12);
+}
+
+.splash__lang:focus-visible {
+  outline: 2px solid var(--warm);
+  outline-offset: 2px;
+}
+
+.splash__hint {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 420px) {
+  .splash__langs { flex-direction: column; align-items: stretch; }
+  .splash[data-lang='ko'] .splash__title--ko,
+  .splash[data-lang='en'] .splash__title--en { font-size: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash__moon,
+  .splash__ping,
+  .splash__titles,
+  .splash__taglines,
+  .splash__pick {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
 }

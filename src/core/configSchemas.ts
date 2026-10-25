@@ -1047,3 +1047,11 @@ export function parseConfig<T extends z.ZodType>(schema: T, data: unknown, sourc
   return result.data;
 }
 export type ParticlesConfig = PresentationConfig['particles'];
+
+/** 스플래시 (data/splash.json): 언어를 고르기 전이라 두 언어 문구를 함께 둔다 */
+const splashLangSchema = z.object({ name: z.string(), title: z.string(), tagline: z.string(), choose: z.string(), hint: z.string() });
+export const splashSchema = z.object({
+  fadeSec: nonNegative,
+  langs: z.object({ ko: splashLangSchema, en: splashLangSchema }),
+});
+export type SplashConfig = z.infer<typeof splashSchema>;

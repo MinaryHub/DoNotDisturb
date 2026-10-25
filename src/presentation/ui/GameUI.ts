@@ -84,6 +84,9 @@ export class GameUI {
     bar(this.symptomGroup, 'hurry', (s) => s.hurry);
     this.buildOptions();
     el('div', 'map__title', this.mapEl, this.tx('map.title'));
+    const zoom = el('button', 'map__zoom', this.mapEl, this.tx('map.zoom'));
+    zoom.dataset['code'] = 'KeyZ';
+    zoom.type = 'button';
     el('div', 'map__hint', this.mapEl, this.tx('map.hint'));
   }
 
@@ -100,13 +103,14 @@ export class GameUI {
     this.minimap = c;
   }
 
-  /** [M]: 닫힘 → 주변 지도 → 도시 전체 → 닫힘 */
+  /** [M]: 열기 ↔ 닫기 (지난번에 보던 크기로 열린다) */
   toggleMap(): void {
-    if (!this.mapOpen) {
-      this.mapOpen = true;
-      this.mapCity = false;
-    } else if (!this.mapCity) this.mapCity = true;
-    else this.mapOpen = false;
+    this.mapOpen = !this.mapOpen;
+  }
+
+  /** [Z]: 지도가 열려 있을 때 주변 ↔ 도시 전체 */
+  zoomMap(): void {
+    if (this.mapOpen) this.mapCity = !this.mapCity;
   }
 
   closeMap(): void {

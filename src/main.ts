@@ -10,6 +10,7 @@ import { AudioDirector } from './presentation/AudioDirector';
 import { PresentationState } from './presentation/PresentationState';
 import { Renderer } from './presentation/Renderer';
 import { loadSettings, saveSettings } from './presentation/Settings';
+import { runSplash } from './presentation/ui/Splash';
 import { GameUI } from './presentation/ui/GameUI';
 import { TouchControls, isTouchDevice } from './presentation/ui/TouchControls';
 
@@ -53,6 +54,36 @@ function mergePressed(prev: Controls, next: Controls): Controls {
   return out;
 }
 
+/** 이 탭에서 스플래시를 이미 봤는지 (새로고침·언어를 바꿔 다시 불러올 때는 건너뛴다) */
+const SPLASH_KEY = 'dnd.splashSeen';
+
+function sessionFlag(key: string, set?: boolean): boolean {
+  try {
+    if (set) sessionStorage.setItem(key, '1');
+    return sessionStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** 스플래시에서 언어를 고른 뒤 게임을 연다. 지금과 다른 언어를 고르면 그 언어로 다시 불러온다 */
+function start(): void {
+  const params = new URLSearchParams(location.search);
+  if (params.has('nosplash') || sessionFlag(SPLASH_KEY)) return boot();
+  const settings = loadSettings();
+  const langParam = params.get('lang');
+  const current = langParam === 'ko' || langParam === 'en' ? langParam : settings.lang;
+  void runSplash(current).then((lang) => {
+    sessionFlag(SPLASH_KEY, true);
+    if (lang === current) return boot();
+    settings.lang = lang;
+    saveSettings(settings);
+    const url = new URL(location.href);
+    url.searchParams.delete('lang');
+    location.replace(url.toString());
+  });
+}
+
 function boot(): void {
   let cfg: GameConfig;
   const params = new URLSearchParams(location.search);
@@ -77,7 +108,7 @@ function boot(): void {
   // 마우스: 아이템 막대의 칸을 누르면 그 단축키를 누른 것처럼 (터치는 TouchControls가 맡는다)
   if (!touch) {
     document.addEventListener('pointerdown', (e) => {
-      const slot = (e.target as HTMLElement | null)?.closest<HTMLElement>('.hotbar [data-code], .perk [data-code]');
+      const slot = (e.target as HTMLElement | null)?.closest<HTMLElement>('.hotbar [data-code], .perk [data-code], .map [data-code]');
       if (!slot) return;
       const code = slot.dataset['code']!;
       input.touchDown(code);
@@ -258,6 +289,7 @@ function boot(): void {
       if (input.wasPressed('options')) ui.toggleOptions();
       if (input.wasPressed('toggleHints')) ui.toggleHints();
       if (input.wasPressed('map') && !s.isModal()) ui.toggleMap();
+      if (ui.isMapOpen && input.codePressed('KeyZ')) ui.zoomMap();
       // Esc: 지도가 열려 있으면 지도부터 닫는다
       if (input.wasPressed('pause') && ui.isMapOpen) ui.closeMap();
       else if (input.wasPressed('pause') && s.mode.kind === 'free') {
@@ -294,4 +326,4 @@ function boot(): void {
   (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg };
 }
 
-boot();
+start();
