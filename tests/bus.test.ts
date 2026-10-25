@@ -46,11 +46,12 @@ describe('마을버스 타기', () => {
     const money = s.sim.life.money;
     s.step(dt, { ...NO_CONTROLS, interactPressed: true });
     expect(s.mode.kind).toBe('bus');
-    step(s, cfg.balance.bus.intervalMin + 1);
+    for (let i = 0; i < 60 * (cfg.balance.bus.intervalMin + 1) && !(s.mode.kind === 'bus' && s.mode.phase === 'riding'); i++) s.step(dt, NO_CONTROLS);
     expect(s.mode.kind === 'bus' && s.mode.phase).toBe('riding');
     expect(s.sim.life.money).toBe(money - cfg.balance.bus.fare);
     const x0 = s.player.pos.x;
-    step(s, 5);
+    step(s, 2);
+    // 타고 가는 동안 시간이 빨리 흐른다
     expect(s.player.pos.x).toBeGreaterThan(x0 + 20);
     expect(s.crowdLevel).toBeGreaterThan(0);
     step(s, 60);
@@ -70,5 +71,32 @@ describe('마을버스 타기', () => {
     expect(s.mode.kind).toBe('bus');
     s.step(dt, { ...NO_CONTROLS, move: { x: 1, y: 0 } });
     expect(s.mode.kind).toBe('free');
+  });
+});
+
+describe('지하철', () => {
+  it('개찰구에서 역을 고르면 요금을 내고, 시간이 빨리 흐르며 그 역에 내린다', () => {
+    const s = new GameSession(cfg);
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    s.clock.minutes = parseTime('11:00');
+    const gate = cfg.world.interactables.find((i) => i.id === 'metroHaeoreum')!;
+    s.player.pos.x = gate.at[0];
+    s.player.pos.y = gate.at[1];
+    step(s, 0.1);
+    s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+    expect(s.mode.kind).toBe('metroMenu');
+    const dests = s.metroDestinations('haeoreum');
+    const central = dests.findIndex((d) => d.id === 'central');
+    for (let i = 0; i < central; i++) s.step(dt, { ...NO_CONTROLS, menuNav: 1 });
+    const money = s.sim.life.money;
+    const t0 = s.clock.minutes;
+    s.step(dt, { ...NO_CONTROLS, phoneReply: true });
+    expect(s.mode.kind).toBe('metro');
+    expect(s.sim.life.money).toBe(money - cfg.balance.metro.fare);
+    step(s, 30);
+    expect(s.mode.kind).toBe('free');
+    const st = cfg.world.metro!.stations['central']!;
+    expect(s.player.pos.x).toBeCloseTo(st.at[0], 1);
+    expect(s.clock.minutes - t0).toBeGreaterThanOrEqual(dests[central]!.stops * cfg.balance.metro.minutesPerStop - 1);
   });
 });

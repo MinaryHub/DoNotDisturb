@@ -175,7 +175,7 @@ function boot(): void {
     let useItem: number | null = null;
     if (!keyed) (['useItem1', 'useItem2', 'useItem3', 'useItem4', 'useItem5', 'useItem6', 'useItem7', 'useItem8'] as const).forEach((a, i) => input.wasPressed(a) && (useItem = i));
     const phoneOpen = s.phoneOpen;
-    const menuOpen = phoneOpen || mode === 'shop';
+    const menuOpen = phoneOpen || mode === 'shop' || mode === 'metroMenu';
     return {
       move: phoneOpen ? { x: 0, y: 0 } : move,
       sprint: input.isDown('sprint') || stickRun,

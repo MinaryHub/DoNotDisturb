@@ -17,7 +17,18 @@ export interface World {
 
 const v = (p: readonly [number, number]): Vec2 => ({ x: p[0], y: p[1] });
 
+/** 같은 설정이면 한 번만 칠한다 (넓은 도시는 칠하는 데 시간이 든다. 월드는 읽기만 한다) */
+const cache = new WeakMap<WorldDef, World>();
+
 export function buildWorld(def: WorldDef, tiles: readonly TileDef[]): World {
+  const hit = cache.get(def);
+  if (hit) return hit;
+  const world = paint(def, tiles);
+  cache.set(def, world);
+  return world;
+}
+
+function paint(def: WorldDef, tiles: readonly TileDef[]): World {
   const [W, H] = def.size;
   const index = new Map(tiles.map((t, i) => [t.id, i]));
   const id = (name: string) => {

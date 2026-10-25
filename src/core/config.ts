@@ -21,6 +21,8 @@ import {
   stimulusTableSchema,
   storyConfigSchema,
   reputationConfigSchema,
+  worldPartSchema,
+  districtsConfigSchema,
   textTableSchema,
   tileDefsSchema,
   worldDefSchema,
@@ -49,6 +51,7 @@ import type { DialoguePool } from '../sim/DialogueBattle';
 import type { SimConfig } from '../sim/Simulation';
 import { unknownStoryFlags } from '../gameplay/Story';
 import type { ReputationConfig } from '../sim/Reputation';
+import { generateCity, mergeWorld, type DistrictsConfig } from '../world/CityGen';
 
 export interface GameConfig {
   input: InputConfig;
@@ -131,7 +134,12 @@ export function parseGameConfig(raw: RawConfig, lang: Lang = 'ko'): GameConfig {
     dialoguePools,
     speeches: parseConfig(speechesSchema, j('speeches.json'), 'data/speeches.json'),
     tiles: parseConfig(tileDefsSchema, j('world/tiles.json'), 'data/world/tiles.json'),
-    world: parseConfig(worldDefSchema, j('world/city.json'), 'data/world/city.json'),
+    // 손으로 만든 해오름동 + 규칙으로 생성한 넓은 도시 + 손으로 만든 랜드마크
+    world: mergeWorld(
+      parseConfig(worldDefSchema, j('world/city.json'), 'data/world/city.json'),
+      generateCity(parseConfig(districtsConfigSchema, j('world/districts.json'), 'data/world/districts.json') as DistrictsConfig),
+      parseConfig(worldPartSchema, j('world/landmarks.json'), 'data/world/landmarks.json'),
+    ),
     days,
     monologueTriggers: parseConfig(monologueTriggersSchema, j('monologue/triggers.json'), 'data/monologue/triggers.json'),
     monologue: { ...parseKeyTextCsv(raw.monologueCsv), ...(lang === 'en' && raw.monologueCsvEn ? parseKeyTextCsv(raw.monologueCsvEn) : {}) },
@@ -203,6 +211,17 @@ export function crossCheck(cfg: GameConfig): string[] {
     if (it.kind === 'shop' && !(it.shop && has(cfg.items.shops, it.shop))) errors.push(`interactable ${it.id}: 상점 없음 "${it.shop ?? ''}" (data/items.json)`);
     if (it.kind === 'chore' && !(it.chore && has(cfg.chores, it.chore))) errors.push(`interactable ${it.id}: 생활 행동 없음 "${it.chore ?? ''}" (data/chores.json)`);
   }
+  for (const a of w.ambient ?? []) {
+    if (!has(cfg.npcProfiles, a.profile)) errors.push(`ambient ${a.id}: 프로필 없음 "${a.profile}"`);
+    if (!has(w.spawns, a.at)) errors.push(`ambient ${a.id}: 스폰 없음 "${a.at}"`);
+    if (a.path && !has(w.paths, a.path)) errors.push(`ambient ${a.id}: 경로 없음 "${a.path}"`);
+  }
+  for (const n of w.mapNames ?? []) needText(n.textKey, 'mapNames');
+  if (w.metro) {
+    for (const id of w.metro.line) if (!has(w.metro.stations, id)) errors.push(`metro line: 역 없음 "${id}"`);
+    for (const [id, st] of Object.entries(w.metro.stations)) needText(st.nameKey, `metro station ${id}`);
+  }
+  for (const it of w.interactables) if (it.kind === 'metroGate' && !(it.target && w.metro && has(w.metro.stations, it.target))) errors.push(`interactable ${it.id}: 지하철역 없음 "${it.target ?? ''}"`);
   if (w.bus) {
     needText(w.bus.routeKey, 'bus');
     for (const [id, st] of Object.entries(w.bus.stops)) needText(st.nameKey, `bus stop ${id}`);

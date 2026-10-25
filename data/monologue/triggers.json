@@ -121,5 +121,7 @@
   {"key": "mono.elder.near", "when": {"npcProfile": "elder", "distMax": 9, "visible": true}, "cooldownSec": 300},
   {"key": "mono.festival", "when": {"area": "stream", "day": "day4"}, "once": true},
   {"key": "mono.warp.home", "when": {"event": "warp:home"}, "cooldownSec": 10},
-  {"key": "mono.bike.ride", "when": {"event": "bike:ride"}, "cooldownSec": 600}
+  {"key": "mono.bike.ride", "when": {"event": "bike:ride"}, "cooldownSec": 600},
+  {"key": "mono.metro.board", "when": {"event": "metro:board"}, "cooldownSec": 300},
+  {"key": "mono.metro.rush", "when": {"event": "metro:rush"}, "cooldownSec": 300}
 ]

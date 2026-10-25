@@ -60,6 +60,8 @@ export class GameUI {
   private readonly mapCanvas = el('canvas', 'map__canvas', this.mapEl);
   private readonly optionsEl = el('div', 'options', document.body);
   private mapOpen = false;
+  /** 도시 전체 보기 (아니면 내 주변을 크게) */
+  private mapCity = false;
   private minimap: HTMLCanvasElement | null = null;
 
   constructor(
@@ -98,8 +100,13 @@ export class GameUI {
     this.minimap = c;
   }
 
+  /** [M]: 닫힘 → 주변 지도 → 도시 전체 → 닫힘 */
   toggleMap(): void {
-    this.mapOpen = !this.mapOpen;
+    if (!this.mapOpen) {
+      this.mapOpen = true;
+      this.mapCity = false;
+    } else if (!this.mapCity) this.mapCity = true;
+    else this.mapOpen = false;
   }
 
   get isMapOpen(): boolean {
@@ -554,6 +561,9 @@ export class GameUI {
       case 'shop':
         html = this.shopHtml(s, m);
         break;
+      case 'metroMenu':
+        html = this.metroHtml(s, m);
+        break;
       default:
         break;
     }
@@ -639,6 +649,21 @@ export class GameUI {
       <div class="shop__title">${escapeHtml(this.tx(shop.titleKey))}<span>🎒${s.bagCount()}/${this.cfg.items.bagMax} · ${escapeHtml(this.money(s.sim.life.money))}</span></div>
       <ul class="shop__list">${rows}</ul>
       <div class="shop__hint">${escapeHtml(this.tx('shop.hint'))}</div>
+    </div>`;
+  }
+
+  /** 지하철 개찰구: 갈 역 고르기 (정거장 수·걸리는 시간·요금) */
+  private metroHtml(s: GameSession, m: Extract<Mode, { kind: 'metroMenu' }>): string {
+    const st = this.cfg.world.metro!.stations;
+    const mc = this.cfg.balance.metro;
+    const rows = s
+      .metroDestinations(m.from)
+      .map((d, i) => `<li class="${i === m.cursor ? 'sel' : ''}"><span class="shop__name">🚇 ${escapeHtml(this.tx(st[d.id]!.nameKey))}</span><span class="shop__desc">${escapeHtml(this.tx('metro.stops', { n: d.stops, min: d.stops * mc.minutesPerStop }))}</span><span class="shop__have"></span><span class="shop__price">${escapeHtml(this.money(mc.fare))}</span></li>`)
+      .join('');
+    return `<div class="shop">
+      <div class="shop__title">${escapeHtml(this.tx('metro.title', { name: this.tx(st[m.from]!.nameKey) }))}<span>${escapeHtml(this.money(s.sim.life.money))}</span></div>
+      <ul class="shop__list">${rows}</ul>
+      <div class="shop__hint">${escapeHtml(this.tx('metro.hint'))}</div>
     </div>`;
   }
 
@@ -734,7 +759,10 @@ export class GameUI {
     const m = s.mode;
     let text = '';
     if (m.kind === 'elevator') text = m.phase === 'waiting' ? this.tx('elevator.waiting') : m.phase === 'closing' ? this.tx('elevator.ride') : `▼ ▲  ${m.companion ? '…' : ''}`;
-    else if (m.kind === 'bus') {
+    else if (m.kind === 'metro') {
+      const st = this.cfg.world.metro!.stations;
+      text = this.tx('metro.riding', { name: this.tx(st[m.to]!.nameKey), pct: Math.round((m.timer / m.total) * 100) });
+    } else if (m.kind === 'bus') {
       const dest = this.tx(s.cfg.world.bus?.stops[m.to]?.nameKey ?? m.to);
       text = m.phase === 'waiting' ? this.tx('bus.waiting', { dest, min: Math.ceil(s.busWaitMin()) }) : this.tx(m.awkward ? 'bus.ridingAwkward' : 'bus.riding', { dest });
     }
@@ -755,26 +783,56 @@ export class GameUI {
     show(this.mapEl, this.mapOpen, 'flex');
     if (!this.mapOpen || !this.minimap) return;
     const c = this.mapCanvas;
-    const scale = 4;
-    if (c.width !== this.minimap.width) {
-      c.width = this.minimap.width;
-      c.height = this.minimap.height;
-    }
-    const g = c.getContext('2d')!;
-    g.drawImage(this.minimap, 0, 0);
-    const dot = (x: number, y: number, color: string, r: number) => {
-      g.fillStyle = color;
-      g.beginPath();
-      g.arc(x * scale, y * scale, r, 0, Math.PI * 2);
-      g.fill();
-    };
-    const target = this.markerTarget(s);
-    if (target) dot(target.x, target.y, '#ffd166', 9);
+    const mm = this.minimap;
+    const scale = mm.width / this.cfg.world.size[0];
     const groundH = this.cfg.world.layers.find((l) => l.id === 'ground')?.rect[3] ?? 140;
-    for (const n of s.activeNpcs()) if (n.type !== 'passerby' && n.type !== 'pet' && n.pos.y < groundH) dot(n.pos.x, n.pos.y, n.type === 'ally' ? '#f2c94c' : '#e0645a', 5);
     const p = s.player.pos;
     // 지하·3층(섬 영역)에 있으면 입구 위치로 표시
     const shown = p.y < groundH ? p : s.area?.id === 'subway' ? { x: p.x < 60 ? 31.5 : 177.5, y: 61 } : { x: 22, y: 44 };
+    const W = 1600;
+    const H = this.mapCity ? Math.round((W * mm.height) / mm.width) : 800;
+    if (c.width !== W || c.height !== H) {
+      c.width = W;
+      c.height = H;
+    }
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#1c1c22';
+    g.fillRect(0, 0, W, H);
+    // 도시 전체: 줄여서 / 주변: 미니맵 그대로 잘라서 (내 위치가 가운데)
+    const k = this.mapCity ? W / mm.width : 1;
+    const sx = this.mapCity ? 0 : Math.max(0, Math.min(mm.width - W, shown.x * scale - W / 2));
+    const sy = this.mapCity ? 0 : Math.max(0, Math.min(mm.height - H, shown.y * scale - H / 2));
+    if (this.mapCity) g.drawImage(mm, 0, 0, W, H);
+    else g.drawImage(mm, sx, sy, W, H, 0, 0, W, H);
+    const dot = (x: number, y: number, color: string, r: number) => {
+      g.fillStyle = color;
+      g.beginPath();
+      g.arc((x * scale - sx) * k, (y * scale - sy) * k, r, 0, Math.PI * 2);
+      g.fill();
+    };
+    if (this.mapCity) {
+      // 구역 이름을 크게
+      g.font = '700 26px system-ui, "Malgun Gothic", sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      const names = [
+        ...this.cfg.world.areas.filter((a) => a.labelKey.startsWith('district.') && a.rect[2] >= 100).map((a) => ({ x: a.rect[0] + a.rect[2] / 2, y: a.rect[1] + a.rect[3] / 2, key: a.labelKey })),
+        ...(this.cfg.world.mapNames ?? []).map((n) => ({ x: n.at[0], y: n.at[1], key: n.textKey })),
+      ];
+      for (const a of names) {
+        const cx = a.x * scale * k;
+        const cy = a.y * scale * k;
+        g.fillStyle = 'rgba(20,20,26,0.65)';
+        const text = this.tx(a.key);
+        const tw = g.measureText(text).width + 20;
+        g.fillRect(cx - tw / 2, cy - 18, tw, 36);
+        g.fillStyle = '#fff3d6';
+        g.fillText(text, cx, cy);
+      }
+    }
+    const target = this.markerTarget(s);
+    if (target) dot(target.x, target.y, '#ffd166', 9);
+    for (const n of s.activeNpcs()) if (n.type !== 'passerby' && n.type !== 'pet' && n.pos.y < groundH) dot(n.pos.x, n.pos.y, n.type === 'ally' ? '#f2c94c' : '#e0645a', 5);
     dot(shown.x, shown.y, '#fff7d6', 8);
     dot(shown.x, shown.y, '#3f78c9', 5);
   }

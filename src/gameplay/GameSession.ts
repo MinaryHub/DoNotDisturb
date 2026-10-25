@@ -127,6 +127,9 @@ export type Mode =
   | { kind: 'piano'; game: PianoGame; doneTime: number }
   | { kind: 'travel'; portal: PortalDef; target: PortalDef; timer: number; total: number }
   | { kind: 'elevator'; phase: 'waiting' | 'closing' | 'riding'; timer: number; from: string; to: string; companion: Npc | null; presses: number }
+  /** 지하철: 개찰구에서 갈 역 고르기 → 타고 가는 동안 (시간이 빨리 흐른다) */
+  | { kind: 'metroMenu'; from: string; cursor: number }
+  | { kind: 'metro'; from: string; to: string; timer: number; total: number }
   /** 마을버스: 정류장에서 기다리다(waiting) 타고 간다(riding). awkward = 아는 사람이 같이 탔다 */
   | { kind: 'bus'; phase: 'waiting' | 'riding'; dir: BusDir; fromX: number; to: string; depart: number; awkward: boolean }
   | { kind: 'selfCheckout'; timer: number; total: number }
@@ -196,6 +199,8 @@ export class GameSession {
   dayIndex = 0;
   objectives!: Objectives;
   npcs: Npc[] = [];
+  /** NPC 활동 시간 (분) */
+  private npcHours = new Map<string, { from: number; to: number }>();
   mode: Mode = { kind: 'dayIntro' };
   qte: Qte | null = null;
   player!: PlayerState;
@@ -325,7 +330,9 @@ export class GameSession {
     this.dayIndex = index;
     if (this.seed !== null) this.rngState = mix(this.seed, index, this.attempt++);
     const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
-    this.day = composed.day;
+    // 넓은 도시의 동네 사람들: 날마다 길을 오간다 (확률이 있으면 씨앗으로, 테스트는 확률 없는 사람만)
+    const ambient = (this.cfg.world.ambient ?? []).filter((a) => (a.chance === undefined ? true : this.seed !== null ? this.rng() < a.chance : a.chance >= 1));
+    this.day = { ...composed.day, npcs: [...composed.day.npcs, ...ambient.map(({ chance: _c, ...a }) => a)] };
     this.happenings = composed.happenings;
     this.sim.life.clearLedger();
     this.ledgerSeen = 0;
@@ -470,6 +477,7 @@ export class GameSession {
 
   private spawnNpcs(): void {
     this.npcs = [];
+    this.npcHours = new Map(this.day.npcs.map((n) => [n.id, { from: n.from ? parseTime(n.from) : -Infinity, to: n.to ? parseTime(n.to) : Infinity }]));
     for (const n of this.day.npcs) {
       const base = this.cfg.npcProfiles[n.profile]!;
       const profile = n.dialogue ? { ...base, dialogue: n.dialogue } : base;
@@ -489,13 +497,13 @@ export class GameSession {
     }
   }
 
-  /** NPC가 지금 시각에 활동 중인지 */
+  /** NPC가 지금 시각에 활동 중인지 (활동 시간은 하루 시작 때 분으로 바꿔 둔다) */
   npcActive(npc: Npc): boolean {
-    const def = this.day.npcs.find((n) => n.id === npc.id);
-    if (!def) return false;
+    const w = this.npcHours.get(npc.id);
+    if (!w) return false;
     const m = this.clock.minutes;
-    if (def.from && m < parseTime(def.from)) return false;
-    if (def.to && m >= parseTime(def.to) && npc.state !== 'dialogue') return false;
+    if (m < w.from) return false;
+    if (m >= w.to && npc.state !== 'dialogue') return false;
     return true;
   }
 
@@ -701,7 +709,13 @@ export class GameSession {
         this.updateElevator(dt, c, m);
         break;
       case 'bus':
-        this.updateBus(c, m);
+        this.updateBus(dt, c, m);
+        break;
+      case 'metroMenu':
+        this.updateMetroMenu(c, m);
+        break;
+      case 'metro':
+        this.updateMetro(dt, m);
         break;
       case 'selfCheckout':
         m.timer += dt;
@@ -928,6 +942,9 @@ export class GameSession {
         break;
       case 'busStop':
         this.waitBus(it);
+        break;
+      case 'metroGate':
+        if (it.target && this.cfg.world.metro?.stations[it.target]) this.mode = { kind: 'metroMenu', from: it.target, cursor: 0 };
         break;
       case 'bikeDock':
         if (this.player.biking) this.parkBike('bike.returned');
@@ -1292,7 +1309,51 @@ export class GameSession {
     return Math.max(0, this.busRoute.reachesAt(m.dir, m.depart, m.fromX) - this.clock.minutes);
   }
 
-  private updateBus(c: Controls, m: Extract<Mode, { kind: 'bus' }>): void {
+  // ───────────────────────── 지하철 ─────────────────────────
+
+  /** 이 역에서 갈 수 있는 역 (노선 순서대로, 지금 역 제외) */
+  metroDestinations(from: string): { id: string; stops: number }[] {
+    const line = this.cfg.world.metro?.line ?? [];
+    const i = line.indexOf(from);
+    return line.filter((id) => id !== from).map((id) => ({ id, stops: Math.abs(line.indexOf(id) - i) }));
+  }
+
+  private updateMetroMenu(c: Controls, m: Extract<Mode, { kind: 'metroMenu' }>): void {
+    const dests = this.metroDestinations(m.from);
+    if (c.menuNav !== 0) m.cursor = (m.cursor + c.menuNav + dests.length) % dests.length;
+    if (c.cancel || c.phoneIgnore) {
+      this.mode = { kind: 'free' };
+      return;
+    }
+    if (!(c.interactPressed || c.phoneReply)) return;
+    const d = dests[m.cursor]!;
+    const mc = this.cfg.balance.metro;
+    if (!this.pay(mc.fare)) {
+      this.mode = { kind: 'free' };
+      return;
+    }
+    this.fx.push({ type: 'sound', id: 'beep' });
+    // 타는 동안 시간이 timeScale배로 흐르므로, 실제로는 (정거장 × 분) / timeScale초
+    const minutes = d.stops * mc.minutesPerStop;
+    this.mode = { kind: 'metro', from: m.from, to: d.id, timer: 0, total: minutes / (this.cfg.balance.clock.minutesPerSecond * mc.timeScale) };
+    this.gameEvent('metro:board');
+    if (this.isRush()) this.gameEvent('metro:rush');
+  }
+
+  private updateMetro(dt: number, m: Extract<Mode, { kind: 'metro' }>): void {
+    const mc = this.cfg.balance.metro;
+    this.clock.advance(dt, this.cfg.balance.clock.minutesPerSecond * (mc.timeScale - 1));
+    m.timer += dt;
+    if (m.timer < m.total) return;
+    const st = this.cfg.world.metro!.stations[m.to]!;
+    this.teleport({ x: st.at[0], y: st.at[1] });
+    this.fx.push({ type: 'sound', id: 'chime' });
+    this.mode = { kind: 'free' };
+    this.toast('metro.arrive', { name: this.cfg.text[st.nameKey] ?? m.to });
+    this.gameEvent(`metro:arrive:${m.to}`);
+  }
+
+  private updateBus(dt: number, c: Controls, m: Extract<Mode, { kind: 'bus' }>): void {
     const route = this.busRoute!;
     const b = this.cfg.balance.bus;
     const now = this.clock.minutes;
@@ -1319,14 +1380,26 @@ export class GameSession {
       }
       return;
     }
-    // 타고 가는 동안 버스와 함께 움직인다 (카메라가 따라간다)
+    // 타고 가는 동안 시간이 빨리 흐른다 (넓은 도시)
+    this.clock.advance(dt, this.cfg.balance.clock.minutesPerSecond * (b.rideTimeScale - 1));
+    // 버스와 함께 움직인다 (카메라가 따라간다)
+    const bus = route.busAt(m.dir, m.depart, this.clock.minutes);
+    // [F] 다음 정류장에서 내리기
+    if (c.interactPressed && bus) {
+      const next = Object.entries(this.cfg.world.bus!.stops)
+        .filter(([, st]) => (st.x - bus.x) * m.dir > 1)
+        .sort((a, b2) => (a[1].x - b2[1].x) * m.dir)[0];
+      if (next && next[0] !== m.to) {
+        m.to = next[0];
+        this.toast('bus.alightNext', { name: this.cfg.text[next[1].nameKey] ?? next[0] });
+      }
+    }
     const toX = route.stopX(m.to);
-    const bus = route.busAt(m.dir, m.depart, now);
     if (bus) {
       this.player.pos.x = bus.x;
       this.player.pos.y = bus.y;
     }
-    if (!bus || now >= route.reachesAt(m.dir, m.depart, toX)) {
+    if (!bus || this.clock.minutes >= route.reachesAt(m.dir, m.depart, toX)) {
       this.teleport(route.alightAt(m.dir, toX));
       this.fx.push({ type: 'sound', id: 'chime' });
       this.mode = { kind: 'free' };
@@ -1988,8 +2061,11 @@ export class GameSession {
     const percept = this.playerPercept();
     const talkBlocked = this.isModal() && this.mode.kind !== 'seated';
     const seatedFocus = this.mode.kind === 'seated';
+    const far = this.cfg.balance.npcUpdateRange;
     for (const npc of this.npcs) {
       if (!this.npcActive(npc)) continue;
+      // 멀리 있는 사람은 잠시 멈춰 둔다 (넓은 도시의 성능). 쫓아오거나 대화 중이면 계속
+      if (!npc.pursuing && npc.state !== 'dialogue' && Math.abs(npc.pos.x - this.player.pos.x) + Math.abs(npc.pos.y - this.player.pos.y) > far) continue;
       const wasPursuing = npc.pursuing;
       npc.update(dt, {
         map: this.world.map,
@@ -2039,7 +2115,7 @@ export class GameSession {
       phonePretend: p.phonePretend || this.phoneOpen,
       eyesClosed: p.eyesClosed,
       hidden: p.hidden,
-      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech' || (this.mode.kind === 'bus' && this.mode.phase === 'riding') || p.biking,
+      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech' || m === 'metro' || (this.mode.kind === 'bus' && this.mode.phase === 'riding') || p.biking,
     };
   }
 
@@ -2080,6 +2156,8 @@ export class GameSession {
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
     // 자전거로 사람들 사이를 지나가면 더 조마조마하다
     if (p.biking) crowd *= b.bike.crowdScale;
+    // 지하철 안: 러시아워엔 더 빽빽하다
+    if (this.mode.kind === 'metro') crowd = this.isRush() ? b.metro.crowdRush : b.metro.crowd;
     // 버스 안: 러시아워엔 빽빽하다
     if (this.mode.kind === 'bus' && this.mode.phase === 'riding') crowd = this.isRush() ? b.bus.crowdRush : b.bus.crowd;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);

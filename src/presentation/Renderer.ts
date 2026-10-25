@@ -930,7 +930,7 @@ export class Renderer {
   private drawPlayer(s: GameSession, ps: PresentationState, st: Settings): void {
     const ctx = this.wctx;
     const p = s.player;
-    if (s.mode.kind === 'travel' || (s.mode.kind === 'bus' && s.mode.phase === 'riding')) return;
+    if (s.mode.kind === 'travel' || s.mode.kind === 'metro' || (s.mode.kind === 'bus' && s.mode.phase === 'riding')) return;
     const { x, y } = p.pos;
     const r = this.cfg.player.radius;
     // 번아웃: 주저앉는다
@@ -1278,6 +1278,16 @@ export class Renderer {
       const k = Math.min(1, Math.min(m.timer, m.total - m.timer) / 0.4);
       ctx.fillStyle = `rgba(0,0,0,${Math.max(0, Math.min(1, k))})`;
       ctx.fillRect(0, 0, W, H);
+    }
+    // 지하철 안: 어둑한 차창, 지나가는 터널 불빛
+    if (s.mode.kind === 'metro') {
+      const m = s.mode;
+      const k = Math.min(1, m.timer / 0.4, (m.total - m.timer) / 0.4);
+      ctx.fillStyle = `rgba(14,16,24,${0.65 + 0.3 * Math.max(0, k)})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255, 230, 170, 0.12)';
+      const off = (ps.time * 900) % (W + 200);
+      for (let i = 0; i < 3; i++) ctx.fillRect(W - ((off + i * (W / 3)) % (W + 200)), H * 0.38, 120, H * 0.24);
     }
     if (s.mode.kind === 'elevator' && s.mode.phase === 'riding') {
       ctx.fillStyle = `rgba(20,20,26,${0.25 + ps.awkward * 0.25})`;

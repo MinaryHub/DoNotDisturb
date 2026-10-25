@@ -570,7 +570,9 @@
   ],
 
   "elevator": { "car": [193.5, 465.5], "carArea": "elevatorCar", "fronts": { "elevator3F": [177, 469.6], "elevator1F": [11, 32.8] } },
-  "bus": { "routeKey": "bus.route", "fromX": -14, "toX": 354, "laneEastY": 68, "laneWestY": 65.6, "curbSouthY": 71.2, "curbNorthY": 62.4, "stops": { "west": { "x": 20, "nameKey": "bus.stop.west" }, "middle": { "x": 140, "nameKey": "bus.stop.middle" }, "east": { "x": 304, "nameKey": "bus.stop.east" } } },
+  "bus": { "routeKey": "bus.route", "fromX": -14, "toX": 1114, "laneEastY": 68, "laneWestY": 65.6, "curbSouthY": 71.2, "curbNorthY": 62.4, "stops": { "west": { "x": 20, "nameKey": "bus.stop.west" }, "middle": { "x": 140, "nameKey": "bus.stop.middle" }, "east": { "x": 304, "nameKey": "bus.stop.east" }, "downtown": { "x": 560, "nameKey": "bus.stop.downtown" }, "campus": { "x": 940, "nameKey": "bus.stop.campus" } } },
+  "mapNames": [{ "at": [170, 32], "textKey": "district.haeoreum" }],
+  "metro": { "line": ["haeoreum", "market", "riverside", "central", "university"], "stations": { "haeoreum": { "at": [37.5, 62.6], "nameKey": "metro.haeoreum" }, "market": { "at": [170, 298.6], "nameKey": "metro.market" }, "riverside": { "at": [368, 319.8], "nameKey": "metro.riverside" }, "central": { "at": [555, 119.6], "nameKey": "metro.central" }, "university": { "at": [912, 81.8], "nameKey": "metro.university" } } },
 
   "spawns": {
     "player": [130.6, 466.5],

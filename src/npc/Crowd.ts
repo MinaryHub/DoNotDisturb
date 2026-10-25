@@ -26,6 +26,9 @@ export interface CrowdAgent {
 
 type Lane = WorldDef['crowdLanes'][number];
 
+/** 이만큼(맨해튼 거리, 칸)보다 먼 행인은 갱신하지 않는다 */
+const FAR = 80;
+
 export class Crowd {
   readonly agents: CrowdAgent[] = [];
   private readonly lanes = new Map<string, Lane>();
@@ -58,8 +61,12 @@ export class Crowd {
     }
   }
 
-  /** 러시아워 등 밀도 배율 적용 */
+  private density = -1;
+
+  /** 러시아워 등 밀도 배율 적용 (바뀔 때만) */
   setDensity(multiplier: number): void {
+    if (multiplier === this.density) return;
+    this.density = multiplier;
     const perLane = new Map<string, number>();
     for (const a of this.agents) {
       const n = perLane.get(a.lane) ?? 0;
@@ -71,6 +78,8 @@ export class Crowd {
   update(dt: number, player: Vec2, playerRadius: number): void {
     for (const a of this.agents) {
       if (!a.active) continue;
+      // 멀리(화면 밖) 있는 행인은 멈춰 둔다 (넓은 도시 성능). 다가가면 다시 걷는다
+      if (Math.abs(a.pos.x - player.x) + Math.abs(a.pos.y - player.y) > FAR) continue;
       a.phase += dt * a.speed * 5;
       const lane = this.lanes.get(a.lane)!;
       // 플레이어를 비켜 간다 (멀리서부터 옆으로 한 걸음)

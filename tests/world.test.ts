@@ -69,3 +69,31 @@ describe('월드 타일맵', () => {
     expect(p.y).toBeGreaterThan(463);
   });
 });
+
+describe('넓은 도시 (자동 생성 + 랜드마크)', () => {
+  it('씨앗이 같으면 같은 도시가 나온다', () => {
+    const a = readConfig().world;
+    const b = readConfig().world;
+    expect(a.areas.length).toBe(b.areas.length);
+    expect(JSON.stringify(a.interactables.map((i) => i.at))).toBe(JSON.stringify(b.interactables.map((i) => i.at)));
+  });
+
+  it('해오름동에서 도심·시장·대학·강변·남쪽 둔치까지 걸어서 이어진다 (다리 경유)', () => {
+    const ground = map.reachableFrom({ x: 17.5, y: 33.5 });
+    const at = (x: number, y: number) => ground[Math.floor(y) * map.width + Math.floor(x)] === 1;
+    for (const id of ['metroCentral', 'stationConv', 'deptCafe', 'mkGukbap', 'univRead1', 'riverKioskShop', 'metroUniv', 'metroRiver', 'metroMarket', 'busD_east', 'busC_west']) {
+      const it = world.interactables.find((i) => i.id === id)!;
+      expect(at(it.at[0], it.at[1]), id).toBe(true);
+    }
+    expect(at(352, 440), '중앙로 다리 건너 남쪽 둔치').toBe(true);
+    expect(at(900, 440), '보행 다리 건너 남쪽 둔치').toBe(true);
+  });
+
+  it('생성된 건물의 상호작용은 모두 걸어서 닿는다', () => {
+    const ground = map.reachableFrom({ x: 17.5, y: 33.5 });
+    const gen = world.interactables.filter((i) => /_(b|bench|it)_?\d+/.test(i.id));
+    expect(gen.length).toBeGreaterThan(200);
+    const unreachable = gen.filter((i) => ground[Math.floor(i.at[1]) * map.width + Math.floor(i.at[0])] !== 1).map((i) => i.id);
+    expect(unreachable).toEqual([]);
+  });
+});

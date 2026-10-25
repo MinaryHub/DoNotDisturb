@@ -103,12 +103,18 @@ export const balanceConfigSchema = z.object({
     crowd: nonNegative,
     crowdRush: nonNegative,
     acquaintanceChance: unit,
+    /** 타고 가는 동안 시간이 이만큼 빨리 흐른다 (넓은 도시를 오가는 시간 압축) */
+    rideTimeScale: positive,
   }),
+  /** 지하철: 역 사이 minutesPerStop분, 요금 fare, 타는 동안 시간 압축 timeScale, 차 안 군중 */
+  metro: z.object({ fare: nonNegative, minutesPerStop: positive, timeScale: positive, crowd: nonNegative, crowdRush: nonNegative }),
   /**
    * 공유 자전거: 대여소(bikeDock)에서 요금(fare)을 내고 탄다. 걷기의 speedMultiplier배.
    * 타는 동안 아무도 말을 걸 수 없지만 군중 속은 crowdScale배 더 긴장되고, 폰·먹기·우산은 못 쓴다. 건물에 들어서면 문 앞에 세운다
    */
   bike: z.object({ fare: nonNegative, speedMultiplier: positive, crowdScale: positive }),
+  /** 이만큼(맨해튼 거리, 칸)보다 먼 NPC는 갱신하지 않는다 (넓은 도시 성능) */
+  npcUpdateRange: positive,
   /** 연차: 한 주에 쓸 수 있는 날 수 (하루 시작 화면에서 [L]) */
   leave: z.object({ perWeek: z.number().int().min(0) }),
   /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
@@ -571,10 +577,21 @@ export const interactableKinds = [
   'seat',
   'busStop',
   'bikeDock',
+  'metroGate',
 ] as const;
 export type InteractableKind = (typeof interactableKinds)[number];
 
 const crowdLaneSchema = z.object({ id: z.string(), from: vec2, to: vec2, width: positive, count: z.number().int().min(0), speed: positive, zone: z.string() });
+
+const ambientNpcSchema = z.object({
+  id: z.string(),
+  profile: z.string(),
+  at: z.string(),
+  path: z.string().optional(),
+  from: hhmm.optional(),
+  to: hhmm.optional(),
+  chance: unit.optional(),
+});
 
 export const worldDefSchema = z.object({
   size: z.tuple([positive, positive]),
@@ -639,6 +656,10 @@ export const worldDefSchema = z.object({
       stops: z.record(z.string(), z.object({ x: z.number(), nameKey: z.string() })),
     })
     .optional(),
+  /** 도시 전체 지도에 크게 쓰는 이름 (자동 생성 구역은 구역 영역 이름을 쓴다) */
+  mapNames: z.array(z.object({ at: vec2, textKey: z.string() })).optional(),
+  /** 지하철 노선: 역 순서(line)와 역마다 내리는 자리 (개찰구 metroGate의 target이 역 id) */
+  metro: z.object({ line: z.array(z.string()).min(2), stations: z.record(z.string(), z.object({ at: vec2, nameKey: z.string() })) }).optional(),
   spawns: z.record(z.string(), vec2),
   paths: z.record(z.string(), z.object({ points: z.array(vec2).min(1), loop: z.boolean() })),
   crowdLanes: z.array(crowdLaneSchema),
@@ -654,8 +675,35 @@ export const worldDefSchema = z.object({
     .optional(),
   /** color가 있으면 가게 간판처럼 그 색 바탕으로 그린다 */
   labels: z.array(z.object({ at: vec2, textKey: z.string(), color: z.string().optional() })),
+  /** 동네 사람: 날마다 나와 길을 오간다 (자동 생성 구역·랜드마크). 하루 데이터의 npcs와 같은 모양 */
+  ambient: z.array(ambientNpcSchema).optional(),
 });
 export type WorldDef = z.infer<typeof worldDefSchema>;
+
+/** 월드에 덧붙이는 조각 (data/world/landmarks.json): city.json과 같은 칸, 모두 선택 */
+export const worldPartSchema = worldDefSchema
+  .pick({ ops: true, areas: true, hides: true, interactables: true, spawns: true, paths: true, crowdLanes: true, props: true, labels: true, ambient: true })
+  .partial();
+
+/** 자동 생성 구역 (data/world/districts.json, src/world/CityGen.ts) */
+export const districtsConfigSchema = z.object({
+  seed: z.number().int(),
+  /** 큰 길·강·다리·바탕 영역: 구역을 생성하기 전에 깐다 (구역이 그 위를 덮는다) */
+  macro: worldPartSchema.optional(),
+  districts: z.array(
+    z.object({
+      id: z.string(),
+      nameKey: z.string(),
+      rect,
+      style: z.enum(['downtown', 'nightlife', 'market', 'residential', 'campus', 'riverside']),
+      reserve: z.array(rect).optional(),
+      block: z.tuple([positive, positive]).optional(),
+      street: positive.optional(),
+      ambient: z.array(z.object({ profile: z.string(), count: z.number().int().min(0), from: hhmm.optional(), to: hhmm.optional(), chance: unit.optional() })).optional(),
+      stimulus: z.object({ id: z.string(), intensity: positive }).optional(),
+    }),
+  ),
+});
 export type InteractableDef = WorldDef['interactables'][number];
 export type PortalDef = WorldDef['portals'][number];
 export type SafeDef = WorldDef['safes'][number];

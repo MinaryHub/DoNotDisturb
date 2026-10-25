@@ -43,13 +43,22 @@
     "fare": 1450,
     "crowd": 0.45,
     "crowdRush": 1.1,
-    "acquaintanceChance": 0.15
+    "acquaintanceChance": 0.15,
+    "rideTimeScale": 4
+  },
+  "metro": {
+    "fare": 1450,
+    "minutesPerStop": 4,
+    "timeScale": 4,
+    "crowd": 0.6,
+    "crowdRush": 1.3
   },
   "bike": {
     "fare": 1000,
     "speedMultiplier": 2.3,
     "crowdScale": 1.4
   },
+  "npcUpdateRange": 90,
   "leave": {
     "perWeek": 1
   },
