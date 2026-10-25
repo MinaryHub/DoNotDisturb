@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 방해 금지 모드 아이콘: 조용한 밤의 달, 흐려지며 사라지는 알림 하나 -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#34323f"/>
+      <stop offset="0.6" stop-color="#1b1a22"/>
+      <stop offset="1" stop-color="#101015"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd166" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="crescent">
+      <rect width="512" height="512" fill="#000"/>
+      <circle cx="252" cy="266" r="138" fill="#fff"/>
+      <circle cx="194" cy="226" r="122" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="262" cy="262" r="210" fill="url(#glow)"/>
+  <rect width="512" height="512" fill="#ffd166" mask="url(#crescent)"/>
+  <!-- 흐려지는 알림: 말풍선 하나가 조용히 사라진다 -->
+  <g opacity="0.34" fill="none" stroke="#f3ece0" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M96 92 h104 a20 20 0 0 1 20 20 v38 a20 20 0 0 1 -20 20 h-58 l-22 20 v-20 h-24 a20 20 0 0 1 -20 -20 v-38 a20 20 0 0 1 20 -20 z"/>
+    <path d="M110 122 h66 M110 142 h40"/>
+  </g>
+  <circle cx="214" cy="96" r="12" fill="#e0705a" opacity="0.5"/>
+</svg>
