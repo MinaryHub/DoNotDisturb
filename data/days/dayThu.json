@@ -71,7 +71,8 @@
         "income": -8
       },
       "marker": "officeFloor",
-      "closes": "12:00"
+      "closes": "12:00",
+      "workday": true
     },
     {
       "id": "work",
@@ -91,7 +92,8 @@
       },
       "if": [
         "!pitch.prepped"
-      ]
+      ],
+      "workday": true
     },
     {
       "id": "work",
@@ -107,7 +109,8 @@
       },
       "if": [
         "pitch.prepped"
-      ]
+      ],
+      "workday": true
     },
     {
       "id": "pitch",
@@ -117,7 +120,8 @@
       "requires": [
         "work"
       ],
-      "marker": "meetingSeat"
+      "marker": "meetingSeat",
+      "workday": true
     },
     {
       "id": "memo",
@@ -450,5 +454,9 @@
       7
     ],
     "pingTimeoutSec": 4
+  },
+  "leave": {
+    "allowed": false,
+    "noteKey": "leave.note.thu"
   }
 }

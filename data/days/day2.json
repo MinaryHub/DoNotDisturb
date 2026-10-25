@@ -20,7 +20,8 @@
         "income": -8
       },
       "marker": "officeFloor",
-      "closes": "18:00"
+      "closes": "18:00",
+      "workday": true
     },
     {
       "id": "work",
@@ -33,7 +34,8 @@
       "closes": "18:30",
       "missed": {
         "income": -12
-      }
+      },
+      "workday": true
     },
     {
       "id": "groceries",
@@ -429,5 +431,12 @@
     "snackTv": {
       "monologue": "mono.notice.tv.d2"
     }
+  },
+  "leave": {
+    "allowed": true,
+    "cost": {
+      "income": -6
+    },
+    "noteKey": "leave.note.tue"
   }
 }

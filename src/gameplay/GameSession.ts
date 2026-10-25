@@ -54,6 +54,8 @@ export interface Controls {
   note: number | null;
   slot: number | null;
   retry: boolean;
+  /** 하루 시작 화면에서 연차 쓰기 */
+  leave: boolean;
   /** 미니게임·휴식 그만두기 (Esc) */
   cancel: boolean;
 }
@@ -85,6 +87,7 @@ export const NO_CONTROLS: Controls = {
   note: null,
   slot: null,
   retry: false,
+  leave: false,
   cancel: false,
 };
 
@@ -159,6 +162,8 @@ export interface SaveState {
   practiced?: boolean;
   /** 이야기 표지·셈 (data/story.json). 그날 아침 기준. 예전 저장은 이름 목록 */
   story?: Record<string, number> | string[];
+  /** 이번 주에 쓴 연차 (그날 아침 기준) */
+  leaveUsed?: number;
 }
 
 const INTERACT_RANGE_EXTRA = 0.2;
@@ -206,6 +211,10 @@ export class GameSession {
   readonly fx: FxEvent[] = [];
   /** 이야기 표지·셈: 지난 날들의 선택이 남긴 것 (data/story.json) */
   story = new Map<string, number>();
+  /** 이번 주에 쓴 연차 */
+  leaveUsed = 0;
+  /** 오늘 연차를 냈는지 */
+  onLeave = false;
   /** 오늘 이미 적용한 하루 한 번 규칙 (story.json marks의 순번) */
   private readonly marksToday = new Set<number>();
   /** 오늘 눈인사를 나눈 사람 */
@@ -214,7 +223,7 @@ export class GameSession {
   private readonly regularGreeted = new Set<string>();
 
   private nextMax: number;
-  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number> };
+  private dayStart!: { life: LifeSnapshot; max: number; story: Record<string, number>; leaveUsed: number };
   private rngState = 12345;
   private hurryNoted = false;
   /** 가진 장비: 하루가 바뀌어도, 다시 해도 남는다 */
@@ -266,6 +275,7 @@ export class GameSession {
       for (const g of save.gear ?? []) this.ownedGear.add(g);
       this.practiced = save.practiced ?? save.dayIndex > 0;
       this.story = storyFromSave(save.story);
+      this.leaveUsed = save.leaveUsed ?? 0;
     }
     this.startDay(this.dayIndex);
   }
@@ -293,7 +303,7 @@ export class GameSession {
   }
 
   saveState(): SaveState {
-    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story };
+    return { dayIndex: this.dayIndex, life: this.dayStart.life, nextMax: this.dayStart.max, reports: this.reports, gear: [...this.ownedGear], practiced: this.practiced, story: this.dayStart.story, leaveUsed: this.dayStart.leaveUsed };
   }
 
   // ───────────────────────── 하루 시작·재시작 ─────────────────────────
@@ -304,7 +314,8 @@ export class GameSession {
     const composed = composeDay(this.cfg.days[index]!, this.cfg.happenings, this.seed !== null ? () => this.rng() : null, this.story);
     this.day = composed.day;
     this.happenings = composed.happenings;
-    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story) };
+    this.dayStart = { life: this.sim.life.snapshot(), max: this.nextMax, story: Object.fromEntries(this.story), leaveUsed: this.leaveUsed };
+    this.onLeave = false;
     this.sim.startDay(this.nextMax);
     this.clock = new GameClock(parseTime(this.day.start));
     this.objectives = new Objectives(this.day);
@@ -369,6 +380,26 @@ export class GameSession {
     this.lastTier = 'stable';
   }
 
+  /** 오늘 연차를 쓸 수 있는지 (그날 허용 + 이번 주 남은 연차) */
+  get canTakeLeave(): boolean {
+    return !!this.day.leave?.allowed && !this.onLeave && this.leaveUsed < this.cfg.balance.leave.perWeek;
+  }
+
+  /** 연차: 회사 일 목표가 빠지고 쉬는 날이 된다. 그만큼 소득·평판이 조금 깎인다 (그날을 다시 하면 아침으로 돌아간다) */
+  takeLeave(): void {
+    if (!this.canTakeLeave || this.mode.kind !== 'dayIntro') return;
+    const leave = this.day.leave!;
+    this.onLeave = true;
+    this.leaveUsed++;
+    if (leave.cost) this.sim.life.apply(leave.cost);
+    const objectives = this.day.objectives.filter((o) => !o.workday);
+    const ids = new Set(objectives.map((o) => o.id));
+    this.day = { ...this.day, objectives: objectives.map((o) => (o.requires ? { ...o, requires: o.requires.filter((r) => ids.has(r)) } : o)) };
+    this.objectives = new Objectives(this.day);
+    this.toast(leave.noteKey);
+    this.gameEvent('leave');
+  }
+
   /**
    * 주저앉은 뒤 집 침대에서 다시 일어난다: 시간이 흐르고(respawn.hours), 에너지는 일부만(respawn.battery),
    * 심리 상태·증상은 가라앉은 채로. 목표·생활 지표·소지품은 그대로 이어진다.
@@ -409,6 +440,7 @@ export class GameSession {
     this.sim.life.restore(this.dayStart.life);
     this.nextMax = this.dayStart.max;
     this.story = storyFromSave(this.dayStart.story);
+    this.leaveUsed = this.dayStart.leaveUsed;
     this.startDay(this.dayIndex);
   }
 
@@ -456,6 +488,7 @@ export class GameSession {
   step(dt: number, c: Controls): void {
     switch (this.mode.kind) {
       case 'dayIntro':
+        if (c.leave) this.takeLeave();
         if (c.confirm) {
           this.mode = { kind: 'free' };
           this.gameEvent(`dayStart:${this.day.id}`);
@@ -470,6 +503,7 @@ export class GameSession {
           this.sim.life.restore({ values: { ...this.cfg.life.stats.start }, money: this.cfg.life.stats.startMoney, avoidCounts: {} });
           this.reports = [];
           this.story.clear();
+          this.leaveUsed = 0;
           this.nextMax = this.cfg.balance.battery.start;
           this.startDay(0);
         }

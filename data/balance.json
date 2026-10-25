@@ -45,6 +45,9 @@
     "crowdRush": 1.1,
     "acquaintanceChance": 0.15
   },
+  "leave": {
+    "perWeek": 1
+  },
   "nod": {
     "range": 5,
     "calm": 12

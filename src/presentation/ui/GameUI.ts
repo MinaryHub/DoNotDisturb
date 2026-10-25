@@ -186,6 +186,17 @@ export class GameUI {
     this.drainEl.classList.toggle('gauge__drain--up', eating && !b.paused);
   }
 
+  /** 하루 시작 화면: 연차 (쓸 수 있으면 [L], 썼으면 쉬는 날, 못 쓰는 날이면 이유) */
+  private leaveHtml(s: GameSession): string {
+    const leave = s.day.leave;
+    if (!leave) return '';
+    if (s.onLeave) return `<p class="screen__leave screen__leave--on">${escapeHtml(this.tx('leave.on'))}</p>`;
+    if (!leave.allowed) return `<p class="screen__leave">${escapeHtml(this.tx(leave.noteKey))}</p>`;
+    const left = s.cfg.balance.leave.perWeek - s.leaveUsed;
+    if (left <= 0) return `<p class="screen__leave">${escapeHtml(this.tx('leave.none'))}</p>`;
+    return `<p class="screen__leave">${escapeHtml(this.tx('leave.offer', { n: left }))}</p>`;
+  }
+
   /** 하루 시작 화면: 오늘만의 작은 사건 */
   private happeningsHtml(s: GameSession): string {
     // 지난 날의 선택이 남긴 이야기 한 줄이 먼저, 그다음 오늘만의 작은 사건
@@ -703,6 +714,7 @@ export class GameUI {
           <h1 class="screen__title">${escapeHtml(this.tx(s.day.titleKey))}</h1>
           <p class="screen__body">${escapeHtml(this.tx(s.day.introKey))}</p>
           ${this.happeningsHtml(s)}
+          ${this.leaveHtml(s)}
           ${s.dayIndex === 0 ? `<p class="screen__gauges">${escapeHtml(this.tx('intro.gauges'))}</p>` : ''}
           <p class="screen__cta">${escapeHtml(this.tx('screen.dayIntro.hint'))}</p>
           <p class="screen__hint">${escapeHtml(this.tx('hud.controls'))}</p>

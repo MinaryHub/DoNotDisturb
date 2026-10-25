@@ -53,6 +53,7 @@ export const inputActions = [
   'options',
   'toggleHints',
   'toggleDebug',
+  'leave',
 ] as const;
 export type InputAction = (typeof inputActions)[number];
 
@@ -103,6 +104,8 @@ export const balanceConfigSchema = z.object({
     crowdRush: nonNegative,
     acquaintanceChance: unit,
   }),
+  /** 연차: 한 주에 쓸 수 있는 날 수 (하루 시작 화면에서 [L]) */
+  leave: z.object({ perWeek: z.number().int().min(0) }),
   /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
   nod: z.object({ range: positive, calm: nonNegative }),
   recovery: z.object({
@@ -686,6 +689,8 @@ export const daySchema = z.object({
   stalls: z.array(z.object({ rect, color: z.string() })).optional(),
   /** 하루 시작 화면에 붙는 이야기 한 줄 (지난 날의 선택이 남긴 것) */
   notes: z.array(z.object({ textKey: z.string(), if: storyIf.optional(), /** 하루 시작에 가방에 넣어 주는 소모품 */ give: z.string().optional() })).optional(),
+  /** 연차: allowed면 하루 시작 화면에서 [L]로 쉬는 날이 된다 (회사 일 목표가 빠지고 cost만큼 생활 지표). 아니면 noteKey가 이유 */
+  leave: z.object({ allowed: z.boolean(), cost: lifeDelta.optional(), noteKey: z.string() }).optional(),
   /** 그날만 상호작용의 안내·독백·발화를 바꾼다 (목요일 회의 자리 = 발표) */
   interactAt: z.record(z.string(), z.object({ labelKey: z.string().optional(), monologue: z.string().optional(), speech: z.string().optional() })).optional(),
   objectives: z.array(
@@ -709,6 +714,8 @@ export const daySchema = z.object({
       /** 지도·화면 가장자리 화살표가 가리킬 곳: 상호작용 id 또는 영역 id */
       marker: z.string().optional(),
       if: storyIf.optional(),
+      /** 회사 일 (출근·업무·회의·회식). 연차를 내면 빠진다 */
+      workday: z.boolean().optional(),
     }),
   ),
   phone: z.array(

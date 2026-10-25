@@ -193,6 +193,7 @@ function boot(): void {
       note,
       slot,
       retry: input.codePressed('KeyR'),
+      leave: input.wasPressed('leave'),
       cancel: input.wasPressed('pause'),
     };
   };

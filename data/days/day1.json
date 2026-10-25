@@ -25,7 +25,8 @@
         "income": -8
       },
       "marker": "officeFloor",
-      "closes": "18:00"
+      "closes": "18:00",
+      "workday": true
     },
     {
       "id": "meeting",
@@ -36,7 +37,8 @@
         "commute"
       ],
       "marker": "meetingSeat",
-      "closes": "18:00"
+      "closes": "18:00",
+      "workday": true
     },
     {
       "id": "work",
@@ -49,7 +51,8 @@
       "closes": "18:30",
       "missed": {
         "income": -12
-      }
+      },
+      "workday": true
     },
     {
       "id": "home",
@@ -390,5 +393,12 @@
     "libraryBoard": {
       "monologue": "mono.notice.library.d1"
     }
+  },
+  "leave": {
+    "allowed": true,
+    "cost": {
+      "income": -8
+    },
+    "noteKey": "leave.note.mon"
   }
 }

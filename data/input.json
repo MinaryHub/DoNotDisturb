@@ -33,5 +33,6 @@
   "pause": ["Escape"],
   "options": ["KeyO"],
   "toggleHints": ["KeyH"],
-  "toggleDebug": ["F1"]
+  "toggleDebug": ["F1"],
+  "leave": ["KeyL"]
 }

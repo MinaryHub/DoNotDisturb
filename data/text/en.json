@@ -753,5 +753,13 @@
   "item.vanish": "Make It All Go Away~",
   "use.vanish": "Make it all go away~ …You open your eyes at home. The door is locked.",
   "buff.resist.end": "The tough vitamin wore off.",
-  "warp.home": "Home."
+  "warp.home": "Home.",
+  "leave.offer": "[L] Take a day off · {n} day(s) of leave left this week (no commute, work, meetings or team dinner; income dips a little)",
+  "leave.none": "You've already used this week's day off.",
+  "leave.on": "🌿 Day off. No office today. The messenger will… probably stay quiet.",
+  "leave.note.mon": "Took the day off. The team lead will cover the weekly meeting. Sorry, and thank you.",
+  "leave.note.tue": "Took the day off. A Tuesday off feels strangely luxurious.",
+  "leave.note.wed": "A full day off instead of a half day. The whole day is mine.",
+  "leave.note.thu": "It's presentation day. No day off today.",
+  "leave.note.fri": "Took the day off. The team dinner ended with \"Come next time for sure~\"."
 }

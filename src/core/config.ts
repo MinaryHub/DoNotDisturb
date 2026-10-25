@@ -266,6 +266,7 @@ export function crossCheck(cfg: GameConfig): string[] {
       if (!w.areas.some((x) => x.id === a.area)) errors.push(`${where} areaStimuli: 영역 없음 "${a.area}"`);
       needStim(a.id, `${where} areaStimuli`);
     }
+    if (d.leave) needText(d.leave.noteKey, `${where} leave`);
     for (const n of d.notes ?? []) {
       needText(n.textKey, `${where} notes`);
       if (n.give && !itemIds.has(n.give)) errors.push(`${where} notes: 아이템 없음 "${n.give}"`);
