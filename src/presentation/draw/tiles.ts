@@ -25,7 +25,9 @@ export type TileDeco =
   | 'bench'
   | 'books'
   | 'washer'
-  | 'vending';
+  | 'vending'
+  | 'readingTable'
+  | 'water';
 
 export interface TileNeighbors {
   up: TileDef;
@@ -292,6 +294,60 @@ export function paintDeco(g: CanvasRenderingContext2D, d: TileDef, n: TileNeighb
         circle(g, x + 0.78, y + 0.28, 0.09);
         g.fillStyle = '#a3c9d8';
         circle(g, x + 0.78, y + 0.28, 0.065);
+      }
+      break;
+    }
+    case 'readingTable': {
+      // 열람실 책상: 이어 붙인 상판, 펼친 책·공책, 가끔 스탠드
+      const l = n.left.deco === 'readingTable' ? 0 : 0.05;
+      const r = n.right.deco === 'readingTable' ? 0 : 0.05;
+      const t = n.up.deco === 'readingTable' ? 0 : 0.05;
+      const b = n.down.deco === 'readingTable' ? 0 : 0.05;
+      g.fillStyle = shade(d.color, -0.18);
+      g.fillRect(x + l, y + t + 0.04, 1.02 - l - r, 1.02 - t - b);
+      g.fillStyle = shade(d.color, 0.1);
+      g.fillRect(x + l, y + t, 1.02 - l - r, 1.02 - t - b - 0.04);
+      if (h % 3 !== 0) {
+        const bx = x + 0.22 + (h % 5) * 0.03;
+        const by = y + 0.3 + ((h >>> 4) % 4) * 0.04;
+        g.fillStyle = 'rgba(0,0,0,0.12)';
+        g.fillRect(bx + 0.03, by + 0.03, 0.5, 0.34);
+        g.fillStyle = BOOKS[h % BOOKS.length]!;
+        g.fillRect(bx, by, 0.5, 0.34);
+        g.fillStyle = '#f7f2e6';
+        g.fillRect(bx + 0.03, by + 0.03, 0.21, 0.28);
+        g.fillRect(bx + 0.26, by + 0.03, 0.21, 0.28);
+        g.fillStyle = 'rgba(90, 80, 70, 0.35)';
+        for (let i = 0; i < 4; i++) {
+          g.fillRect(bx + 0.06, by + 0.08 + i * 0.05, 0.15, 0.012);
+          g.fillRect(bx + 0.29, by + 0.08 + i * 0.05, 0.15, 0.012);
+        }
+      }
+      if (h % 5 === 2) {
+        g.fillStyle = '#3f4650';
+        circle(g, x + 0.82, y + 0.24, 0.06);
+        g.fillStyle = 'rgba(255, 236, 180, 0.9)';
+        circle(g, x + 0.82, y + 0.24, 0.035);
+      }
+      break;
+    }
+    case 'water': {
+      // 냇물: 잔물결 몇 줄, 가끔 반짝임
+      g.strokeStyle = 'rgba(220, 240, 255, 0.28)';
+      g.lineWidth = 0.035;
+      for (let i = 0; i < 2; i++) {
+        const k = hash2(tx, ty, i + 3);
+        const wx = x + 0.1 + (k % 50) / 100;
+        const wy = y + 0.2 + i * 0.45 + ((k >>> 8) % 20) / 100;
+        g.beginPath();
+        g.moveTo(wx, wy);
+        g.quadraticCurveTo(wx + 0.12, wy - 0.06, wx + 0.24, wy);
+        g.quadraticCurveTo(wx + 0.36, wy + 0.06, wx + 0.48, wy);
+        g.stroke();
+      }
+      if (h % 17 === 0) {
+        g.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        circle(g, x + 0.3 + (h % 40) / 100, y + 0.5, 0.03);
       }
       break;
     }

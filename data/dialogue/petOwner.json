@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "어머, 혹시 강아지 키우세요? 아니면 고양이?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "우리 애는 열네 살이에요. 요즘 관절이 안 좋아서요.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "고양이요? 몇 살이에요? 이름은요?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "여기 선생님 진짜 꼼꼼하세요. 걱정 마요.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "털 빠지는 거 장난 아니죠? 우리 집은 다 털이야.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "사진 있어요? 보여 줘요, 보여 줘!",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 얼굴 빨개졌네. 내가 너무 반가워했나 봐.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "고양이한테 안부 전해 줘요~",
+    "parried": "아 그래요, 가 봐요!",
+    "endured": "우리 애 차례다. 또 봐요~",
+    "sos": "전화 받아요~",
+    "awkward": "…응, 고양이 잘 키워요."
+  }
+}

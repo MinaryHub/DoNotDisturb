@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "어서 오세요~ 커트 보러 오셨어요? 예약하셨어요?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "요즘 이런 기장이 유행이에요. 한번 해 보실래요?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "머릿결이 좋으시다. 뭐 따로 하세요?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "앞머리만 살짝 다듬어도 인상이 확 달라져요.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "오늘 시간 괜찮으시면 바로 해 드릴 수 있는데~",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "드라이는 서비스예요. 편하게 앉아 계세요.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 더우세요? 에어컨 좀 세게 틀어 드릴까요?",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "다음에 꼭 오세요~ 쿠폰 드릴게요!",
+    "parried": "네~ 둘러보세요!",
+    "endured": "아이고 제가 말이 많았죠. 또 오세요~",
+    "sos": "전화 받으세요~",
+    "awkward": "…네, 그럼 다음에~"
+  }
+}

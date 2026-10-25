@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "안녕하세요! 혹시 요가 체험 관심 있으세요? 첫 수업 무료예요!",
+    "kind": "question",
+    "durationSec": 2.8
+  },
+  "lines": [
+    {
+      "text": "어깨가 좀 굳어 보이시는데, 사무직이시죠?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "호흡만 바꿔도 하루가 달라져요. 진짜예요.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "1:1 수업도 있어요. 상담만 받아 보셔도 돼요.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "조용한 반이에요. 말 안 해도 되는 수업!",
+      "kind": "story",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "어머, 긴장하셨구나. 숨 한번 깊게 쉬어 보세요~",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "전단지 드릴게요. 언제든 오세요!",
+    "parried": "네~ 좋은 하루 되세요!",
+    "endured": "제가 너무 붙잡았죠. 숨 쉬세요~",
+    "sos": "전화 받으세요!",
+    "awkward": "…네, 그럼 나중에~"
+  }
+}

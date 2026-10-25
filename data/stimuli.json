@@ -22,6 +22,8 @@
   "salesPitch": { "kind": "encounter", "channel": "social", "damage": 6 },
   "clerkTalk": { "kind": "encounter", "channel": "social", "damage": 8 },
   "meetingSpeech": { "kind": "encounter", "channel": "social", "damage": 18 },
+  "salonDryer": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.14 },
+  "vetBarking": { "kind": "continuous", "channel": "auditory", "ratePerSec": 0.1 },
   "cafeOrder": { "kind": "encounter", "channel": "social", "damage": 3 },
   "pitchSpeech": { "kind": "encounter", "channel": "social", "damage": 24 },
   "pitchQna": { "kind": "ambush", "channel": "social", "damage": 10 },

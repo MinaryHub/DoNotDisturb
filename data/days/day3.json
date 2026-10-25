@@ -281,6 +281,57 @@
       "at": "seoyunWindow",
       "from": "09:00",
       "to": "18:00"
+    },
+    {
+      "id": "librarian",
+      "profile": "bookseller",
+      "at": "librarian",
+      "from": "09:00",
+      "to": "20:00"
+    },
+    {
+      "id": "libraryReader",
+      "profile": "regular",
+      "at": "libraryReader",
+      "from": "10:00",
+      "to": "18:00",
+      "chance": 0.7
+    },
+    {
+      "id": "hairdresser",
+      "profile": "hairdresser",
+      "at": "hairdresser",
+      "from": "10:00",
+      "to": "20:00"
+    },
+    {
+      "id": "vetClerk",
+      "profile": "staff",
+      "at": "vetClerk",
+      "from": "09:30",
+      "to": "19:00"
+    },
+    {
+      "id": "petOwner",
+      "profile": "petOwner",
+      "at": "petOwner",
+      "from": "10:00",
+      "to": "18:00",
+      "chance": 0.7
+    },
+    {
+      "id": "yogaTeacher",
+      "profile": "yogaTeacher",
+      "at": "yogaTeacher",
+      "from": "10:00",
+      "to": "21:00"
+    },
+    {
+      "id": "streamWalker",
+      "profile": "dogWalker",
+      "at": "streamWalker",
+      "path": "streamWalk",
+      "chance": 0.6
     }
   ],
   "work": {

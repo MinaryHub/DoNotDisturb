@@ -1,0 +1,41 @@
+{
+  "greeting": {
+    "text": "Hi! Interested in a yoga trial? The first class is free!",
+    "kind": "question",
+    "durationSec": 2.8
+  },
+  "lines": [
+    {
+      "text": "Your shoulders look a bit stiff. Desk job, right?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Just changing how you breathe changes your day. Really.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "We have one-on-one classes too. Even just a consultation is fine.",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "It's a quiet class. No talking required!",
+      "kind": "story",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, you're tense. Take a deep breath~",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Here's a flyer. Come anytime!",
+    "parried": "Sure~ have a nice day!",
+    "endured": "I kept you too long. Breathe~",
+    "sos": "Take your call!",
+    "awkward": "…Okay, maybe later~"
+  }
+}

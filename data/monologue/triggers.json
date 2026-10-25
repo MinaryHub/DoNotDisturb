@@ -103,5 +103,11 @@
   {"key": "mono.seoyun.nod", "when": {"event": "nod:seoyun"}, "cooldownSec": 30},
   {"key": "mono.seoyun.seen", "when": {"npcProfile": "seoyun", "distMax": 10, "visible": true}, "once": true},
   {"key": "mono.neighbor.sidedish", "when": {"event": "talked:neighbor", "day": "day1"}, "once": true},
-  {"key": "mono.neighbor.followup", "when": {"npcProfile": "neighbor", "distMax": 10, "visible": true, "day": "dayWed"}, "if": ["neighbor.sidedish"], "once": true}
+  {"key": "mono.neighbor.followup", "when": {"npcProfile": "neighbor", "distMax": 10, "visible": true, "day": "dayWed"}, "if": ["neighbor.sidedish"], "once": true},
+  {"key": "mono.readingRoom.enter", "when": {"area": "readingRoom"}, "cooldownSec": 600},
+  {"key": "mono.stream.enter", "when": {"area": "stream"}, "cooldownSec": 600},
+  {"key": "mono.stream.enter", "when": {"area": "streamSouth"}, "cooldownSec": 600},
+  {"key": "mono.salon.enter", "when": {"area": "salon"}, "cooldownSec": 600},
+  {"key": "mono.vet.enter", "when": {"area": "vet"}, "cooldownSec": 600},
+  {"key": "mono.yoga.enter", "when": {"area": "yoga"}, "cooldownSec": 600}
 ]

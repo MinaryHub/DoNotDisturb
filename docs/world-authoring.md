@@ -15,7 +15,7 @@
 
 | 층 | 사각형 | 내용 |
 |---|---|---|
-| `ground` | `[0, 0, 260, 140]` | 지상: 아파트 단지·공원·회사·카페·편의점·대로·마트·고깃집·옷 매장·골목, 동쪽 골목(약국·코인세탁방·서점·쉼터) |
+| `ground` | `[0, 0, 340, 140]` | 지상: 아파트 단지·공원·회사·카페·편의점·대로·마트·고깃집·옷 매장·골목, 동쪽 골목(약국·코인세탁방·서점·쉼터), 가람길(도서관·머리방·동물병원·쌈지공원), 빌라촌(요가원·빌라·공영 주차장), 해오름천 산책로 |
 | `subway` | `[0, 140, 124, 20]` | 지하철 환승 통로 (무빙워크, 인파) |
 | `apartment` | `[124, 140, 76, 20]` | 우리 집, 3층 복도, 엘리베이터 안 |
 
@@ -30,7 +30,7 @@
 | `tall` | 서 있는 물체처럼 그림 (그림자) |
 | `push` | 무빙워크: 위에 서면 밀려감 (타일/초) |
 | `pattern`, `accent` | 바닥 무늬 |
-| `deco` | 장식 그림 (`wall`, `window`, `desk`, `shelf`, `books`, `washer`, `bed`, `tree` …, `src/presentation/draw/tiles.ts`) |
+| `deco` | 장식 그림 (`wall`, `window`, `desk`, `shelf`, `books`, `washer`, `bed`, `tree`, `readingTable`, `water` …, `src/presentation/draw/tiles.ts`) |
 
 ## 월드 (`data/world/city.json`)
 

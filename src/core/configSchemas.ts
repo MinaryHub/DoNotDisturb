@@ -500,7 +500,7 @@ export const tileDefsSchema = z
       accent: z.string().optional(),
       /** 장식 (src/presentation/draw/tiles.ts) */
       deco: z
-        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench', 'books', 'washer', 'vending'])
+        .enum(['wall', 'window', 'door', 'doorClosed', 'desk', 'shelf', 'rack', 'table', 'counter', 'bed', 'sofa', 'tree', 'plant', 'appliance', 'grill', 'partition', 'grass', 'bench', 'books', 'washer', 'vending', 'readingTable', 'water'])
         .optional(),
     }),
   )

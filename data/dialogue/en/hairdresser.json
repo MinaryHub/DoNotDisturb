@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "Welcome~ Here for a cut? Do you have a reservation?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "This length is really in right now. Want to try it?",
+      "kind": "question",
+      "durationSec": 2.6
+    },
+    {
+      "text": "Your hair is so healthy. Do you do anything special?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "Just trimming the bangs changes your whole look.",
+      "kind": "story",
+      "durationSec": 2.6
+    },
+    {
+      "text": "If you have time today, I can do it right now~",
+      "kind": "opening",
+      "durationSec": 2.6
+    },
+    {
+      "text": "The blow-dry's on the house. Have a seat, relax.",
+      "kind": "opening",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, are you warm? Should I turn up the AC?",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Come back for sure~ I'll give you a coupon!",
+    "parried": "Sure~ look around!",
+    "endured": "Oh, I talked too much. Come again~",
+    "sos": "Take your call~",
+    "awkward": "…Okay, next time then~"
+  }
+}

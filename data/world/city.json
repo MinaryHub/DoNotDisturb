@@ -1,8 +1,8 @@
 {
-  "size": [260, 160],
+  "size": [340, 160],
   "base": "void",
   "layers": [
-    { "id": "ground", "rect": [0, 0, 260, 140] },
+    { "id": "ground", "rect": [0, 0, 340, 140] },
     { "id": "subway", "rect": [0, 140, 124, 20] },
     { "id": "apartment", "rect": [124, 140, 76, 20] }
   ],
@@ -173,6 +173,87 @@
     { "op": "fill", "rect": [30, 60, 3, 2], "tile": "stairs" },
     { "op": "fill", "rect": [176, 60, 3, 2], "tile": "stairs" },
 
+    { "op": "fill", "rect": [260, 0, 80, 140], "tile": "grass" },
+    { "op": "fill", "rect": [260, 0, 80, 4], "tile": "alley" },
+    { "op": "fill", "rect": [260, 56, 80, 4], "tile": "plaza" },
+    { "op": "fill", "rect": [260, 60, 80, 4], "tile": "sidewalk" },
+    { "op": "fill", "rect": [260, 64, 80, 6], "tile": "road" },
+    { "op": "fill", "rect": [260, 70, 80, 4], "tile": "sidewalk" },
+    { "op": "fill", "rect": [260, 74, 80, 3], "tile": "plaza" },
+    { "op": "fill", "rect": [260, 132, 80, 6], "tile": "alley" },
+    { "op": "fill", "rect": [296, 64, 3, 6], "tile": "crosswalk" },
+    { "op": "fill", "rect": [290, 4, 5, 52], "tile": "sidewalk" },
+    { "op": "fill", "rect": [288, 77, 3, 55], "tile": "sidewalk" },
+    { "op": "room", "rect": [262, 6, 28, 24], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [289, 17, 1, 2], "tile": "door" },
+    { "op": "fill", "rect": [262, 10, 1, 14], "tile": "window" },
+    { "op": "fill", "rect": [277, 7, 1, 13], "tile": "partition" },
+    { "op": "fill", "rect": [277, 23, 1, 6], "tile": "partition" },
+    { "op": "fill", "rect": [279, 8, 10, 1], "tile": "bookshelf" },
+    { "op": "fill", "rect": [279, 11, 9, 1], "tile": "bookshelf" },
+    { "op": "fill", "rect": [279, 14, 9, 1], "tile": "bookshelf" },
+    { "op": "fill", "rect": [279, 21, 9, 1], "tile": "bookshelf" },
+    { "op": "fill", "rect": [281, 26, 6, 1], "tile": "counter" },
+    { "op": "fill", "rect": [265, 10, 4, 2], "tile": "readingTable" },
+    { "op": "fill", "rect": [271, 10, 4, 2], "tile": "readingTable" },
+    { "op": "fill", "rect": [265, 16, 4, 2], "tile": "readingTable" },
+    { "op": "fill", "rect": [271, 16, 4, 2], "tile": "readingTable" },
+    { "op": "fill", "rect": [265, 22, 4, 2], "tile": "readingTable" },
+    { "op": "fill", "rect": [271, 22, 4, 2], "tile": "readingTable" },
+    { "op": "tiles", "tile": "plant", "at": [[263, 7], [263, 28], [288, 28]] },
+    { "op": "room", "rect": [262, 34, 24, 18], "floor": "floorTile", "wall": "wall" },
+    { "op": "fill", "rect": [285, 41, 1, 2], "tile": "door" },
+    { "op": "fill", "rect": [286, 41, 4, 2], "tile": "sidewalk" },
+    { "op": "fill", "rect": [264, 34, 13, 1], "tile": "window" },
+    { "op": "fill", "rect": [265, 36, 2, 1], "tile": "sofa" },
+    { "op": "fill", "rect": [269, 36, 2, 1], "tile": "sofa" },
+    { "op": "fill", "rect": [273, 36, 2, 1], "tile": "sofa" },
+    { "op": "fill", "rect": [279, 37, 4, 1], "tile": "counter" },
+    { "op": "fill", "rect": [264, 48, 6, 1], "tile": "sofa" },
+    { "op": "fill", "rect": [263, 44, 1, 3], "tile": "shelf" },
+    { "op": "tiles", "tile": "plant", "at": [[284, 35], [284, 50]] },
+    { "op": "room", "rect": [296, 30, 16, 22], "floor": "floorTile", "wall": "wall" },
+    { "op": "fill", "rect": [296, 40, 1, 2], "tile": "door" },
+    { "op": "fill", "rect": [295, 40, 1, 2], "tile": "sidewalk" },
+    { "op": "fill", "rect": [299, 33, 8, 1], "tile": "counter" },
+    { "op": "fill", "rect": [304, 46, 6, 1], "tile": "bench" },
+    { "op": "fill", "rect": [310, 36, 1, 6], "tile": "shelf" },
+    { "op": "fill", "rect": [311, 43, 1, 6], "tile": "window" },
+    { "op": "tiles", "tile": "plant", "at": [[297, 50], [310, 50]] },
+    { "op": "fill", "rect": [300, 14, 3, 1], "tile": "bench" },
+    { "op": "fill", "rect": [306, 22, 3, 1], "tile": "bench" },
+    { "op": "tiles", "tile": "tree", "at": [[298, 7], [304, 6], [310, 9], [297, 20], [310, 18], [303, 26], [309, 27]] },
+    { "op": "tiles", "tile": "bush", "at": [[299, 10], [300, 10], [307, 13], [308, 13]] },
+    { "op": "fill", "rect": [314, 4, 8, 52], "tile": "alley" },
+    { "op": "fill", "rect": [322, 4, 8, 52], "tile": "water" },
+    { "op": "fill", "rect": [314, 77, 8, 55], "tile": "alley" },
+    { "op": "fill", "rect": [322, 77, 8, 55], "tile": "water" },
+    { "op": "fill", "rect": [314, 18, 1, 3], "tile": "bench" },
+    { "op": "fill", "rect": [314, 44, 1, 3], "tile": "bench" },
+    { "op": "fill", "rect": [314, 95, 1, 3], "tile": "bench" },
+    { "op": "fill", "rect": [314, 118, 1, 3], "tile": "bench" },
+    { "op": "fill", "rect": [321, 24, 1, 6], "tile": "bush" },
+    { "op": "fill", "rect": [321, 102, 1, 6], "tile": "bush" },
+    { "op": "tiles", "tile": "tree", "at": [[332, 8], [336, 14], [333, 22], [337, 30], [332, 38], [336, 46], [333, 53], [332, 82], [336, 90], [333, 99], [337, 108], [332, 116], [336, 124], [312, 10], [312, 34], [312, 52], [312, 86], [312, 110], [312, 128]] },
+    { "op": "tiles", "tile": "bush", "at": [[331, 12], [331, 13], [331, 27], [331, 28], [331, 42], [331, 43], [331, 94], [331, 95], [331, 112], [331, 113]] },
+    { "op": "room", "rect": [262, 80, 26, 20], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [272, 80, 2, 1], "tile": "door" },
+    { "op": "fill", "rect": [272, 77, 2, 3], "tile": "sidewalk" },
+    { "op": "fill", "rect": [265, 84, 18, 10], "tile": "floorCarpet" },
+    { "op": "fill", "rect": [262, 84, 1, 10], "tile": "window" },
+    { "op": "fill", "rect": [283, 96, 4, 1], "tile": "shelf" },
+    { "op": "tiles", "tile": "plant", "at": [[263, 81], [286, 81], [263, 98]] },
+    { "op": "room", "rect": [292, 80, 14, 12], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [292, 83, 1, 6], "tile": "window" },
+    { "op": "fill", "rect": [305, 83, 1, 6], "tile": "window" },
+    { "op": "room", "rect": [292, 96, 14, 12], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [292, 99, 1, 6], "tile": "window" },
+    { "op": "fill", "rect": [305, 99, 1, 6], "tile": "window" },
+    { "op": "room", "rect": [292, 112, 14, 12], "floor": "floorWood", "wall": "wall" },
+    { "op": "fill", "rect": [292, 115, 1, 6], "tile": "window" },
+    { "op": "tiles", "tile": "tree", "at": [[308, 84], [309, 100], [308, 118], [296, 94], [300, 110]] },
+    { "op": "fill", "rect": [262, 104, 24, 24], "tile": "plaza" },
+    { "op": "tiles", "tile": "plant", "at": [[262, 104], [285, 104], [262, 127], [285, 127]] },
     { "op": "room", "rect": [0, 142, 124, 16], "floor": "platform", "wall": "wall" },
     { "op": "fill", "rect": [1, 148, 3, 4], "tile": "stairs" },
     { "op": "fill", "rect": [120, 148, 3, 4], "tile": "stairs" },
@@ -253,14 +334,18 @@
   "areas": [
     { "id": "yard", "rect": [0, 4, 44, 56], "kind": "outdoor", "labelKey": "area.yard" },
     { "id": "park", "rect": [44, 4, 42, 56], "kind": "outdoor", "labelKey": "area.park" },
-    { "id": "alleyNorth", "rect": [40, 0, 220, 4], "kind": "outdoor", "labelKey": "area.alley" },
+    { "id": "alleyNorth", "rect": [40, 0, 300, 4], "kind": "outdoor", "labelKey": "area.alley" },
     { "id": "avenue", "rect": [86, 4, 16, 56], "kind": "outdoor", "labelKey": "area.avenue", "stimulus": { "id": "trafficNoise", "intensity": 0.5 } },
     { "id": "officePlaza", "rect": [102, 36, 98, 24], "kind": "outdoor", "labelKey": "area.officePlaza" },
     { "id": "eastLots", "rect": [102, 4, 28, 32], "kind": "outdoor", "labelKey": "area.officePlaza" },
-    { "id": "boulevard", "rect": [0, 60, 260, 17], "kind": "outdoor", "labelKey": "area.boulevard", "stimulus": { "id": "trafficNoise", "intensity": 1 } },
+    { "id": "boulevard", "rect": [0, 60, 340, 17], "kind": "outdoor", "labelKey": "area.boulevard", "stimulus": { "id": "trafficNoise", "intensity": 1 } },
     { "id": "southLots", "rect": [0, 77, 260, 55], "kind": "outdoor", "labelKey": "area.southStreet" },
-    { "id": "alleySouth", "rect": [0, 132, 260, 8], "kind": "outdoor", "labelKey": "area.alley" },
+    { "id": "alleySouth", "rect": [0, 132, 340, 8], "kind": "outdoor", "labelKey": "area.alley" },
 
+    { "id": "eastNorth", "rect": [260, 4, 54, 52], "kind": "outdoor", "labelKey": "area.eastNorth" },
+    { "id": "stream", "rect": [314, 4, 26, 52], "kind": "outdoor", "labelKey": "area.stream" },
+    { "id": "eastSouth", "rect": [260, 77, 54, 55], "kind": "outdoor", "labelKey": "area.eastSouth" },
+    { "id": "streamSouth", "rect": [314, 77, 26, 55], "kind": "outdoor", "labelKey": "area.stream" },
     { "id": "aptLobby", "rect": [7, 31, 33, 27], "kind": "indoor", "labelKey": "area.aptLobby" },
     { "id": "mgmtOffice", "rect": [27, 31, 13, 9], "kind": "indoor", "labelKey": "area.mgmtOffice" },
     { "id": "cafe", "rect": [105, 7, 22, 28], "kind": "indoor", "labelKey": "area.cafe", "stimulus": { "id": "cafeChatter", "intensity": 1 } },
@@ -284,8 +369,16 @@
     { "id": "eastRest", "rect": [236, 40, 22, 14], "kind": "outdoor", "labelKey": "area.eastRest" },
     { "id": "pharmacy", "rect": [202, 8, 22, 18], "kind": "indoor", "labelKey": "area.pharmacy" },
     { "id": "laundromat", "rect": [202, 32, 22, 20], "kind": "indoor", "labelKey": "area.laundromat", "stimulus": { "id": "laundryHum", "intensity": 1 }},
-    { "id": "bookstore", "rect": [235, 8, 23, 30], "kind": "indoor", "labelKey": "area.bookstore" }
+    { "id": "bookstore", "rect": [235, 8, 23, 30], "kind": "indoor", "labelKey": "area.bookstore" },
 
+    { "id": "library", "rect": [262, 6, 28, 24], "kind": "indoor", "labelKey": "area.library" },
+    { "id": "readingRoom", "rect": [263, 7, 14, 22], "kind": "indoor", "labelKey": "area.readingRoom" },
+    { "id": "salon", "rect": [262, 34, 24, 18], "kind": "indoor", "labelKey": "area.salon", "stimulus": { "id": "salonDryer", "intensity": 1 } },
+    { "id": "vet", "rect": [296, 30, 16, 22], "kind": "indoor", "labelKey": "area.vet", "stimulus": { "id": "vetBarking", "intensity": 1 } },
+    { "id": "yoga", "rect": [262, 80, 26, 20], "kind": "indoor", "labelKey": "area.yoga" },
+    { "id": "villa1", "rect": [292, 80, 14, 12], "kind": "indoor", "labelKey": "area.villa" },
+    { "id": "villa2", "rect": [292, 96, 14, 12], "kind": "indoor", "labelKey": "area.villa" },
+    { "id": "villa3", "rect": [292, 112, 14, 12], "kind": "indoor", "labelKey": "area.villa" }
   ],
 
   "hides": [
@@ -296,7 +389,10 @@
     { "id": "yardBush", "rect": [20, 10, 4, 3] },
     { "id": "lobbyNook", "rect": [7, 50, 3, 4] },
     { "id": "martAisleEnd", "rect": [136, 84, 4, 6] },
-    { "id": "officeNook", "rect": [190, 6, 6, 3] }
+    { "id": "officeNook", "rect": [190, 6, 6, 3] },
+    { "id": "streamReedN", "rect": [321, 24, 1, 6] },
+    { "id": "streamReedS", "rect": [321, 102, 1, 6] },
+    { "id": "gardenBush", "rect": [307, 13, 2, 1] }
   ],
 
   "safes": [
@@ -376,8 +472,22 @@
     { "id": "bookBrowse", "kind": "browse", "at": [245.5, 15], "labelKey": "interact.browse" },
     { "id": "bookNook", "kind": "browse", "at": [253, 30.4], "labelKey": "interact.readNook" },
     { "id": "bookCounter", "kind": "flavor", "at": [244, 32.4], "labelKey": "interact.bookCounter", "monologue": "mono.bookstore.counter" },
-    { "id": "eastBench", "kind": "bench", "at": [242, 47.6], "labelKey": "interact.bench" }
+    { "id": "eastBench", "kind": "bench", "at": [242, 47.6], "labelKey": "interact.bench" },
 
+    { "id": "libraryRead", "kind": "browse", "at": [267, 12.6], "labelKey": "interact.libraryRead" },
+    { "id": "libraryRead2", "kind": "browse", "at": [273, 24.6], "labelKey": "interact.libraryRead" },
+    { "id": "libraryDesk", "kind": "flavor", "at": [284, 25.4], "labelKey": "interact.libraryDesk", "monologue": "mono.library.desk" },
+    { "id": "libraryBoard", "kind": "flavor", "at": [287.5, 9.6], "labelKey": "interact.board", "monologue": "mono.library.board" },
+    { "id": "salonMenu", "kind": "flavor", "at": [283.5, 44.5], "labelKey": "interact.menu", "monologue": "mono.salon.menu" },
+    { "id": "salonChair", "kind": "flavor", "at": [270, 37.6], "labelKey": "interact.salonChair", "monologue": "mono.salon.chair" },
+    { "id": "vetBoard", "kind": "flavor", "at": [303, 34.6], "labelKey": "interact.vetBoard", "monologue": "mono.vet.board" },
+    { "id": "vetBench", "kind": "bench", "at": [306.5, 45.4], "labelKey": "interact.vetBench" },
+    { "id": "gardenBench", "kind": "bench", "at": [301.5, 13.4], "labelKey": "interact.bench" },
+    { "id": "streamBench", "kind": "bench", "at": [315.4, 19.5], "labelKey": "interact.streamBench" },
+    { "id": "streamBench2", "kind": "bench", "at": [315.4, 96.5], "labelKey": "interact.streamBench" },
+    { "id": "streamSign", "kind": "flavor", "at": [317.5, 6.5], "labelKey": "interact.streamSign", "monologue": "mono.stream.sign" },
+    { "id": "yogaMat", "kind": "bench", "at": [270, 88.5], "labelKey": "interact.yogaMat" },
+    { "id": "yogaBoard", "kind": "flavor", "at": [276, 82.5], "labelKey": "interact.board", "monologue": "mono.yoga.board" }
   ],
 
   "portals": [
@@ -429,7 +539,15 @@
     "bookseller": [244, 35.2],
     "surveyor": [229.5, 50],
     "laundryRegular": [210, 43],
-    "eastWalker": [229.5, 8], "busker": [140, 74.6], "promoter": [150, 61.8], "blvdSurvey": [80, 61.8], "strollWest": [20, 76], "lobbyWalk": [16, 40]
+    "eastWalker": [229.5, 8], "busker": [140, 74.6], "promoter": [150, 61.8], "blvdSurvey": [80, 61.8], "strollWest": [20, 76], "lobbyWalk": [16, 40],
+
+    "librarian": [284, 27.6],
+    "hairdresser": [276, 41.5],
+    "vetClerk": [303, 31.6],
+    "petOwner": [301, 43.5],
+    "yogaTeacher": [279, 86.5],
+    "streamWalker": [317, 10],
+    "libraryReader": [268, 19.5]
   },
 
   "paths": {
@@ -442,7 +560,8 @@
     "clerkPatrol": { "points": [[163, 92], [176, 92], [176, 106], [150, 106], [150, 92]], "loop": true },
     "southStroll": { "points": [[10, 76], [190, 76]], "loop": true },
     "eastLaneLoop": { "points": [[229.5, 6], [229.5, 55], [245, 49], [229.5, 55]], "loop": true },
-    "bookAisle": { "points": [[244, 35.2], [253, 15], [244, 35.2], [241, 19]], "loop": true }
+    "bookAisle": { "points": [[244, 35.2], [253, 15], [244, 35.2], [241, 19]], "loop": true },
+    "streamWalk": { "points": [[317.5, 6], [317.5, 58], [317.5, 130], [317.5, 58]], "loop": true }
   },
 
   "crowdLanes": [
@@ -457,7 +576,14 @@
     { "id": "avenueN", "from": [87.5, 4], "to": [87.5, 59], "width": 1.4, "count": 5, "speed": 1.2, "zone": "avenue" },
     { "id": "avenueS", "from": [99.5, 59], "to": [99.5, 4], "width": 1.4, "count": 5, "speed": 1.2, "zone": "avenue" },
     { "id": "eastLane_S", "from": [231, 4], "to": [231, 58], "width": 1.4, "count": 3, "speed": 1.2, "zone": "eastLane" },
-    { "id": "eastLane_N", "from": [228.5, 58], "to": [228.5, 4], "width": 1.4, "count": 3, "speed": 1.25, "zone": "eastLane" }
+    { "id": "eastLane_N", "from": [228.5, 58], "to": [228.5, 4], "width": 1.4, "count": 3, "speed": 1.25, "zone": "eastLane" },
+
+    { "id": "blvdNE_E", "from": [200, 61], "to": [338, 61], "width": 1.6, "count": 6, "speed": 1.35, "zone": "boulevard" },
+    { "id": "blvdNE_W", "from": [338, 62.8], "to": [200, 62.8], "width": 1.4, "count": 5, "speed": 1.3, "zone": "boulevard" },
+    { "id": "blvdSE_E", "from": [200, 71], "to": [338, 71], "width": 1.4, "count": 4, "speed": 1.3, "zone": "boulevard" },
+    { "id": "blvdSE_W", "from": [338, 72.6], "to": [200, 72.6], "width": 1.4, "count": 4, "speed": 1.25, "zone": "boulevard" },
+    { "id": "streamJog", "from": [316, 4], "to": [316, 131], "width": 1.2, "count": 3, "speed": 2.1, "zone": "stream" },
+    { "id": "streamStroll", "from": [319.5, 131], "to": [319.5, 4], "width": 1.2, "count": 3, "speed": 0.9, "zone": "stream" }
   ],
 
   "props": [
@@ -647,7 +773,41 @@
     { "kind": "recycleGreen", "at": [2.6, 40.4] },
     { "kind": "recycleBlue", "at": [3.5, 40.4] },
     { "kind": "recycleYellow", "at": [4.4, 40.4] },
-    { "kind": "catBowl", "at": [134.5, 154.2] }
+    { "kind": "catBowl", "at": [134.5, 154.2] },
+
+    { "kind": "lamp", "at": [266, 60.4] },
+    { "kind": "lamp", "at": [271.5, 73.6] },
+    { "kind": "lamp", "at": [277, 60.4] },
+    { "kind": "lamp", "at": [282.5, 73.6] },
+    { "kind": "lamp", "at": [288, 60.4] },
+    { "kind": "lamp", "at": [293.5, 73.6] },
+    { "kind": "lamp", "at": [299, 60.4] },
+    { "kind": "lamp", "at": [304.5, 73.6] },
+    { "kind": "lamp", "at": [310, 60.4] },
+    { "kind": "lamp", "at": [315.5, 73.6] },
+    { "kind": "lamp", "at": [321, 60.4] },
+    { "kind": "lamp", "at": [326.5, 73.6] },
+    { "kind": "lamp", "at": [332, 60.4] },
+    { "kind": "lamp", "at": [337.5, 73.6] },
+    { "kind": "lamp", "at": [313.5, 12] },
+    { "kind": "lamp", "at": [313.5, 26] },
+    { "kind": "lamp", "at": [313.5, 40] },
+    { "kind": "lamp", "at": [313.5, 54] },
+    { "kind": "lamp", "at": [313.5, 82] },
+    { "kind": "lamp", "at": [313.5, 96] },
+    { "kind": "lamp", "at": [313.5, 110] },
+    { "kind": "lamp", "at": [313.5, 124] },
+    { "kind": "bike", "at": [264.0, 106.5] },
+    { "kind": "bike", "at": [266.2, 106.5] },
+    { "kind": "bike", "at": [268.4, 106.5] },
+    { "kind": "bike", "at": [270.6, 106.5] },
+    { "kind": "bike", "at": [272.8, 106.5] },
+    { "kind": "bike", "at": [275.0, 106.5] },
+    { "kind": "bin", "at": [291.5, 58.5] },
+    { "kind": "bin", "at": [313.5, 40.5] },
+    { "kind": "hydrant", "at": [294.5, 30.5] },
+    { "kind": "recycleGreen", "at": [291, 94] },
+    { "kind": "recycleBlue", "at": [291, 95.2] }
   ],
 
   "labels": [
@@ -666,7 +826,13 @@
     { "at": [213, 7], "textKey": "sign.pharmacy", "color": "#2e8b57" },
     { "at": [213, 31], "textKey": "sign.laundromat", "color": "#3b6fb6" },
     { "at": [246.5, 7], "textKey": "sign.bookstore", "color": "#8a5a3c" },
-    { "at": [247, 39.2], "textKey": "sign.eastRest" }
+    { "at": [247, 39.2], "textKey": "sign.eastRest" },
 
+    { "at": [276, 5], "textKey": "sign.library", "color": "#5a6b8c" },
+    { "at": [274, 33], "textKey": "sign.salon", "color": "#b5657a" },
+    { "at": [304, 29], "textKey": "sign.vet", "color": "#3f8f8a" },
+    { "at": [275, 79], "textKey": "sign.yoga", "color": "#8a7a5a" },
+    { "at": [326, 58.6], "textKey": "sign.stream" },
+    { "at": [274, 103], "textKey": "sign.parking" }
   ]
 }

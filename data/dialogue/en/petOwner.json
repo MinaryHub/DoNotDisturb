@@ -1,0 +1,46 @@
+{
+  "greeting": {
+    "text": "Oh, do you have a dog? Or a cat?",
+    "kind": "question",
+    "durationSec": 2.6
+  },
+  "lines": [
+    {
+      "text": "Mine is fourteen. Her joints aren't great lately.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "A cat? How old? What's the name?",
+      "kind": "question",
+      "durationSec": 2.4
+    },
+    {
+      "text": "The vet here is really thorough. Don't worry.",
+      "kind": "opening",
+      "durationSec": 2.4
+    },
+    {
+      "text": "The shedding is unreal, right? My whole place is fur.",
+      "kind": "story",
+      "durationSec": 2.8
+    },
+    {
+      "text": "Got a picture? Show me, show me!",
+      "kind": "question",
+      "durationSec": 2.4
+    }
+  ],
+  "flushRemark": {
+    "text": "Oh, you're blushing. I must've been too excited.",
+    "kind": "remark",
+    "durationSec": 2.6
+  },
+  "closers": {
+    "satisfied": "Say hi to your cat for me~",
+    "parried": "Oh okay, go ahead!",
+    "endured": "Oh, it's our turn. See you~",
+    "sos": "Take your call~",
+    "awkward": "…Mm, take good care of your cat."
+  }
+}
