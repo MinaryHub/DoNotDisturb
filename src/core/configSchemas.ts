@@ -104,6 +104,11 @@ export const balanceConfigSchema = z.object({
     crowdRush: nonNegative,
     acquaintanceChance: unit,
   }),
+  /**
+   * 공유 자전거: 대여소(bikeDock)에서 요금(fare)을 내고 탄다. 걷기의 speedMultiplier배.
+   * 타는 동안 아무도 말을 걸 수 없지만 군중 속은 crowdScale배 더 긴장되고, 폰·먹기·우산은 못 쓴다. 건물에 들어서면 문 앞에 세운다
+   */
+  bike: z.object({ fare: nonNegative, speedMultiplier: positive, crowdScale: positive }),
   /** 연차: 한 주에 쓸 수 있는 날 수 (하루 시작 화면에서 [L]) */
   leave: z.object({ perWeek: z.number().int().min(0) }),
   /** 눈인사(nodOnly인 사람과 눈이 마주침): 이 거리 안에서 하루 한 번, 마음이 calm만큼 가라앉는다 */
@@ -565,6 +570,7 @@ export const interactableKinds = [
   'clothesPick',
   'seat',
   'busStop',
+  'bikeDock',
 ] as const;
 export type InteractableKind = (typeof interactableKinds)[number];
 

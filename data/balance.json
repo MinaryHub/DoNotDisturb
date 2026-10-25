@@ -45,6 +45,11 @@
     "crowdRush": 1.1,
     "acquaintanceChance": 0.15
   },
+  "bike": {
+    "fare": 1000,
+    "speedMultiplier": 2.3,
+    "crowdScale": 1.4
+  },
   "leave": {
     "perWeek": 1
   },

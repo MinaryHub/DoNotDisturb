@@ -120,5 +120,6 @@
   {"key": "mono.florist.enter", "when": {"area": "florist"}, "cooldownSec": 600},
   {"key": "mono.elder.near", "when": {"npcProfile": "elder", "distMax": 9, "visible": true}, "cooldownSec": 300},
   {"key": "mono.festival", "when": {"area": "stream", "day": "day4"}, "once": true},
-  {"key": "mono.warp.home", "when": {"event": "warp:home"}, "cooldownSec": 10}
+  {"key": "mono.warp.home", "when": {"event": "warp:home"}, "cooldownSec": 10},
+  {"key": "mono.bike.ride", "when": {"event": "bike:ride"}, "cooldownSec": 600}
 ]

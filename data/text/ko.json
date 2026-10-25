@@ -807,5 +807,11 @@
   "rep.tier.good": "좋게 본다",
   "rep.tier.neutral": "아직 잘 모른다",
   "rep.tier.distant": "조금 서운해한다",
-  "rep.tier.hurt": "멀게 느낀다"
+  "rep.tier.hurt": "멀게 느낀다",
+  "interact.bikeDock": "공유 자전거 (대여·반납)",
+  "bike.rent": "자전거를 빌렸다. −{fare}원. 바람이 분다.",
+  "bike.returned": "자전거를 반납했다.",
+  "bike.parked": "자전거를 세웠다.",
+  "bike.parkedDoor": "자전거를 문 앞에 세웠다.",
+  "bike.noPhone": "자전거 위에서는 폰을 볼 수 없다."
 }

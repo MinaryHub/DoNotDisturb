@@ -553,7 +553,11 @@
     { "id": "snackMenu", "kind": "flavor", "at": [218.5, 126.5], "labelKey": "interact.menu", "monologue": "mono.snack.menu" },
     { "id": "floristCounter", "kind": "shop", "at": [231, 118.4], "labelKey": "interact.florist", "shop": "florist" },
     { "id": "plazaBench", "kind": "bench", "at": [246.5, 103.4], "labelKey": "interact.bench" },
-    { "id": "snackTv", "kind": "flavor", "at": [219.5, 110.6], "labelKey": "interact.tv", "monologue": "mono.snack.tv" }
+    { "id": "snackTv", "kind": "flavor", "at": [219.5, 110.6], "labelKey": "interact.tv", "monologue": "mono.snack.tv" },
+    { "id": "bikeApt", "kind": "bikeDock", "at": [42.5, 60.6], "labelKey": "interact.bikeDock" },
+    { "id": "bikeOffice", "kind": "bikeDock", "at": [126.5, 58.4], "labelKey": "interact.bikeDock" },
+    { "id": "bikeSouth", "kind": "bikeDock", "at": [226.5, 76.2], "labelKey": "interact.bikeDock" },
+    { "id": "bikeStream", "kind": "bikeDock", "at": [311, 58.4], "labelKey": "interact.bikeDock" }
   ],
 
   "portals": [
@@ -904,7 +908,19 @@
     { "kind": "aircon", "at": [221.4, 110] },
     { "kind": "pot", "at": [234.6, 130.6] },
     { "kind": "pot", "at": [230.6, 130.6] },
-    { "kind": "lamp", "at": [241.5, 106] }
+    { "kind": "lamp", "at": [241.5, 106] },
+    { "kind": "bike", "at": [41.1, 61.5], "rot": 1.5708 },
+    { "kind": "bike", "at": [42.2, 61.5], "rot": 1.5708 },
+    { "kind": "bike", "at": [43.3, 61.5], "rot": 1.5708 },
+    { "kind": "bike", "at": [125.1, 59.3], "rot": 1.5708 },
+    { "kind": "bike", "at": [126.2, 59.3], "rot": 1.5708 },
+    { "kind": "bike", "at": [127.3, 59.3], "rot": 1.5708 },
+    { "kind": "bike", "at": [225.1, 77.1], "rot": 1.5708 },
+    { "kind": "bike", "at": [226.2, 77.1], "rot": 1.5708 },
+    { "kind": "bike", "at": [227.3, 77.1], "rot": 1.5708 },
+    { "kind": "bike", "at": [309.6, 59.3], "rot": 1.5708 },
+    { "kind": "bike", "at": [310.7, 59.3], "rot": 1.5708 },
+    { "kind": "bike", "at": [311.8, 59.3], "rot": 1.5708 }
   ],
 
   "labels": [

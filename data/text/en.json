@@ -807,5 +807,11 @@
   "rep.tier.good": "thinks well of you",
   "rep.tier.neutral": "doesn't know you yet",
   "rep.tier.distant": "is a little hurt",
-  "rep.tier.hurt": "feels distant"
+  "rep.tier.hurt": "feels distant",
+  "interact.bikeDock": "Shared bike (rent/return)",
+  "bike.rent": "Rented a bike. −{fare} won. The wind picks up.",
+  "bike.returned": "Returned the bike.",
+  "bike.parked": "Parked the bike.",
+  "bike.parkedDoor": "Parked the bike by the door.",
+  "bike.noPhone": "Can't look at your phone while riding."
 }

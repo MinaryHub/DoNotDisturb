@@ -113,6 +113,8 @@ export interface PlayerState {
   /** consumables: 소모품 id → 개수, items: 장바구니 */
   inventory: { consumables: Record<string, number>; gear: string[]; clothes: boolean; items: string[] };
   walkPhase: number;
+  /** 공유 자전거를 타고 있는지 */
+  biking: boolean;
 }
 
 export type Mode =
@@ -385,6 +387,7 @@ export class GameSession {
       knockTimer: 0,
       inventory: { consumables: {}, gear: [...this.ownedGear], clothes: false, items: [] },
       walkPhase: 0,
+      biking: false,
     };
     this.spawnNpcs();
     // 지난 날의 일이 오늘 아침 가방에 남긴 것 (옆집 반찬 등)
@@ -429,7 +432,7 @@ export class GameSession {
     this.viewTarget = null;
     this.hurry = 0;
     const p = this.player;
-    Object.assign(p, { frozen: 0, winded: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null });
+    Object.assign(p, { frozen: 0, winded: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null, biking: false });
     const bed = this.world.interactables.find((i) => i.kind === 'bed');
     const home = bed ? { x: bed.at[0], y: bed.at[1] + 1.2 } : this.world.spawns[this.day.spawn]!;
     this.teleport({ ...home });
@@ -590,12 +593,13 @@ export class GameSession {
     p.phonePretend = c.phonePretend && !modal && !c.cover;
     p.cover = c.cover && this.mode.kind !== 'speech';
     p.eyesClosed = c.eyesClosed && !modal;
-    if (c.phoneToggle && !p.cover && this.mode.kind !== 'speech') {
+    if (c.phoneToggle && p.biking) this.toast('bike.noPhone');
+    else if (c.phoneToggle && !p.cover && this.mode.kind !== 'speech') {
       this.phoneOpen = !this.phoneOpen;
       this.phoneCursor = 0;
     }
     if (p.cover) this.phoneOpen = false;
-    if (!modal) {
+    if (!modal && !p.biking) {
       // 단축키 1~8 = 가방 칸 순서
       const id = c.useItem !== null ? this.bagSlots()[c.useItem] : undefined;
       const def = id ? this.consumable(id) : undefined;
@@ -623,8 +627,9 @@ export class GameSession {
     }
     const canMove = p.frozen <= 0 && !this.phoneOpen && !p.lockedSafe && this.mode.kind === 'free';
     p.moving = canMove && len > 0.01;
-    p.running = p.moving && c.sprint && p.winded <= 0 && !p.phonePretend;
+    p.running = p.moving && c.sprint && p.winded <= 0 && !p.phonePretend && !p.biking;
     let speed = p.running ? this.cfg.player.runSpeed : this.cfg.player.walkSpeed;
+    if (p.biking) speed *= this.cfg.balance.bike.speedMultiplier;
     if (p.phonePretend) speed *= sk.phonePretend.moveMultiplier;
     if (p.cover) speed *= sk.coverCheeks.moveMultiplier;
     if (p.eyesClosed) speed *= sk.closeEyes.moveMultiplier;
@@ -845,6 +850,8 @@ export class GameSession {
   }
 
   private interact(target: NonNullable<ReturnType<GameSession['nearestInteractable']>>): void {
+    // 자전거는 대여소에 반납하거나, 다른 걸 하려면 그 자리에 세운다
+    if (this.player.biking && target.def?.kind !== 'bikeDock') this.parkBike('bike.parked');
     if (target.portal) {
       this.startTravel(target.portal);
       return;
@@ -920,6 +927,14 @@ export class GameSession {
         break;
       case 'busStop':
         this.waitBus(it);
+        break;
+      case 'bikeDock':
+        if (this.player.biking) this.parkBike('bike.returned');
+        else if (this.pay(this.cfg.balance.bike.fare)) {
+          this.player.biking = true;
+          this.toast('bike.rent', { fare: this.cfg.balance.bike.fare.toLocaleString(this.cfg.lang === 'en' ? 'en-US' : 'ko-KR') });
+          this.gameEvent('bike:ride');
+        }
         break;
       case 'flavor': {
         const mono = this.day.interactAt?.[it.id]?.monologue ?? it.monologue;
@@ -1125,7 +1140,7 @@ export class GameSession {
     for (const n of this.npcs) if (n.state === 'dialogue') n.endDialogue();
     const bed = this.world.interactables.find((i) => i.kind === 'bed');
     const home = bed ? { x: bed.at[0], y: bed.at[1] + 1.2 } : this.world.spawns[this.day.spawn]!;
-    Object.assign(this.player, { frozen: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null });
+    Object.assign(this.player, { frozen: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null, biking: false });
     this.phoneOpen = false;
     this.hurry = 0;
     this.teleport({ ...home });
@@ -1233,6 +1248,15 @@ export class GameSession {
   private teleport(to: Vec2): void {
     this.player.pos.x = to.x;
     this.player.pos.y = to.y;
+  }
+
+  // ───────────────────────── 공유 자전거 ─────────────────────────
+
+  private parkBike(toastKey: string): void {
+    if (!this.player.biking) return;
+    this.player.biking = false;
+    this.toast(toastKey);
+    this.gameEvent('bike:park');
   }
 
   // ───────────────────────── 마을버스 ─────────────────────────
@@ -1927,6 +1951,8 @@ export class GameSession {
     const prevArea = this.area;
     this.area = this.world.map.areaAt(p.pos.x, p.pos.y);
     if (this.area && this.area !== prevArea) {
+      // 건물에 들어서면 자전거는 문 앞에 세운다
+      if (p.biking && this.area.kind !== 'outdoor') this.parkBike('bike.parkedDoor');
       this.gameEvent(`enter:${this.area.id}`);
       // 밖으로 나갔을 때만 '빠져나감' (건물 안 화장실로 가는 건 제외)
       if (prevArea && this.area.kind === 'outdoor') this.gameEvent(`exit:${prevArea.id}`);
@@ -2007,7 +2033,7 @@ export class GameSession {
       phonePretend: p.phonePretend || this.phoneOpen,
       eyesClosed: p.eyesClosed,
       hidden: p.hidden,
-      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech' || (this.mode.kind === 'bus' && this.mode.phase === 'riding'),
+      unreachable: !!p.lockedSafe || this.sanctuary || this.atHome || m === 'travel' || m === 'elevator' || m === 'work' || m === 'speech' || (this.mode.kind === 'bus' && this.mode.phase === 'riding') || p.biking,
     };
   }
 
@@ -2046,6 +2072,8 @@ export class GameSession {
     const near = this.crowd.countNear(p.pos, b.crowdDensity.radius);
     let crowd = Math.min(b.crowdDensity.max, near * b.crowdDensity.perAgent);
     if (this.crowd.slipstream(p.pos, p.moveDir, b.slipstream.behindDist, b.slipstream.lateral)) crowd *= b.slipstream.crowdScale;
+    // 자전거로 사람들 사이를 지나가면 더 조마조마하다
+    if (p.biking) crowd *= b.bike.crowdScale;
     // 버스 안: 러시아워엔 빽빽하다
     if (this.mode.kind === 'bus' && this.mode.phase === 'riding') crowd = this.isRush() ? b.bus.crowdRush : b.bus.crowd;
     bus.setContinuous('crowd', 'crowd', p.lockedSafe ? 0 : crowd);
@@ -2053,7 +2081,8 @@ export class GameSession {
     if (crowd > 0 && !p.lockedSafe) this.sim.energy.addMood('tension', crowd * b.crowdDensity.stressPerSec * dt, crowd >= b.crowdDensity.sustainFrom);
     this.crowdLevel = p.lockedSafe ? 0 : crowd;
     // 비: 우산 없이 바깥에 있으면 축축하고 불편하다
-    const soaked = this.raining && this.area?.kind === 'outdoor' && !this.player.inventory.gear.includes('umbrella');
+    // 자전거를 타면 우산을 쓸 수 없다
+    const soaked = this.raining && this.area?.kind === 'outdoor' && (!this.player.inventory.gear.includes('umbrella') || p.biking);
     bus.setContinuous('weather', 'rainSoaked', soaked ? 1 : 0);
     if (soaked && !this.soakedToday) {
       this.soakedToday = true;

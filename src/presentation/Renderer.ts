@@ -958,6 +958,13 @@ export class Renderer {
     const fl = ps.flush;
     const skin = `#${[240 + fl * 10, 218 - fl * 70, 196 - fl * 70].map((v) => Math.round(Math.min(255, v)).toString(16).padStart(2, '0')).join('')}`;
     const hoodie = s.player.hidden ? '#567a8f' : '#6c8fb2';
+    // 공유 자전거: 몸 아래에 자전거 (진행 방향으로)
+    if (s.player.biking) {
+      ctx.save();
+      ctx.scale(1.9, 1.9);
+      drawProp(ctx, 'bike', 0, 0, p.facing, 0, ps.time);
+      ctx.restore();
+    }
     drawPerson(ctx, 0, 0, PLAYER_LOOK_BASE(hoodie, skin), {
       r: r * this.peopleScale,
       facing: this.turned('player', p.facing),
