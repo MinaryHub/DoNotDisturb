@@ -207,6 +207,61 @@
         "flush": 0.3
       },
       "breakSec": 4
+    },
+    {
+      "id": "energyShot",
+      "nameKey": "item.energyShot",
+      "useKey": "use.energyShot",
+      "icon": "can",
+      "effects": {
+        "battery": 18
+      }
+    },
+    {
+      "id": "sighCandy",
+      "nameKey": "item.sighCandy",
+      "useKey": "use.sighCandy",
+      "icon": "candy",
+      "effects": {
+        "stress": 22
+      },
+      "breakSec": 3
+    },
+    {
+      "id": "calmJelly",
+      "nameKey": "item.calmJelly",
+      "useKey": "use.calmJelly",
+      "icon": "jelly",
+      "effects": {
+        "stress": 6,
+        "soothe": {
+          "perSec": 1.5,
+          "sec": 60
+        }
+      },
+      "breakSec": 3
+    },
+    {
+      "id": "toughVitamin",
+      "nameKey": "item.toughVitamin",
+      "useKey": "use.toughVitamin",
+      "icon": "vitamin",
+      "effects": {
+        "resist": {
+          "scale": 0.5,
+          "sec": 150
+        }
+      }
+    },
+    {
+      "id": "vanish",
+      "nameKey": "item.vanish",
+      "useKey": "use.vanish",
+      "icon": "star",
+      "effects": {
+        "warpHome": true
+      },
+      "usesPerDay": 1
     }
   ],
   "gear": [
@@ -247,6 +302,15 @@
         {
           "item": "umbrella",
           "price": 5000
+        },
+        {
+          "item": "energyShot",
+          "price": 3500,
+          "perDay": 1
+        },
+        {
+          "item": "sighCandy",
+          "price": 1200
         }
       ]
     },
@@ -268,6 +332,20 @@
         {
           "item": "water",
           "price": 800
+        },
+        {
+          "item": "energyShot",
+          "price": 3000,
+          "perDay": 1
+        },
+        {
+          "item": "toughVitamin",
+          "price": 6000,
+          "perDay": 1
+        },
+        {
+          "item": "calmJelly",
+          "price": 2500
         }
       ]
     },
@@ -310,6 +388,10 @@
         {
           "item": "herbalTea",
           "price": 4000
+        },
+        {
+          "item": "calmJelly",
+          "price": 3000
         }
       ],
       "regular": {
@@ -391,6 +473,10 @@
         },
         {
           "item": "handCream",
+          "price": 0
+        },
+        {
+          "item": "vanish",
           "price": 0
         }
       ]

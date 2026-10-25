@@ -1214,6 +1214,16 @@ export class Renderer {
       ctx.fillRect(0, 0, W, H);
     }
 
+    // 순간 이동: 연보랏빛이 번졌다 걷힌다 (깜빡임을 끄면 부드럽게만)
+    if (ps.warp > 0.01) {
+      const a = st.flash ? ps.warp * 0.85 : ps.warp * 0.35;
+      const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+      g.addColorStop(0, `rgba(250, 244, 255, ${a})`);
+      g.addColorStop(1, `rgba(196, 155, 216, ${a * 0.8})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
     // 기습: 짧은 섬광 (깜빡임 끄기 지원)
     if (st.flash && ps.trauma > 0.5) {
       ctx.fillStyle = `rgba(255, 245, 235, ${(ps.trauma - 0.5) * 0.35})`;

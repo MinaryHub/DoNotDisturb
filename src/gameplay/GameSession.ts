@@ -144,7 +144,9 @@ export type FxEvent =
   | { type: 'ambush'; stimulusId: string }
   | { type: 'sound'; id: 'doorLock' | 'doorUnlock' | 'knock' | 'doorbell' | 'piano' | 'elevatorDing' | 'chime' | 'sigh' | 'laugh' | 'sizzle' | 'beep' | 'stairs' | 'vibrate' | 'fakeCall'; note?: number }
   | { type: 'toast'; key: string; vars?: Record<string, string | number> }
-  | { type: 'rumble' };
+  | { type: 'rumble' }
+  /** 집으로 순간 이동 (화면이 하얗게 번쩍) */
+  | { type: 'warp' };
 
 export interface SaveState {
   dayIndex: number;
@@ -221,6 +223,8 @@ export class GameSession {
   private readonly shopTaken = new Map<string, number>();
   /** 위안 물건을 오늘 쓴 횟수 */
   private readonly itemUses = new Map<string, number>();
+  /** 아이템 효과 지속: 차분함(마음이 더 가라앉음), 스트레스 내성(자극 × scale). 남은 초 */
+  buffs = { soothe: { perSec: 0, left: 0 }, resist: { scale: 1, left: 0 } };
   /** 혼자만의 틈: 멈춰 서서 천천히 먹거나 쓰는 중. paused면 누가 보고 있어 손이 멈췄다 */
   itemBreak: { id: string; time: number; dur: number; paused: boolean } | null = null;
   /** 첫 대화는 연습 (규칙을 하나씩 알려 준다) */
@@ -320,6 +324,7 @@ export class GameSession {
     this.shopTaken.clear();
     this.itemUses.clear();
     this.itemBreak = null;
+    this.buffs = { soothe: { perSec: 0, left: 0 }, resist: { scale: 1, left: 0 } };
     this.soakedToday = false;
     this.hurry = 0;
     this.hurryNoted = false;
@@ -489,6 +494,7 @@ export class GameSession {
     this.updateMode(dt, c);
     if (this.stopped()) return;
     this.updateItemBreak(dt, c);
+    this.updateBuffs(dt);
     this.updatePhone(dt, c);
     this.updateWorld(dt);
     this.updateSim(dt);
@@ -995,6 +1001,7 @@ export class GameSession {
     if (!def.breakSec) {
       this.applyEffects(def.effects);
       this.toast(def.useKey);
+      this.applyLasting(def.effects);
       return;
     }
     // 혼자만의 틈: 멈춰 서서 천천히. 효과는 그동안 나눠 찬다
@@ -1029,6 +1036,44 @@ export class GameSession {
     if (b.time >= b.dur) {
       this.itemBreak = null;
       this.toast(def.useKey);
+      this.applyLasting(def.effects);
+    }
+  }
+
+  /** 지속 효과와 순간 이동 (먹기를 마쳤을 때) */
+  private applyLasting(e: RecoveryEffects): void {
+    if (e.soothe) this.buffs.soothe = { perSec: e.soothe.perSec, left: e.soothe.sec };
+    if (e.resist) this.buffs.resist = { scale: e.resist.scale, left: e.resist.sec };
+    if (e.warpHome) this.warpHome();
+  }
+
+  /** "모두 사라져 버려~": 주변의 자극에서 곧장 집으로. 문은 잠겨 있고, 시간은 그대로 */
+  private warpHome(): void {
+    for (const n of this.npcs) if (n.state === 'dialogue') n.endDialogue();
+    const bed = this.world.interactables.find((i) => i.kind === 'bed');
+    const home = bed ? { x: bed.at[0], y: bed.at[1] + 1.2 } : this.world.spawns[this.day.spawn]!;
+    Object.assign(this.player, { frozen: 0, lockedSafe: null, hidden: false, phonePretend: false, cover: false, eyesClosed: false, moving: false, running: false, moveDir: null });
+    this.phoneOpen = false;
+    this.hurry = 0;
+    this.teleport({ ...home });
+    this.area = this.world.map.areaAt(home.x, home.y);
+    this.homeLocked = true;
+    this.mode = { kind: 'free' };
+    this.fx.push({ type: 'warp' });
+    this.fx.push({ type: 'sound', id: 'doorLock' });
+    this.gameEvent('warp:home');
+  }
+
+  /** 아이템 지속 효과의 시간 흐름 */
+  private updateBuffs(dt: number): void {
+    const b = this.buffs;
+    if (b.soothe.left > 0) {
+      b.soothe.left = Math.max(0, b.soothe.left - dt);
+      this.sim.energy.calm(b.soothe.perSec * dt);
+    }
+    if (b.resist.left > 0) {
+      b.resist.left = Math.max(0, b.resist.left - dt);
+      if (b.resist.left === 0) this.toast('buff.resist.end');
     }
   }
 
@@ -1943,7 +1988,10 @@ export class GameSession {
     const awkwardPair =
       (this.mode.kind === 'elevator' && this.mode.phase !== 'waiting' && this.mode.companion !== null) || (this.mode.kind === 'bus' && this.mode.phase === 'riding' && this.mode.awkward);
 
-    const modifiers: ChannelModifiers = p.earphones ? { ...NO_MODIFIERS, auditory: this.cfg.skills.earphones.auditoryMultiplier } : NO_MODIFIERS;
+    // 이어폰은 청각만, 스트레스 내성(아이템)은 모든 자극을 줄인다
+    const rs = this.buffs.resist.left > 0 ? this.buffs.resist.scale : 1;
+    const ear = p.earphones ? this.cfg.skills.earphones.auditoryMultiplier : 1;
+    const modifiers: ChannelModifiers = rs === 1 && ear === 1 ? NO_MODIFIERS : { auditory: ear * rs, visual: rs, social: rs };
     const ally = this.activeNpcs().some((n) => n.type === 'ally' && dist(n.pos, p.pos) < b.recovery.allyRange);
     let extra = 0;
     if (this.sanctuary) extra += b.recovery.homeLockedPerSec;

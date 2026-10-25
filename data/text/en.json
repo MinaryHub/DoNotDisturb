@@ -741,5 +741,17 @@
   "phone.town.s.festival": "Festival today! Lanterns float at 6 p.m. 🏮",
   "phone.town.s.upstairs": "This is 402. Sorry for all the noise at night. I put down floor mats 🙇",
   "phone.town.s.florist": "The plants outside Spring Rain are so pretty. The owner says little, but the flowers say a lot",
-  "phone.town.s.lanterns": "Posting lantern photos. Have a good weekend, everyone 🌙"
+  "phone.town.s.lanterns": "Posting lantern photos. Have a good weekend, everyone 🌙",
+  "item.energyShot": "Energy tonic",
+  "use.energyShot": "Downed the energy tonic. A rush of strength.",
+  "item.sighCandy": "Sigh candy",
+  "use.sighCandy": "Rolled the candy around and let out a long sigh. Shoulders drop.",
+  "item.calmJelly": "Chamomile jelly",
+  "use.calmJelly": "Chamomile jelly. For a while, your mind settles slowly.",
+  "item.toughVitamin": "Tough vitamin",
+  "use.toughVitamin": "Tough vitamin. For a while, the world's noise sticks less. (stress resistance)",
+  "item.vanish": "Make It All Go Away~",
+  "use.vanish": "Make it all go away~ …You open your eyes at home. The door is locked.",
+  "buff.resist.end": "The tough vitamin wore off.",
+  "warp.home": "Home."
 }

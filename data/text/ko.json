@@ -741,5 +741,17 @@
   "phone.town.s.festival": "축제 오늘이에요! 오후 6시 등불 띄우기 🏮",
   "phone.town.s.upstairs": "402호입니다. 그동안 밤에 시끄러웠던 점 죄송합니다. 매트 깔았어요 🙇",
   "phone.town.s.florist": "꽃집 봄비 앞 화분들 너무 예뻐요. 사장님 말수는 적은데 꽃은 말이 많네요",
-  "phone.town.s.lanterns": "등불 사진 올려요. 다들 좋은 주말 되세요 🌙"
+  "phone.town.s.lanterns": "등불 사진 올려요. 다들 좋은 주말 되세요 🌙",
+  "item.energyShot": "피로회복 드링크",
+  "use.energyShot": "피로회복 드링크를 들이켰다. 기운이 확 돈다.",
+  "item.sighCandy": "한숨 사탕",
+  "use.sighCandy": "사탕을 굴리며 길게 한숨. 어깨가 내려간다.",
+  "item.calmJelly": "캐모마일 젤리",
+  "use.calmJelly": "캐모마일 젤리. 한동안 마음이 천천히 가라앉는다.",
+  "item.toughVitamin": "단단 비타민",
+  "use.toughVitamin": "단단 비타민. 한동안 세상의 소리가 덜 박힌다. (스트레스 내성)",
+  "item.vanish": "모두 사라져 버려~",
+  "use.vanish": "모두 사라져 버려~ …눈을 뜨니 우리 집이다. 문은 잠겨 있다.",
+  "buff.resist.end": "단단 비타민 효과가 끝났다.",
+  "warp.home": "집이다."
 }

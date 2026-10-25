@@ -25,6 +25,8 @@ export class PresentationState {
   cover = 0;
   /** 번아웃 후 경과 시간 (-1 = 아님) */
   burnoutTime = -1;
+  /** "모두 사라져 버려~" 순간 이동 직후 번지는 빛 (1 → 0) */
+  warp = 0;
   /** 심박 박동 (0~1, 박동 직후 1) */
   beat = 0;
   time = 0;
@@ -61,6 +63,7 @@ export class PresentationState {
     this.hurt = Math.max(0, this.hurt - dt * 2);
     this.trauma = Math.max(0, this.trauma - dt / Math.max(0.01, this.balance.ambush.shakeSec));
     this.beat = Math.max(0, this.beat - dt * 4);
+    this.warp = Math.max(0, this.warp - dt / 1.4);
 
     // 안전지대에서는 모든 왜곡이 풀린다
     if (this.sanctuary > 0.01) {
@@ -77,6 +80,7 @@ export class PresentationState {
         this.trauma = 1;
         this.ambushes.push(e.stimulusId);
       } else if (e.type === 'sound') this.sounds.push(e);
+      else if (e.type === 'warp') this.warp = 1;
     }
     const burned = s.mode.kind === 'burnout';
     this.burnoutTime = burned ? (this.burnoutTime < 0 ? 0 : this.burnoutTime + dt) : -1;

@@ -152,6 +152,12 @@ const recoveryEffects = z.object({
   /** 증상 강도 감소 (0~1) */
   flush: unit.optional(),
   migraine: unit.optional(),
+  /** 차분함: sec초 동안 마음(심리 상태)이 초당 perSec씩 더 가라앉는다 */
+  soothe: z.object({ perSec: positive, sec: positive }).optional(),
+  /** 스트레스 내성: sec초 동안 자극이 심리 상태를 올리는 양 × scale */
+  resist: z.object({ scale: unit, sec: positive }).optional(),
+  /** "모두 사라져 버려~": 그 자리에서 곧장 집(잠근 안전지대)으로. 시간은 흐르지 않는다 */
+  warpHome: z.boolean().optional(),
 });
 export type RecoveryEffects = z.infer<typeof recoveryEffects>;
 
@@ -172,7 +178,7 @@ export const itemsConfigSchema = z.object({
         id: z.string(),
         nameKey: z.string(),
         useKey: z.string(),
-        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box', 'book', 'fidget', 'cream', 'flower']).optional(),
+        icon: z.enum(['cup', 'snack', 'tumbler', 'can', 'bottle', 'pill', 'tea', 'patch', 'rice', 'sandwich', 'bread', 'banana', 'box', 'book', 'fidget', 'cream', 'flower', 'can', 'candy', 'jelly', 'vitamin', 'star']).optional(),
         effects: recoveryEffects,
         /** 혼자만의 틈: 이만큼(초) 멈춰 서서 천천히 먹거나 쓰고, 효과도 그동안 나눠 찬다. 움직이거나 말을 걸려 오면 그만둔다 */
         breakSec: positive.optional(),
