@@ -10,6 +10,8 @@ export class Camera2D {
   viewH = 1;
   shakeX = 0;
   shakeY = 0;
+  /** 사람이 서 있게 그려지는 시점(2.5D)에서 머리가 발보다 위로 올라간 만큼 (칸). UI가 이름표·독백을 그만큼 올린다 */
+  headLift = 0;
 
   follow(target: Vec2, dt: number, lerp: number, snap = false): void {
     if (snap || Math.hypot(target.x - this.x, target.y - this.y) > 30) {

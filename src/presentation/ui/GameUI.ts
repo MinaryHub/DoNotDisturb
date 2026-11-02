@@ -453,7 +453,7 @@ export class GameUI {
     setText(this.mono, line.text);
     // 시야 앞쪽에 떠다니는 생각 (월드 좌표 → 화면 좌표)
     const p = s.player;
-    const ahead = { x: p.pos.x + Math.cos(p.facing) * 0.8, y: p.pos.y + Math.min(0, Math.sin(p.facing)) * 0.8 - 2.2 };
+    const ahead = { x: p.pos.x + Math.cos(p.facing) * 0.8, y: p.pos.y + Math.min(0, Math.sin(p.facing)) * 0.8 - 2.2 - cam.headLift };
     const sp = cam.toScreen(ahead);
     const float = Math.sin(ps.time * 1.6) * 4;
     const k = line.age / line.duration;
@@ -480,7 +480,7 @@ export class GameUI {
         }
         setText(tag, this.tx(n.profile.displayTagKey));
         tag.dataset['state'] = n.pursuing ? 'hot' : n.type === 'ally' ? 'ally' : n.notice > 0.4 ? 'warm' : '';
-        const sp = cam.toScreen({ x: n.pos.x, y: n.pos.y - 0.9 });
+        const sp = cam.toScreen({ x: n.pos.x, y: n.pos.y - 0.9 - (n.type === 'pet' ? 0 : cam.headLift) });
         tag.style.transform = `translate(${Math.round(sp.x)}px, ${Math.round(sp.y)}px) translate(-50%, -100%)`;
         tag.style.opacity = String(Math.max(0.25, 1 - d / 12));
       }
@@ -1088,7 +1088,7 @@ export class GameUI {
         this.onSettings(s);
       });
     };
-    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge' | 'symptomGauge' | 'controlsHint', label: string) => {
+    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge' | 'symptomGauge' | 'controlsHint' | 'view25d', label: string) => {
       const row = el('label', 'options__row', box);
       el('span', '', row, this.tx(label));
       const input = el('input', '', row);
@@ -1111,6 +1111,7 @@ export class GameUI {
     toggle('stressGauge', 'options.stressGauge');
     toggle('symptomGauge', 'options.symptomGauge');
     toggle('controlsHint', 'options.controlsHint');
+    toggle('view25d', 'options.view25d');
     // 언어: 바꾸면 저장하고 다시 불러온다 (주소의 ?lang=은 지운다)
     const langRow = el('label', 'options__row', box);
     el('span', '', langRow, this.tx('options.language'));

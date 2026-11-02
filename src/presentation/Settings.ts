@@ -17,6 +17,8 @@ export interface Settings {
   symptomGauge: boolean;
   /** 화면 아래 단축키 안내 */
   controlsHint: boolean;
+  /** 2.5D 시점 시제품 (아파트 층만) */
+  view25d: boolean;
   /** 화면 언어 (바꾸면 다시 불러온다) */
   lang: 'ko' | 'en';
 }
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   stressGauge: true,
   symptomGauge: true,
   controlsHint: true,
+  view25d: true,
   lang: typeof navigator !== 'undefined' && !navigator.language.startsWith('ko') ? 'en' : 'ko',
 };
 

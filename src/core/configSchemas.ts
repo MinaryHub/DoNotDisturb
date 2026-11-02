@@ -387,6 +387,20 @@ export const presentationConfigSchema = z.object({
   }),
   /** 사람 그리기 (src/presentation/draw/people.ts) */
   people: z.object({ visualScale: positive }),
+  /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
+  view25d: z
+    .object({
+      layers: z.array(z.string()),
+      /** 타일 id → 세워 그릴 높이 (칸). 없으면 바닥 */
+      heights: z.record(z.string(), nonNegative),
+      /** 사람 키 (칸) */
+      personHeight: positive,
+      /** 사람을 가리는 벽·가구의 불투명도 */
+      fadeAlpha: unit,
+      /** Danger 이하에서 벽이 높아지는 정도 (1 = 두 배) */
+      dangerGrow: nonNegative,
+    })
+    .optional(),
   /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
   particles: z.object({
     /** 화면 칸 하나를 1초에 몇 번 들여다볼지. 아래 확률은 맞는 칸을 골랐을 때 생길 확률 */

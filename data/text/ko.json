@@ -1205,5 +1205,6 @@
   "diff.mild.desc": "자극이 조금 덜 박힌다",
   "diff.normal.desc": "이 게임이 생각한 만큼",
   "diff.deep.desc": "자극이 더 크게 박히고 아침 기운도 적다",
-  "touch.difficulty": "지치는 정도"
+  "touch.difficulty": "지치는 정도",
+  "options.view25d": "2.5D 시점 (시제품 · 집과 3층 복도)"
 }

@@ -1205,5 +1205,6 @@
   "diff.mild.desc": "Stimuli land a little softer",
   "diff.normal.desc": "As this game intends",
   "diff.deep.desc": "Stimuli hit harder and mornings start with less energy",
-  "touch.difficulty": "Tiredness"
+  "touch.difficulty": "Tiredness",
+  "options.view25d": "2.5D view (prototype · home & 3F hallway)"
 }
