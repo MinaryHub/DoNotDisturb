@@ -329,7 +329,7 @@ function boot(): void {
   loop.start();
 
   // 자동화 테스트·디버그용
-  (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg };
+  (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg, get view3d() { return renderer?.stats3d() ?? null; } };
 }
 
 start();

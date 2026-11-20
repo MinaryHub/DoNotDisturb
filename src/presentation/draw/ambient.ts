@@ -11,6 +11,13 @@ type AmbientConfig = PresentationConfig['ambient'];
 const AWNINGS = ['#c0533f', '#3f6e8c', '#4f7d55', '#d39b3a', '#7a5c8c'];
 const ROOF_COLORS = ['#8f7465', '#6f7f8c', '#7b866c', '#958570', '#7a7488', '#8c6e68'];
 
+export interface RoofBuilding {
+  readonly outer: Rect[];
+  readonly color: string;
+  /** 1 = 지붕이 덮임, 0 = 들어서서 걷힘 */
+  readonly alpha: number;
+}
+
 interface Building {
   rects: Rect[];
   /** 벽까지 덮도록 1칸 넓힌 범위 */
@@ -132,6 +139,11 @@ export class Roofs {
       const inside = b.outer.some((r) => inRect(r, player.x, player.y));
       b.alpha += ((inside ? 0 : 1) - b.alpha) * k;
     }
+  }
+
+  /** 3D 시점이 지붕을 세울 때 쓴다 (alpha는 update가 계속 바꾼다) */
+  list(): readonly RoofBuilding[] {
+    return this.buildings;
   }
 
   /** 이 지점이 지금 지붕에 가려져 있는지 */

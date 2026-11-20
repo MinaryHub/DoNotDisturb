@@ -418,6 +418,20 @@ export const presentationConfigSchema = z.object({
       cutawayDepth: positive,
       cutawayWidth: positive,
       cutawayHeight: nonNegative,
+      /** 층마다 벽(tall 타일) 높이 배율. 지상 건물은 사람보다 훨씬 높게 */
+      wallScale: z.record(z.string(), positive),
+      /** 카메라 주변 이 거리(칸) 안의 청크만 장면에 둔다 */
+      streamRadius: positive,
+      /** 바닥 텍스처의 칸당 픽셀 */
+      floorPx: z.number().int().min(8).max(48),
+      /** 한 프레임에 새로 만들 청크 수 */
+      buildPerFrame: z.number().int().min(1),
+      /** 나무: 줄기 높이, 수관 반지름 (칸) */
+      tree: z.object({ trunk: positive, canopy: positive }),
+      /** 지붕: 두께, 플레이어를 가릴 때 남길 불투명도 */
+      roof: z.object({ thickness: positive, occludedAlpha: z.number().min(0).max(1) }),
+      /** 밤: 해·하늘빛을 이만큼 줄이고, 플레이어 둘레에 작은 빛 */
+      night: z.object({ dim: z.number().min(0).max(1), playerLight: nonNegative }),
     })
     .optional(),
   /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
