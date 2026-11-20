@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameSession, NO_CONTROLS } from '../src/gameplay/GameSession';
 import type { Npc } from '../src/npc/Npc';
+import { salaryOf } from '../src/sim/DayCycle';
 import { LifeStats } from '../src/sim/LifeStats';
 import { readConfig } from '../tools/lib/readData';
 
@@ -70,8 +71,37 @@ describe('돈을 쓸 곳', () => {
     const money = s.sim.life.money;
     s.drainFx();
     s.step(dt, { ...NO_CONTROLS, confirm: true });
-    expect(s.sim.life.money).toBe(money - vet.expense!.money);
+    // 첫날은 월급날: 급여가 먼저 들어온 뒤 지출이 나간다
+    const salary = s.day.flags.payday ? salaryOf(cfg.life.settlement, s.sim.life) : 0;
+    expect(s.sim.life.money).toBe(money + salary - vet.expense!.money);
     expect(s.drainFx().some((f) => f.type === 'toast' && f.key === vet.expense!.toastKey)).toBe(true);
+  });
+
+  it('월급은 첫날 아침에 들어오고, 토요일 밤엔 월세가 나간다 (한 주 동안 나눠 쓴다)', () => {
+    expect(cfg.days[0]!.flags.payday).toBe(true);
+    expect(cfg.days.at(-1)!.flags.monthEnd).toBe(true);
+    const s = new GameSession(cfg);
+    const money = s.sim.life.money;
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    expect(s.sim.life.money).toBe(money + salaryOf(cfg.life.settlement, s.sim.life));
+    expect(s.sim.life.money).toBeGreaterThan(cfg.life.settlement.monthEnd.rent);
+    // 다시 해도 두 번 받지 않는다 (아침 기록으로 돌아간 뒤 다시 받음)
+    s.retryDay();
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    expect(s.sim.life.money).toBe(money + salaryOf(cfg.life.settlement, s.sim.life));
+  });
+
+  it('오래 쓰는 물건: 사면 그 효과가 기술처럼 붙는다', () => {
+    const s = new GameSession(cfg);
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    const before = s.perkMul('earphoneScale');
+    (s as unknown as { ownedGear: Set<string> }).ownedGear.add('ncEarbuds');
+    expect(s.perkMul('earphoneScale')).toBeCloseTo(before * 0.75);
+    expect(cfg.world.interactables.some((i) => i.kind === 'shop' && i.shop === 'deptLiving')).toBe(true);
+    for (const g of cfg.items.gear.filter((x) => x.effects)) {
+      const sold = Object.values(cfg.items.shops).some((sh) => sh.stock.some((e) => e.item === g.id && e.price > 0));
+      expect(sold, g.id).toBe(true);
+    }
   });
 
   it('집에서 배달을 시킬 수 있다 (돈으로 회복을 산다)', () => {

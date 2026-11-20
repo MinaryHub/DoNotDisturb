@@ -245,9 +245,11 @@
     },
     "monthEnd": {
       "rent": 450000,
-      "salaryBase": 300000,
-      "salaryPerIncome": 4000,
       "unpaidHousingDelta": -30
+    },
+    "payday": {
+      "salaryBase": 300000,
+      "salaryPerIncome": 4000
     }
   },
   "night": {

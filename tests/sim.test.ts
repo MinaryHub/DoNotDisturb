@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simConfigOf } from '../src/core/config';
 import { DialogueBattle, type DialogueConfig, type DialoguePool } from '../src/sim/DialogueBattle';
-import { GameClock, nightRecovery, parseTime, settleDay } from '../src/sim/DayCycle';
+import { GameClock, nightRecovery, parseTime, salaryOf, settleDay } from '../src/sim/DayCycle';
 import { EnergyModel, NO_MODIFIERS, tierOf, type EnergyConfig } from '../src/sim/EnergyModel';
 import { LifeStats } from '../src/sim/LifeStats';
 import { Phone, applyContactOutcome } from '../src/sim/Phone';
@@ -383,7 +383,10 @@ describe('DayCycle', () => {
     expect(nightRecovery(game.life.night, calm).nextMax).toBe(game.life.night.baseMax);
     const life = new LifeStats(game.life.stats);
     const lines = settleDay(game.life.settlement, life, { weeklyEval: true, monthEnd: true });
-    expect(lines.map((l) => l.key)).toContain('settle.month.salary');
+    expect(lines.map((l) => l.key)).toContain('settle.month.unpaid');
+    // 월급날 아침의 급여는 소득·업무 평판을 따른다
+    const pay = game.life.settlement.payday;
+    expect(salaryOf(game.life.settlement, life)).toBe(Math.round(pay.salaryBase + life.get('income') * pay.salaryPerIncome));
   });
 });
 

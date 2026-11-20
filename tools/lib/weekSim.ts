@@ -1,5 +1,5 @@
 import { simConfigOf, type GameConfig } from '../../src/core/config';
-import { nightRecovery, parseTime, settleDay } from '../../src/sim/DayCycle';
+import { nightRecovery, parseTime, salaryOf, settleDay } from '../../src/sim/DayCycle';
 import { NO_MODIFIERS } from '../../src/sim/EnergyModel';
 import { applyContactOutcome, type CallHow, type MessageHow } from '../../src/sim/Phone';
 import { Simulation } from '../../src/sim/Simulation';
@@ -74,6 +74,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       for (const m of marksFor(game.story, event, day.id)) applyMark(story, m);
     };
     sim.startDay(nextMax);
+    if (day.flags.payday) sim.life.addMoney(salaryOf(game.life.settlement, sim.life));
     let talks = 0;
     const encounter = (stimulus: string, talkSec: number) => {
       talks++;

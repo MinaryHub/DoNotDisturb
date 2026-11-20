@@ -7,7 +7,8 @@
   "spawn": "player",
   "flags": {
     "weeklyEval": false,
-    "monthEnd": false
+    "monthEnd": false,
+    "payday": true
   },
   "objectives": [
     {

@@ -2,7 +2,7 @@ import type { GameConfig } from '../core/config';
 import { simConfigOf } from '../core/config';
 import type { ConsumableDef, RecoveryEffects, DayDef, FavorDef, PerkEffects, HappeningDef, InteractableDef, NpcProfile, PortalDef, SafeDef } from '../core/configSchemas';
 import { DialogueBattle, replies, type Reply } from '../sim/DialogueBattle';
-import { GameClock, formatTime, nightRecovery, parseTime, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
+import { GameClock, formatTime, nightRecovery, parseTime, salaryOf, settleDay, type Breakdown, type SettlementLine } from '../sim/DayCycle';
 import type { DayReport } from '../sim/DayReport';
 import { NO_MODIFIERS, type ChannelModifiers } from '../sim/EnergyModel';
 import type { LifeChange, LifeSnapshot, LifeStatId } from '../sim/LifeStats';
@@ -514,17 +514,23 @@ export class GameSession {
     }
   }
 
-  /** 익힌 기술의 효과: 배율은 곱하고 */
+  /** 익힌 기술과 가진 물건(items.gear)의 효과 목록 */
+  private *effectSources(): Iterable<PerkEffects> {
+    for (const k of this.cfg.perks.list) if (this.perks.has(k.id)) yield k.effects;
+    for (const g of this.cfg.items.gear) if (g.effects && this.ownedGear.has(g.id)) yield g.effects;
+  }
+
+  /** 익힌 기술·가진 물건의 효과: 배율은 곱하고 */
   perkMul(key: keyof PerkEffects): number {
     let v = 1;
-    for (const k of this.cfg.perks.list) if (this.perks.has(k.id)) v *= k.effects[key] ?? 1;
+    for (const e of this.effectSources()) v *= e[key] ?? 1;
     return v;
   }
 
-  /** 익힌 기술의 효과: 더하기 */
+  /** 익힌 기술·가진 물건의 효과: 더하기 */
   perkAdd(key: keyof PerkEffects): number {
     let v = 0;
-    for (const k of this.cfg.perks.list) if (this.perks.has(k.id)) v += k.effects[key] ?? 0;
+    for (const e of this.effectSources()) v += e[key] ?? 0;
     return v;
   }
 
@@ -733,6 +739,12 @@ export class GameSession {
         if (c.confirm) {
           this.mode = { kind: 'free' };
           this.gameEvent(`dayStart:${this.day.id}`);
+          // 월급날: 아침에 급여가 들어온다. 토요일 월세를 남겨 두고 한 주 동안 나눠 써야 한다
+          if (this.day.flags.payday && !this.vacation) {
+            const salary = salaryOf(this.cfg.life.settlement, this.sim.life);
+            this.sim.life.addMoney(salary);
+            this.toast('payday', { money: salary.toLocaleString('ko-KR'), rent: this.cfg.life.settlement.monthEnd.rent.toLocaleString('ko-KR') });
+          }
           for (const h of this.happenings) {
             this.gameEvent(`happening:${h.id}`);
             if (h.expense) {
@@ -1189,9 +1201,12 @@ export class GameSession {
         break;
       case 'bikeDock':
         if (this.player.biking) this.parkBike('bike.returned');
-        else if (this.pay(this.cfg.balance.bike.fare)) {
+        else {
+          // 정기권이 있으면 요금 없이
+          const fare = this.perkAdd('bikeFree') > 0 ? 0 : this.cfg.balance.bike.fare;
+          if (!this.pay(fare)) break;
           this.player.biking = true;
-          this.toast('bike.rent', { fare: this.cfg.balance.bike.fare.toLocaleString(this.cfg.lang === 'en' ? 'en-US' : 'ko-KR') });
+          this.toast(fare > 0 ? 'bike.rent' : 'bike.rentPass', { fare: fare.toLocaleString(this.cfg.lang === 'en' ? 'en-US' : 'ko-KR') });
           this.gameEvent('bike:ride');
         }
         break;

@@ -205,7 +205,15 @@ export const itemsConfigSchema = z.object({
       }),
     ),
   /** 쓰면 없어지지 않는 물건 (우산 등). 상점 품목 item에 소모품 대신 이 id를 쓸 수 있다 */
-  gear: z.array(z.object({ id: z.string(), nameKey: z.string(), icon: z.enum(['umbrella']).optional() })),
+  gear: z.array(
+    z.object({
+      id: z.string(),
+      nameKey: z.string(),
+      icon: z.enum(['umbrella', 'earbuds', 'curtain', 'card']).optional(),
+      /** 가지고 있는 동안 늘 붙는 효과 (기술과 같은 효과 이름) */
+      effects: z.lazy(() => perkEffectsSchema).optional(),
+    }),
+  ),
   /** 상점·찬장·탕비실. price 0이면 무료, life는 돈 대신 쓰는 생활 지표(집 찬장), perDay는 하루에 챙길 수 있는 개수(탕비실) */
   shops: z.record(
     z.string(),
@@ -291,7 +299,10 @@ export const lifeConfigSchema = z.object({
     dailyDecay: lifeDelta,
     dailyCost: z.object({ money: nonNegative, unpaidEssentials: z.number() }),
     weekly: z.object({ goodIncome: nonNegative, goodBonusMoney: nonNegative, badIncomeDelta: z.number() }),
-    monthEnd: z.object({ rent: nonNegative, salaryBase: nonNegative, salaryPerIncome: nonNegative, unpaidHousingDelta: z.number() }),
+    /** 월말(토요일): 월세. 못 내면 주거 안정 감소 */
+    monthEnd: z.object({ rent: nonNegative, unpaidHousingDelta: z.number() }),
+    /** 월급날(하루 데이터 flags.payday, 그날 아침): 기본급 + 소득 지표 1당 가산. 한 주 동안 나눠 쓰고 토요일 월세를 남겨야 한다 */
+    payday: z.object({ salaryBase: nonNegative, salaryPerIncome: nonNegative }),
   }),
   night: z.object({
     baseMax: positive,
@@ -768,7 +779,7 @@ export const daySchema = z.object({
   introKey: z.string(),
   start: hhmm,
   spawn: z.string(),
-  flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean() }),
+  flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean(), payday: z.boolean().optional() }),
   /** 비 오는 날: 바깥이 흐려지고, 우산 없이 실외에 있으면 rainSoaked 자극 */
   weather: z.enum(['clear', 'rain']).optional(),
   /** 그날만 생기는 군중 동선 (플리마켓 등) */
@@ -969,6 +980,26 @@ export type FavorDef = FavorsConfig['list'][number];
  * 내향인의 기술 (data/perks.json): 밤마다 그날 한 일(tag)에 맞춰 offer개를 보여 주고 하나를 고른다. 한 주 동안 쌓인다.
  * 효과: 배율(…Scale)은 곱하고, 더하기(…Bonus·orderFree)는 더한다
  */
+/** 기술(perks)과 오래 쓰는 물건(items.gear)이 함께 쓰는 효과. 배율은 곱하고 나머지는 더한다 */
+export const perkEffectsSchema = z
+  .object({
+      noticeScale: positive,
+      parryBonusSec: nonNegative,
+      earphoneScale: positive,
+      smileDropScale: nonNegative,
+      dialogueDrainScale: nonNegative,
+      crowdScale: nonNegative,
+      restScale: positive,
+      nightMaxBonus: nonNegative,
+      breakScale: positive,
+      walkScale: positive,
+      orderFree: nonNegative,
+      favorScale: positive,
+      /** 공유 자전거 요금 없음 (정기권) */
+      bikeFree: nonNegative,
+  })
+  .partial();
+
 export const perksSchema = z.object({
   offer: z.number().int().min(1),
   list: z.array(
@@ -977,22 +1008,7 @@ export const perksSchema = z.object({
       tag: z.enum(['avoid', 'endure', 'rest', 'explore', 'favor']),
       nameKey: z.string(),
       descKey: z.string(),
-      effects: z
-        .object({
-          noticeScale: positive,
-          parryBonusSec: nonNegative,
-          earphoneScale: positive,
-          smileDropScale: nonNegative,
-          dialogueDrainScale: nonNegative,
-          crowdScale: nonNegative,
-          restScale: positive,
-          nightMaxBonus: nonNegative,
-          breakScale: positive,
-          walkScale: positive,
-          orderFree: nonNegative,
-          favorScale: positive,
-        })
-        .partial(),
+      effects: perkEffectsSchema,
     }),
   ),
 });

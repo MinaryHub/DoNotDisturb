@@ -108,11 +108,13 @@ export interface SettlementConfig {
   };
   monthEnd: {
     rent: number;
-    salaryBase: number;
-    /** 소득 지표 1당 급여 가산 */
-    salaryPerIncome: number;
     /** 월세를 못 내면 주거 안정 감소 */
     unpaidHousingDelta: number;
+  };
+  /** 월급날 아침: 기본급 + 소득 지표 1당 가산 */
+  payday: {
+    salaryBase: number;
+    salaryPerIncome: number;
   };
 }
 
@@ -123,7 +125,12 @@ export interface SettlementLine {
   money?: number;
 }
 
-/** 하루 끝 정산. 금요일 업무 평가, 월말 월세·급여 */
+/** 월급날 아침에 들어오는 급여 (소득·업무 평판이 높을수록 많다) */
+export function salaryOf(cfg: SettlementConfig, life: LifeStats): number {
+  return Math.round(cfg.payday.salaryBase + life.get('income') * cfg.payday.salaryPerIncome);
+}
+
+/** 하루 끝 정산. 금요일 업무 평가, 월말 월세 (급여는 월급날 아침, salaryOf) */
 export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weeklyEval?: boolean; monthEnd?: boolean }): SettlementLine[] {
   const lines: SettlementLine[] = [];
   for (const [stat, delta] of Object.entries(cfg.dailyDecay) as [LifeStatId, number][]) {
@@ -148,9 +155,6 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
     }
   }
   if (flags.monthEnd) {
-    const salary = Math.round(cfg.monthEnd.salaryBase + life.get('income') * cfg.monthEnd.salaryPerIncome);
-    life.addMoney(salary);
-    lines.push({ key: 'settle.month.salary', money: salary });
     if (life.spend(cfg.monthEnd.rent)) {
       lines.push({ key: 'settle.month.rent', money: -cfg.monthEnd.rent });
     } else {

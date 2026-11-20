@@ -294,6 +294,30 @@
       "id": "umbrella",
       "nameKey": "item.umbrella",
       "icon": "umbrella"
+    },
+    {
+      "id": "ncEarbuds",
+      "nameKey": "item.ncEarbuds",
+      "icon": "earbuds",
+      "effects": {
+        "earphoneScale": 0.75
+      }
+    },
+    {
+      "id": "blackoutCurtain",
+      "nameKey": "item.blackoutCurtain",
+      "icon": "curtain",
+      "effects": {
+        "nightMaxBonus": 4
+      }
+    },
+    {
+      "id": "bikePass",
+      "nameKey": "item.bikePass",
+      "icon": "card",
+      "effects": {
+        "bikeFree": 1
+      }
     }
   ],
   "shops": {
@@ -336,6 +360,10 @@
         {
           "item": "sighCandy",
           "price": 1200
+        },
+        {
+          "item": "bikePass",
+          "price": 15000
         }
       ]
     },
@@ -544,6 +572,19 @@
         {
           "item": "flower",
           "price": 5000
+        }
+      ]
+    },
+    "deptLiving": {
+      "titleKey": "shop.deptLiving",
+      "stock": [
+        {
+          "item": "ncEarbuds",
+          "price": 89000
+        },
+        {
+          "item": "blackoutCurtain",
+          "price": 49000
         }
       ]
     }

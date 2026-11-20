@@ -411,7 +411,6 @@
   "settle.daily.unpaid": "Couldn't cover living costs",
   "settle.weekly.good": "Friday performance review: Good (bonus)",
   "settle.weekly.bad": "Friday performance review: Warning",
-  "settle.month.salary": "Monthly salary",
   "settle.month.rent": "Rent paid",
   "settle.month.unpaid": "Rent unpaid",
   "map.title": "Map",
@@ -1207,5 +1206,15 @@
   "diff.deep.desc": "Stimuli hit harder and mornings start with less energy",
   "touch.difficulty": "Tiredness",
   "options.view25d": "2.5D view (prototype · home & 3F hallway)",
-  "night.weekFatigue": "A week of tiredness piling up"
+  "night.weekFatigue": "A week of tiredness piling up",
+  "item.ncEarbuds": "Good noise-cancelling earbuds",
+  "item.ncEarbuds.desc": "Keeps · earphones block even more outside noise",
+  "item.blackoutCurtain": "Blackout curtains",
+  "item.blackoutCurtain.desc": "Keeps · deeper sleep (tomorrow's energy cap +4)",
+  "item.bikePass": "Bike-share pass",
+  "item.bikePass.desc": "Keeps · shared bikes are free",
+  "shop.deptLiving": "Department store · Home goods",
+  "interact.deptLiving": "Browse home goods",
+  "payday": "Payday (+{money} won). Keep {rent} won for Saturday's rent.",
+  "bike.rentPass": "Rented a bike with your pass."
 }
