@@ -7,7 +7,7 @@ export const BUS_LENGTH = 10.5;
 const LENGTH = BUS_LENGTH;
 export const BUS_WIDTH = 2.4;
 const WIDTH = BUS_WIDTH;
-export const BUS_BODY = '#3f9a5c';
+export const BUS_BODY = '#6fb48a';
 const BODY = BUS_BODY;
 
 function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {

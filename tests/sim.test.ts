@@ -437,4 +437,13 @@ describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
     expect(thu(r)).toBeGreaterThan(thu(plain));
     expect(thu(r)).toBeLessThan(50);
   });
+
+  it('회사 화장실 칸에서 쉬는 법을 알아도 한 주의 정점은 여전히 빠듯하다 (쉼터가 정답이 되지 않게)', () => {
+    const plain = playWeek(game, 'balanced');
+    const r = playWeek(game, 'balanced', { commuteSec: 120, skilled: true });
+    expect(r.failed).toBeNull();
+    const thu = (w: typeof r) => w.rows.find((d) => d.day === 'dayThu')!.batteryEnd;
+    expect(thu(r)).toBeGreaterThan(thu(plain));
+    expect(thu(r)).toBeLessThan(50);
+  });
 });

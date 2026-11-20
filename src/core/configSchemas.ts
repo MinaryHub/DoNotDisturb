@@ -144,7 +144,10 @@ export const balanceConfigSchema = z.object({
     rushHours: z.array(z.tuple([hhmm, hhmm])),
     rushCrowdMultiplier: positive,
   }),
-  safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive }),
+  /** 화장실 칸·피팅룸: 노크가 시작되면(누가 기다린다) 회복이 멈추고, 같은 칸은 reuseMin(게임 분)이 지나야 다시 회복된다 */
+  safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive, reuseMin: nonNegative }),
+  /** 근무 시간에 자리를 비우면(사무실 밖·화장실 칸에 숨음) everyMin(게임 분)마다 팀장님이 찾는다: 업무 평판 life.rewards.deskAway */
+  deskAway: z.object({ areas: z.array(z.string()), everyMin: positive }),
   /** 코인세탁방: 기다리는 시간(실제 초), 게임 시계 진행(분), 생활 필수 보상 */
   laundry: z.object({ waitSec: positive, minutes: nonNegative, essentials: nonNegative }),
   rehearsal: z.object({ damageScale: unit, flushScale: unit }),
@@ -329,6 +332,8 @@ export const lifeConfigSchema = z.object({
     homeMealEssentials: z.number(),
     allyMeet: lifeDelta,
     mandatorySkipped: lifeDelta,
+    /** 근무 시간에 자리를 오래 비움 (balance.deskAway) */
+    deskAway: lifeDelta,
   }),
 });
 export type LifeConfig = z.infer<typeof lifeConfigSchema>;
@@ -414,10 +419,11 @@ export const presentationConfigSchema = z.object({
       dangerGrow: nonNegative,
       personHeight: positive,
       shadows: z.boolean(),
-      /** 플레이어 앞(카메라 쪽)에서 낮출 벽의 깊이·폭·남길 높이 (칸) */
+      /** 플레이어 앞(카메라 쪽)에서 비쳐 보이게 할 벽·나무의 깊이·폭 (칸) */
       cutawayDepth: positive,
       cutawayWidth: positive,
-      cutawayHeight: nonNegative,
+      /** 플레이어를 가리는 벽·가구·수관의 불투명도 (0 = 안 보임) */
+      occluderAlpha: z.number().min(0).max(1),
       /** 층마다 벽(tall 타일) 높이 배율. 지상 건물은 사람보다 훨씬 높게 */
       wallScale: z.record(z.string(), positive),
       /** 카메라 주변 이 거리(칸) 안의 청크만 장면에 둔다 */
@@ -432,6 +438,14 @@ export const presentationConfigSchema = z.object({
       roof: z.object({ thickness: positive, occludedAlpha: z.number().min(0).max(1) }),
       /** 밤: 해·하늘빛을 이만큼 줄이고, 플레이어 둘레에 작은 빛 */
       night: z.object({ dim: z.number().min(0).max(1), playerLight: nonNegative }),
+      /** 부드러운 감성: 노출(톤 매핑), 가구 모서리 둥글기(칸), 그림자 번짐 */
+      exposure: positive,
+      roundness: nonNegative,
+      shadowSoftness: nonNegative,
+      /** 하늘·안개 색 (지상은 멀수록 이 색으로 옅어진다). fogNear·fogFar는 카메라 거리의 배수 */
+      sky: z.object({ day: z.string(), dusk: z.string(), night: z.string(), indoor: z.string(), fogNear: positive, fogFar: positive }),
+      /** 3D에서만 쓰는 부드러운 색 (타일 id·tree·trunk·bus·skin 등). 없으면 타일 색 그대로 */
+      palette: z.record(z.string(), z.string()),
     })
     .optional(),
   /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
@@ -447,6 +461,13 @@ export const presentationConfigSchema = z.object({
       /** Danger 이하에서 벽이 높아지는 정도 (1 = 두 배) */
       dangerGrow: nonNegative,
     })
+    .optional(),
+  /**
+   * 부드러운 감성 (설정 '부드러운 빛'): 화면을 1/scale로 줄여 흐린 그림을 screen으로 얹어 빛이 번지게(glow),
+   * 어둠을 따뜻한 색으로 살짝 들어 올리고(lift), 전체를 조금 덜 짙게(saturate)
+   */
+  soft: z
+    .object({ scale: z.number().int().min(2).max(8), blurPx: nonNegative, glow: unit, lift: unit, liftColor: z.string(), saturate: positive, contrast: positive })
     .optional(),
   /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
   particles: z.object({
@@ -483,6 +504,20 @@ export const presentationConfigSchema = z.object({
     migraineWhineGain: nonNegative,
     sanctuaryMusicGain: nonNegative,
     crossfadeSec: positive,
+    /**
+     * 부드러운 소리: 공간감(리버브 길이·양), 높은 소리 깎기(warmth: 이 Hz 위를 -warmthDb), 마음이 고요할 때만 들리는 배경 화음(padGain),
+     * 낮의 새소리·밤의 풀벌레(바깥, 사람이 적을 때), 집의 오르골 선율(melodyGain)
+     */
+    soft: z.object({
+      reverbSec: positive,
+      reverbWet: unit,
+      warmthHz: positive,
+      warmthDb: z.number().max(0),
+      padGain: nonNegative,
+      birdsGain: nonNegative,
+      cricketsGain: nonNegative,
+      melodyGain: nonNegative,
+    }),
   }),
 });
 export type PresentationConfig = z.infer<typeof presentationConfigSchema>;

@@ -7,15 +7,17 @@ import { playWeek, type Policy } from './lib/weekSim';
 const game = readConfig();
 const commuteSec = Number(process.argv[2] ?? 120);
 
-const runs: { policy: Policy; extras: boolean }[] = [
+const runs: { policy: Policy; extras: boolean; skilled?: boolean }[] = [
   { policy: 'avoid', extras: false },
   { policy: 'accept', extras: false },
   { policy: 'balanced', extras: false },
+  { policy: 'balanced', extras: false, skilled: true },
   { policy: 'balanced', extras: true },
+  { policy: 'balanced', extras: true, skilled: true },
 ];
-for (const { policy, extras } of runs) {
-  const r = playWeek(game, policy, { commuteSec, extras });
-  console.log(`\n■ ${policy}${extras ? ' + 기술·조용한 곳·부탁' : ''}  (출퇴근 ${commuteSec}초)`);
+for (const { policy, extras, skilled } of runs) {
+  const r = playWeek(game, policy, { commuteSec, extras, skilled });
+  console.log(`\n■ ${policy}${extras ? ' + 기술·조용한 곳·부탁' : ''}${skilled ? ' + 능숙(화장실 칸)' : ''}  (출퇴근 ${commuteSec}초)`);
   for (const d of r.rows) {
     const l = d.life;
     console.log(

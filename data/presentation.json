@@ -143,7 +143,26 @@
     "bloodGain": 0.25,
     "migraineWhineGain": 0.012,
     "sanctuaryMusicGain": 0.13,
-    "crossfadeSec": 2
+    "crossfadeSec": 2,
+    "soft": {
+      "reverbSec": 2.4,
+      "reverbWet": 0.22,
+      "warmthHz": 4500,
+      "warmthDb": -6,
+      "padGain": 0.05,
+      "birdsGain": 0.05,
+      "cricketsGain": 0.012,
+      "melodyGain": 0.07
+    }
+  },
+  "soft": {
+    "scale": 4,
+    "blurPx": 5,
+    "glow": 0.26,
+    "lift": 0.05,
+    "liftColor": "#ffe9d6",
+    "saturate": 0.92,
+    "contrast": 0.94
   },
   "view25d": {
     "layers": [
@@ -189,12 +208,12 @@
     "shadows": true,
     "cutawayDepth": 4,
     "cutawayWidth": 2.5,
-    "cutawayHeight": 0.35,
+    "occluderAlpha": 0.22,
     "wallScale": {
       "ground": 2.3,
       "subway": 1.7
     },
-    "streamRadius": 34,
+    "streamRadius": 38,
     "floorPx": 32,
     "buildPerFrame": 2,
     "tree": {
@@ -208,6 +227,43 @@
     "night": {
       "dim": 0.62,
       "playerLight": 1.4
+    },
+    "exposure": 1.0,
+    "roundness": 0.09,
+    "shadowSoftness": 7,
+    "sky": {
+      "day": "#efe4d8",
+      "dusk": "#e9cdc4",
+      "night": "#2e3048",
+      "indoor": "#2b2631",
+      "fogNear": 1.25,
+      "fogFar": 2.7
+    },
+    "palette": {
+      "wall": "#ebe1d5",
+      "window": "#bfdbe5",
+      "doorClosed": "#c79d77",
+      "partition": "#ded5cb",
+      "desk": "#d2a77f",
+      "counter": "#c69a76",
+      "shelf": "#d3ae8a",
+      "rack": "#cbb8da",
+      "table": "#cfa680",
+      "readingTable": "#d5b08b",
+      "grill": "#8f8078",
+      "bed": "#f7efe4",
+      "sofa": "#dcae9f",
+      "bench": "#cda078",
+      "plant": "#8bbd80",
+      "bookshelf": "#c79f79",
+      "vending": "#e8938a",
+      "washer": "#f3f4f6",
+      "appliance": "#eef0f2",
+      "tree": "#93c58a",
+      "trunk": "#a98463",
+      "pot": "#d39572",
+      "bus": "#8fcca8",
+      "floorTint": "#fff8f1"
     }
   }
 }

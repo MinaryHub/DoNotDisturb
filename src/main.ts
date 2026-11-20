@@ -268,7 +268,7 @@ function boot(): void {
       }
     },
     render(frameDt) {
-      touch?.update({ screen, session, optionsOpen: ui.optionsOpen, mapOpen: ui.isMapOpen });
+      touch?.update({ screen, session, optionsOpen: ui.optionsOpen, mapOpen: ui.isMapOpen, focus: screen === 'game' ? ui.focusPoints : [] });
       if (screen === 'title') {
         if (input.wasPressed('confirm')) start(false);
         else if (input.codePressed('KeyN')) {

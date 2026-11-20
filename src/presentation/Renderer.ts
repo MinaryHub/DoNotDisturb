@@ -47,6 +47,8 @@ export class Renderer {
   private wctx: CanvasRenderingContext2D;
   /** 밤 조명: 어둠을 칠하고 불빛 자리를 지워 낸 뒤 월드 위에 덮는다 */
   private readonly light: HTMLCanvasElement;
+  /** 부드러운 빛을 만들 작은 캔버스 */
+  private glowCanvas: HTMLCanvasElement | null = null;
   private readonly lctx: CanvasRenderingContext2D;
   private readonly chunks = new Map<string, HTMLCanvasElement>();
   private dpr = 1;
@@ -151,7 +153,8 @@ export class Renderer {
     // 휴대폰처럼 작은 화면은 칸을 줄여 주변이 충분히 보이게
     const small = Math.min(1, Math.max(0.55, Math.min(cam.viewW / 1280, cam.viewH / 720)));
     cam.scale = pc.camera.tilePx * small * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
-    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom));
+    // 작은 화면은 2D처럼 더 멀리서 (휴대폰 가로 화면에서 주변이 충분히 보이게)
+    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom)) * small;
     if (this.v3d) {
       const scene = this.scene3d!;
       cam.projector = (x, y, h) => scene.project(x, y, h);
@@ -1185,6 +1188,10 @@ export class Renderer {
         kind: n.type === 'pet' ? 'cat' : 'person',
         seated: n.state === 'seated',
         ally: n.type === 'ally',
+        running: n.speed > 2.6,
+        // 나를 알아챈 사람은 고개를 나에게 (대화 중엔 몸이 이미 나를 본다)
+        headTurn: n.notice > 0.3 && n.state !== 'dialogue' ? headToward(n.pos, n.facing, s.player.pos) : undefined,
+        gesture: n.state === 'dialogue' && n.gesture === 'none' ? 'laugh' : n.gesture,
       });
     }
     for (const a of s.crowd.agents) {
@@ -1223,6 +1230,11 @@ export class Renderer {
         sink: ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0,
         phone: ps.phone > 0.4,
         bike: pl.biking,
+        running: pl.running,
+        tension: Math.min(1, ps.stress),
+        tired: Math.min(1, ps.tired * 0.6 + ps.danger * 0.6 + ps.critical * 0.4),
+        tremble: ps.sweat,
+        relax: ps.sanctuary,
       });
     }
     const buses: Bus3D[] = onGround
@@ -1470,9 +1482,11 @@ export class Renderer {
       ctx.rotate(-this.stretchAxis);
       ctx.translate(-pp.x * this.dpr, -pp.y * this.dpr);
     }
-    ctx.filter = filter;
+    const soft = st.softGlow ? this.cfg.presentation.soft : undefined;
+    ctx.filter = soft ? `${filter} saturate(${soft.saturate}) contrast(${soft.contrast})` : filter;
     ctx.drawImage(this.world, 0, 0);
     ctx.filter = 'none';
+    if (soft) this.softGlow(soft, W, H);
     // 편두통: 색수차(겹쳐 보임)와 번지는 빛
     if (st.chromatic && ps.migraine > 0.04) {
       const off = fx.chromaticPx * ps.migraine * dist * this.dpr * (1 + 0.3 * Math.sin(ps.time * 5));
@@ -1491,6 +1505,35 @@ export class Renderer {
     }
     ctx.restore();
     this.finish(ps, st, W, H);
+  }
+
+  /**
+   * 부드러운 빛: 줄인 그림을 흐려 screen으로 얹어 밝은 곳이 은은하게 번지고(필름의 할레이션 같은),
+   * 가장 어두운 곳도 검정이 아니라 따뜻한 색으로 살짝 들린다. 줄여서 흐리므로 가볍다
+   */
+  private softGlow(soft: NonNullable<GameConfig['presentation']['soft']>, W: number, H: number): void {
+    const gw = Math.max(1, Math.round(W / soft.scale));
+    const gh = Math.max(1, Math.round(H / soft.scale));
+    const c = (this.glowCanvas ??= document.createElement('canvas'));
+    if (c.width !== gw || c.height !== gh) {
+      c.width = gw;
+      c.height = gh;
+    }
+    const g = c.getContext('2d')!;
+    g.filter = `blur(${soft.blurPx}px)`;
+    g.clearRect(0, 0, gw, gh);
+    g.drawImage(this.world, 0, 0, gw, gh);
+    g.filter = 'none';
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = soft.glow;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(c, 0, 0, W, H);
+    ctx.globalAlpha = soft.lift;
+    ctx.fillStyle = soft.liftColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 
   /** 마무리: 늘 깔리는 은은한 가장자리 어둠과 필름 결 (깜빡임을 끄면 결이 멈춘다) */
@@ -1746,3 +1789,9 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export type { Vec2 };
+
+/** 몸이 향한 방향 기준으로, 이 점을 보려면 고개를 얼마나 돌려야 하는지 (-π~π) */
+function headToward(from: Vec2, facing: number, to: Vec2): number {
+  const d = Math.atan2(to.y - from.y, to.x - from.x) - facing;
+  return Math.atan2(Math.sin(d), Math.cos(d));
+}

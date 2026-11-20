@@ -9,6 +9,8 @@ import { applyMark, applyStory, marksFor } from '../../src/gameplay/Story';
 //   avoid    전부 회피: 전화·문자 무시, 대화 피함, 선택 목표 건너뜀 → 생활 지표가 무너져야 한다
 //   accept   전부 수용: 모든 전화·문자·대화를 끝까지 → 배터리가 바닥나야 한다
 //   balanced 적당히: 중요한 연락만 받고 나머지는 문자로, 대화 2번(짧게), 커피 1잔·집밥 → 한 주를 버텨야 한다
+// skilled를 켜면 게임을 아는 플레이: 근무일엔 회사 화장실 칸에서 한 번 쉰다 (자리 비움으로 찾기 전까지만, 노크 전까지만).
+//   (폰 보는 척은 같은 길을 걸으면 느려진 만큼 비용이 비슷해 따로 다루지 않는다: 실제 GameSession 측정)
 // extras를 켜면 게임성 요소까지 쓴다: 밤마다 기술 하나(EXTRA_PERKS 순서), 하루 한 번 조용한 곳에서 60초, 부탁 하나
 // 필수 상호작용은 세 방식 모두 수행한다. 이동·대화 시간은 대략값이다.
 // 이야기 표지(data/story.json)도 게임처럼 남겨, 다음 날의 전화·목표가 플레이 방식에 따라 달라진다.
@@ -22,6 +24,8 @@ export interface WeekOptions {
   crowd?: number;
   /** 기술·조용한 곳·부탁까지 쓰는 플레이 (회복 수단이 늘어난 만큼 한 주가 얼마나 쉬워지는지) */
   extras?: boolean;
+  /** 게임을 아는 플레이: 근무일에 화장실 칸에서 쉰다 */
+  skilled?: boolean;
 }
 
 export interface DayRow {
@@ -139,6 +143,13 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     if (policy === 'balanced') {
       for (const n of approachers.slice(0, 2)) encounter(game.npcProfiles[n.profile]!.encounterStimulus, 12);
       sim.energy.recover((game.items.consumables.find((c) => c.id === 'coffee')?.effects.battery ?? 0) * mul('restScale'));
+    }
+    // 근무일 화장실 칸: 노크 전까지, 자리 비움으로 찾기 전까지만 (방금 쓴 칸은 다시 쉬어지지 않으니 하루 한 번)
+    if (opts.skilled && day.work) {
+      const stall = game.world.safes.find((sf) => sf.kind === 'stall');
+      const sec = Math.min(stall?.noiseAfterSec ?? 0, game.balance.deskAway.everyMin / game.balance.clock.minutesPerSecond - 1);
+      const ctx = { outdoor: false, inSafe: true, modifiers: NO_MODIFIERS };
+      for (let i = 0; i < Math.round(sec * 60); i++) sim.step(1 / 60, ctx);
     }
     // 업무: 일하는 동안 업무 스트레스, 끝나면 오후를 건너뛰고 지쳐서 퇴근
     if (day.work) {

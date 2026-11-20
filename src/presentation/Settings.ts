@@ -21,6 +21,8 @@ export interface Settings {
   view25d: boolean;
   /** 3D 시점 시제품 (아파트 층만, Three.js). 켜져 있으면 2.5D보다 먼저 */
   view3d: boolean;
+  /** 부드러운 빛: 화면 전체에 은은하게 번지는 빛과 들어 올린 어둠 (presentation.json soft) */
+  softGlow: boolean;
   /** 화면 언어 (바꾸면 다시 불러온다) */
   lang: 'ko' | 'en';
 }
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   controlsHint: true,
   view25d: true,
   view3d: true,
+  softGlow: true,
   lang: typeof navigator !== 'undefined' && !navigator.language.startsWith('ko') ? 'en' : 'ko',
 };
 

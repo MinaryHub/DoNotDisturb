@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { GameConfig } from '../../core/config';
 import { inRect, type Rect, type TileMap, type Vec2 } from '../../world/TileMap';
 import type { RoofBuilding } from '../draw/ambient';
@@ -37,6 +39,18 @@ export interface Person3D {
   faceless?: boolean;
   /** 공유 자전거를 타고 있음 */
   bike?: boolean;
+  running?: boolean;
+  /** 0~1: 긴장 (어깨가 오르고 움츠린다) */
+  tension?: number;
+  /** 0~1: 지침 (고개가 처진다) */
+  tired?: number;
+  /** 0~1: 진땀 (떨린다) */
+  tremble?: number;
+  /** 0~1: 안전지대 (어깨가 풀린다) */
+  relax?: number;
+  /** 고개를 돌린 각도 (몸 기준, 라디안). 있으면 그쪽을 본다 (나를 알아챈 사람) */
+  headTurn?: number;
+  gesture?: 'none' | 'reach' | 'wave' | 'laugh';
 }
 
 export interface Bus3D {
@@ -92,13 +106,38 @@ interface Tile3D {
 
 interface BlockGroup {
   mesh: THREE.InstancedMesh;
+  /** 플레이어를 가리는 칸만 모아 반투명하게 그리는 짝 */
+  ghost: THREE.InstancedMesh;
   tiles: Tile3D[];
 }
 
 interface TreeGroup {
   trunk: THREE.InstancedMesh;
   canopy: THREE.InstancedMesh;
+  /** 플레이어를 가리는 수관 (반투명) */
+  ghost: THREE.InstancedMesh;
   tiles: Vec2[];
+}
+
+interface TileMat {
+  mat: THREE.MeshStandardMaterial;
+  /** 플레이어를 가릴 때 쓰는 반투명 짝 */
+  ghost: THREE.MeshStandardMaterial;
+  base: THREE.Color;
+  tall: boolean;
+  glass: boolean;
+}
+
+/** 가구 한 덩어리: 붙어 있는 같은 칸을 직사각형으로 묶어 둥근 상자 하나로 (침대·책상이 칸마다 쪼개져 보이지 않게) */
+interface Piece {
+  mesh: THREE.Mesh;
+  x: number;
+  y: number;
+  w: number;
+  d: number;
+  h: number;
+  tall: boolean;
+  mat: TileMat;
 }
 
 interface Chunk3D {
@@ -106,6 +145,7 @@ interface Chunk3D {
   cy: number;
   floor: THREE.Mesh | null;
   blocks: BlockGroup[];
+  pieces: Piece[];
   trees: TreeGroup | null;
   extra: THREE.InstancedMesh[];
 }
@@ -147,18 +187,26 @@ export class Scene3D {
   private readonly v = new THREE.Vector3();
   private w = 1;
   private h = 1;
+  private readonly lite: boolean;
+  private readonly palette: Record<string, string>;
+  private readonly outdoorSky: boolean;
   private readonly cfg3: NonNullable<GameConfig['presentation']['view3d']>;
   /** 공유 자원 (청크마다 만들지 않는다) */
-  private readonly box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+  /** 벽·창·문: 모서리는 반듯하게 (이어진 벽에 홈이 생기지 않게), 바닥 쪽은 은은하게 어둡다 */
+  private readonly box = shadeByHeight(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0));
   private readonly floorGeo: THREE.PlaneGeometry;
-  private readonly mats = new Map<string, { mat: THREE.MeshStandardMaterial; base: THREE.Color; tall: boolean; glass: boolean }>();
+  private readonly mats = new Map<string, TileMat>();
   private readonly potGeo = new THREE.CylinderGeometry(0.22, 0.16, 0.38, 10).translate(0, 0.19, 0);
-  private readonly potMat = new THREE.MeshStandardMaterial({ color: '#b5764f', roughness: 0.9 });
-  private readonly leafGeo = new THREE.IcosahedronGeometry(0.42, 1);
+  private readonly potMat: THREE.MeshStandardMaterial;
+  private leafMat: THREE.MeshStandardMaterial | null = null;
+  /** 바람 셰이더의 시간 */
+  private readonly windTime = { value: 0 };
+  private readonly leafGeo = new THREE.IcosahedronGeometry(0.42, 2);
   private readonly trunkGeo: THREE.CylinderGeometry;
-  private readonly canopyGeo: THREE.IcosahedronGeometry;
-  private readonly trunkMat = new THREE.MeshStandardMaterial({ color: '#6b4f3a', roughness: 0.95 });
+  private readonly canopyGeo: THREE.BufferGeometry;
+  private readonly trunkMat: THREE.MeshStandardMaterial;
   private readonly canopyMat: THREE.MeshStandardMaterial;
+  private readonly canopyGhost: THREE.MeshStandardMaterial;
   /** 벽 높이를 다시 계산해야 하는지 알아보는 열쇠 */
   private blockKey = '';
   private readonly wallScale: number;
@@ -177,35 +225,60 @@ export class Scene3D {
     this.wallScale = this.cfg3.wallScale[layer.id] ?? 1;
     this.roofHeight = (cfg.presentation.view25d?.heights['wall'] ?? 1.35) * this.wallScale;
     this.canvas = document.createElement('canvas');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
+    // 휴대폰·태블릿: 해상도·그림자를 낮춰 가볍게
+    this.lite = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.lite, alpha: false, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = this.cfg3.shadows;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // 부드러운 그림자: 번지는 가장자리 (휴대폰은 가벼운 PCF)
+    this.renderer.shadowMap.type = this.lite ? THREE.PCFSoftShadowMap : THREE.VSMShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.scene.background = new THREE.Color(cfg.tiles[0]!.color);
+    // 톤 매핑: 밝은 곳이 하얗게 타지 않고 부드럽게 눕는다
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = this.cfg3.exposure;
+    this.palette = this.cfg3.palette;
+    // 하늘·안개: 지상은 멀수록 하늘색으로 옅어진다 (실내 층은 따뜻한 어둠)
+    this.outdoorSky = layer.id === 'ground';
+    this.scene.background = new THREE.Color(this.outdoorSky ? this.cfg3.sky.day : this.cfg3.sky.indoor);
+    if (this.outdoorSky) this.scene.fog = new THREE.Fog(this.cfg3.sky.day, 30, 70);
     this.camera = new THREE.PerspectiveCamera(this.cfg3.fov, 1, 0.5, 400);
 
-    // 빛: 하늘·바닥 반사 + 비스듬한 해 (그림자). 밤에는 플레이어 둘레에 작은 빛
-    this.hemi = new THREE.HemisphereLight('#fff6e6', '#5a5048', 1.9);
+    // 빛: 하늘·바닥 반사 + 비스듬한 해 (그림자). 그늘이 너무 깊지 않게 하늘빛을 넉넉히, 해는 따뜻하고 약하게
+    this.hemi = new THREE.HemisphereLight('#fff3e8', '#bfae9f', 2.2);
     this.scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight('#fff1dc', 1.6);
+    this.sun = new THREE.DirectionalLight('#ffe7cc', 1.35);
     this.sun.castShadow = this.cfg3.shadows;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.setScalar(this.lite ? 1024 : 2048);
+    this.sun.shadow.radius = this.cfg3.shadowSoftness;
+    this.sun.shadow.blurSamples = 12;
     const sc = this.sun.shadow.camera;
     sc.left = -30;
     sc.right = 30;
     sc.top = 30;
     sc.bottom = -30;
     sc.far = 140;
-    this.sun.shadow.bias = -0.0008;
+    this.sun.shadow.bias = this.lite ? -0.0008 : -0.0004;
     this.scene.add(this.sun, this.sun.target);
     this.glow = new THREE.PointLight('#ffd9a0', 0, 7, 1.6);
     this.scene.add(this.glow);
 
     this.floorGeo = new THREE.PlaneGeometry(chunkSize, chunkSize);
     const tr = this.cfg3.tree;
-    this.trunkGeo = new THREE.CylinderGeometry(0.1, 0.14, tr.trunk, 6).translate(0, tr.trunk / 2, 0);
-    this.canopyGeo = new THREE.IcosahedronGeometry(tr.canopy, 1);
-    this.canopyMat = new THREE.MeshStandardMaterial({ color: cfg.tiles.find((t) => t.id === 'tree')?.color ?? '#4f7a4b', roughness: 0.85, flatShading: true });
+    this.trunkGeo = new THREE.CylinderGeometry(0.09, 0.14, tr.trunk, 8).translate(0, tr.trunk / 2, 0);
+    // 수관: 둥근 덩어리 셋을 겹쳐 몽글몽글하게
+    const c = tr.canopy;
+    this.canopyGeo = mergeGeometries([
+      new THREE.IcosahedronGeometry(c * 0.8, 2),
+      new THREE.IcosahedronGeometry(c * 0.62, 2).translate(c * 0.5, -c * 0.15, c * 0.2),
+      new THREE.IcosahedronGeometry(c * 0.58, 2).translate(-c * 0.42, -c * 0.1, -c * 0.3),
+      new THREE.IcosahedronGeometry(c * 0.5, 2).translate(c * 0.05, c * 0.38, -c * 0.1),
+    ])!;
+    this.canopyMat = new THREE.MeshStandardMaterial({ color: this.colorOf('tree', cfg.tiles.find((t) => t.id === 'tree')?.color ?? '#4f7a4b'), roughness: 0.95 });
+    this.trunkMat = new THREE.MeshStandardMaterial({ color: this.colorOf('trunk', '#6b4f3a'), roughness: 0.95 });
+    this.potMat = new THREE.MeshStandardMaterial({ color: this.colorOf('pot', '#b5764f'), roughness: 0.9 });
+    this.canopyGhost = this.ghostOf(this.canopyMat);
+    // 바람: 수관이 느리게 일렁인다 (나무마다 박자가 다르게)
+    this.windy(this.canopyMat, 0.05);
+    this.windy(this.canopyGhost, 0.05);
     this.buildLamps();
 
     this.overlay = document.createElement('canvas');
@@ -215,7 +288,8 @@ export class Scene3D {
     this.overlayTex.colorSpace = THREE.SRGBColorSpace;
     this.overlayMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(OVERLAY_TILES.w, OVERLAY_TILES.h),
-      new THREE.MeshBasicMaterial({ map: this.overlayTex, transparent: true, depthWrite: false }),
+      // 바닥 표시는 2D와 같은 색 그대로 (톤 매핑을 거치지 않는다)
+      new THREE.MeshBasicMaterial({ map: this.overlayTex, transparent: true, depthWrite: false, toneMapped: false }),
     );
     this.overlayMesh.rotation.x = -Math.PI / 2;
     this.overlayMesh.renderOrder = 1;
@@ -235,7 +309,7 @@ export class Scene3D {
   resize(w: number, h: number, dpr: number): void {
     this.w = w;
     this.h = h;
-    this.renderer.setPixelRatio(dpr);
+    this.renderer.setPixelRatio(this.lite ? Math.min(dpr, 1.5) : dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -258,7 +332,7 @@ export class Scene3D {
   render(f: Frame3D): void {
     const c = this.cfg3;
     const pitch = (c.pitchDeg * Math.PI) / 180;
-    const dist = (c.distance * (1 + (c.dangerDistance - 1) * f.closeIn)) / Math.max(0.4, f.zoom);
+    const dist = (c.distance * (1 + (c.dangerDistance - 1) * f.closeIn)) / Math.max(0.3, f.zoom);
     const t = f.target;
     this.camera.position.set(t.x, Math.sin(pitch) * dist, t.y + Math.cos(pitch) * dist);
     this.camera.lookAt(t.x, 0, t.y);
@@ -267,6 +341,16 @@ export class Scene3D {
     this.sun.target.position.set(t.x, 0, t.y);
     this.sun.target.updateMatrixWorld();
     this.light(f);
+    this.windTime.value = f.time;
+    if (this.outdoorSky) {
+      const sky = this.cfg3.sky;
+      const col = new THREE.Color(sky.day).lerp(new THREE.Color(sky.dusk), Math.min(1, f.night * 2)).lerp(new THREE.Color(sky.night), Math.max(0, f.night * 2 - 1));
+      (this.scene.background as THREE.Color).copy(col);
+      const fog = this.scene.fog as THREE.Fog;
+      fog.color.copy(col);
+      fog.near = dist * sky.fogNear;
+      fog.far = dist * sky.fogFar;
+    }
 
     const built = this.stream(t);
     this.updateBlocks(f, built);
@@ -357,7 +441,7 @@ export class Scene3D {
 
   private load(cx: number, cy: number): void {
     const S = this.chunkSize;
-    const ch: Chunk3D = { cx, cy, floor: null, blocks: [], trees: null, extra: [] };
+    const ch: Chunk3D = { cx, cy, floor: null, blocks: [], pieces: [], trees: null, extra: [] };
     const img = this.floorChunk(cx, cy);
     if (img) {
       // 청크 캔버스는 LRU로 버려질 수 있어 (줄여서) 복사해 둔다
@@ -368,7 +452,7 @@ export class Scene3D {
       const tex = new THREE.CanvasTexture(copy);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = 4;
-      const plane = new THREE.Mesh(this.floorGeo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+      const plane = new THREE.Mesh(this.floorGeo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, color: this.colorOf('floorTint', '#ffffff') }));
       plane.rotation.x = -Math.PI / 2;
       plane.position.set(cx * S + S / 2, 0, cy * S + S / 2);
       plane.receiveShadow = true;
@@ -401,19 +485,65 @@ export class Scene3D {
         continue;
       }
       const m = this.matFor(id);
-      const mesh = new THREE.InstancedMesh(this.box, m.mat, tiles.length);
+      if (!STRUCTURE.has(id) && this.cfg3.roundness > 0) {
+        ch.pieces.push(...this.pieces(tiles, m));
+        continue;
+      }
+      const geo = this.box;
+      const mesh = new THREE.InstancedMesh(geo, m.mat, tiles.length);
       mesh.castShadow = !m.glass;
       mesh.receiveShadow = true;
-      this.scene.add(mesh);
-      ch.blocks.push({ mesh, tiles });
+      const ghost = new THREE.InstancedMesh(geo, m.ghost, tiles.length);
+      ghost.count = 0;
+      // 비쳐 보여도 그림자는 그대로 (빛이 갑자기 바뀌지 않게)
+      ghost.castShadow = !m.glass;
+      ghost.renderOrder = 2;
+      this.scene.add(mesh, ghost);
+      ch.blocks.push({ mesh, ghost, tiles });
     }
     if (trees.length) ch.trees = this.treesFor(trees);
     this.chunks.set(`${cx},${cy}`, ch);
   }
 
+  /** 붙어 있는 같은 높이의 칸을 직사각형으로 묶는다 (가로로 늘린 뒤 아래로) */
+  private pieces(tiles: Tile3D[], m: TileMat): Piece[] {
+    const at = new Map<string, Tile3D>();
+    for (const t of tiles) at.set(`${t.x},${t.y}`, t);
+    const used = new Set<string>();
+    const out: Piece[] = [];
+    const sorted = [...tiles].sort((a, b) => a.y - b.y || a.x - b.x);
+    const same = (x: number, y: number, h: number) => {
+      const k = `${x},${y}`;
+      const t = at.get(k);
+      return !!t && t.h === h && !used.has(k);
+    };
+    const r = this.cfg3.roundness;
+    for (const t of sorted) {
+      if (used.has(`${t.x},${t.y}`)) continue;
+      let w = 1;
+      while (same(t.x + w, t.y, t.h)) w++;
+      let d = 1;
+      while ([...Array(w).keys()].every((i) => same(t.x + i, t.y + d, t.h))) d++;
+      for (let j = 0; j < d; j++) for (let i = 0; i < w; i++) used.add(`${t.x + i},${t.y + j}`);
+      const geo = shadeByHeight(new RoundedBoxGeometry(w - 0.06, 1, d - 0.06, 2, Math.min(r, (Math.min(w, d) - 0.06) / 2 - 0.001)).translate(0, 0.5, 0));
+      const mesh = new THREE.Mesh(geo, m.mat);
+      mesh.position.set(t.x + w / 2, 0, t.y + d / 2);
+      mesh.scale.y = t.h;
+      mesh.castShadow = !m.glass;
+      mesh.receiveShadow = true;
+      this.scene.add(mesh);
+      out.push({ mesh, x: t.x, y: t.y, w, d, h: t.h, tall: t.tall, mat: m });
+    }
+    return out;
+  }
+
   private unload(key: string): void {
     const ch = this.chunks.get(key);
     if (!ch) return;
+    for (const pc of ch.pieces) {
+      this.scene.remove(pc.mesh);
+      pc.mesh.geometry.dispose();
+    }
     if (ch.floor) {
       const m = ch.floor.material as THREE.MeshStandardMaterial;
       m.map?.dispose();
@@ -421,11 +551,15 @@ export class Scene3D {
       this.scene.remove(ch.floor);
     }
     // 공유 도형·재질은 남기고 인스턴스 버퍼만 버린다
-    for (const b of ch.blocks) this.dropInstanced(b.mesh);
+    for (const b of ch.blocks) {
+      this.dropInstanced(b.mesh);
+      this.dropInstanced(b.ghost);
+    }
     for (const m of ch.extra) this.dropInstanced(m);
     if (ch.trees) {
       this.dropInstanced(ch.trees.trunk);
       this.dropInstanced(ch.trees.canopy);
+      this.dropInstanced(ch.trees.ghost);
     }
     this.chunks.delete(key);
   }
@@ -435,27 +569,68 @@ export class Scene3D {
     m.dispose();
   }
 
-  private matFor(id: string): { mat: THREE.MeshStandardMaterial; base: THREE.Color; tall: boolean; glass: boolean } {
+  private matFor(id: string): TileMat {
     let m = this.mats.get(id);
     if (m) return m;
     const def = this.cfg.tiles.find((t) => t.id === id)!;
     const glass = id === 'window';
     const mat = new THREE.MeshStandardMaterial({
-      color: glass ? '#a9cbd8' : def.color,
-      roughness: glass ? 0.15 : 0.85,
+      color: this.colorOf(id, glass ? '#a9cbd8' : def.color),
+      roughness: glass ? 0.2 : 0.9,
       transparent: glass,
-      opacity: glass ? 0.45 : 1,
+      opacity: glass ? 0.5 : 1,
+      vertexColors: true,
     });
-    m = { mat, base: mat.color.clone(), tall: !!def.tall && !glass, glass };
+    m = { mat, ghost: this.ghostOf(mat), base: mat.color.clone(), tall: !!def.tall && !glass, glass };
     this.mats.set(id, m);
     return m;
   }
 
+  /**
+   * 바람에 일렁이는 재질: 정점을 높이에 비례해 좌우로 흔든다. 인스턴스마다 자리(위치)로 박자를 달리해 함께 흔들리지 않는다.
+   * amp는 칸 단위 최대 흔들림 (그림자는 흔들리지 않는다: 가볍게)
+   */
+  private windy(m: THREE.MeshStandardMaterial, amp: number): void {
+    const u = this.windTime;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms['uWind'] = u;
+      sh.vertexShader =
+        'uniform float uWind;\n' +
+        sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          vec3 wp = vec3(0.0);
+          #ifdef USE_INSTANCING
+            wp = instanceMatrix[3].xyz;
+          #endif
+          float hk = max(0.0, position.y + 0.6);
+          transformed.x += (sin(uWind * 1.25 + wp.x * 0.6 + wp.z * 0.35) * 0.65 + sin(uWind * 2.9 + wp.x * 1.7 + wp.z) * 0.25) * ${amp.toFixed(3)} * hk;
+          transformed.z += cos(uWind * 1.05 + wp.z * 0.7 + wp.x * 0.2) * ${(amp * 0.6).toFixed(3)} * hk;`,
+        );
+    };
+    m.customProgramCacheKey = () => `wind${amp}`;
+  }
+
+  /** 3D 전용 부드러운 색 (presentation.json view3d.palette), 없으면 기본색 */
+  private colorOf(key: string, fallback: string): string {
+    return this.palette[key] ?? fallback;
+  }
+
+  /** 가리는 것을 비쳐 보이게 그릴 재질: 같은 색, 반투명, 뒤를 가리지 않음 */
+  private ghostOf(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+    const g = mat.clone();
+    g.transparent = true;
+    g.opacity = Math.min(mat.opacity, this.cfg3.occluderAlpha);
+    g.depthWrite = false;
+    return g;
+  }
+
   private plants(tiles: Tile3D[]): THREE.InstancedMesh[] {
-    const color = this.cfg.tiles.find((t) => t.id === 'plant')?.color ?? '#6a9a5b';
-    const leafMat = this.matFor('plant').mat;
-    leafMat.color.set(color);
-    leafMat.flatShading = true;
+    if (!this.leafMat) {
+      this.leafMat = new THREE.MeshStandardMaterial({ color: this.colorOf('plant', this.cfg.tiles.find((t) => t.id === 'plant')?.color ?? '#6a9a5b'), roughness: 0.95 });
+      this.windy(this.leafMat, 0.015);
+    }
+    const leafMat = this.leafMat;
     const pot = new THREE.InstancedMesh(this.potGeo, this.potMat, tiles.length);
     const leaf = new THREE.InstancedMesh(this.leafGeo, leafMat, tiles.length);
     tiles.forEach((t, i) => {
@@ -483,47 +658,72 @@ export class Scene3D {
     });
     trunk.castShadow = canopy.castShadow = true;
     canopy.receiveShadow = true;
-    this.scene.add(trunk, canopy);
-    return { trunk, canopy, tiles };
+    const ghost = new THREE.InstancedMesh(this.canopyGeo, this.canopyGhost, tiles.length);
+    ghost.count = 0;
+    ghost.castShadow = true;
+    ghost.renderOrder = 2;
+    this.scene.add(trunk, canopy, ghost);
+    return { trunk, canopy, ghost, tiles };
   }
 
-  /** 벽 높이: Danger 이하에서 솟고, 플레이어 앞(카메라 쪽)을 가리는 벽·나무는 낮춘다 (컷어웨이) */
+  /** 벽 높이: Danger 이하에서 솟는다. 플레이어 앞(카메라 쪽)을 가리는 벽·가구·수관은 높이 그대로 반투명하게 */
   private updateBlocks(f: Frame3D, built: boolean): void {
     const grow = 1 + (this.cfg3.dangerGrow ?? 0) * f.closeIn * (1 + 0.05 * Math.sin(f.time * 2));
     const p = f.focus;
     const key = `${grow.toFixed(3)}|${p ? `${Math.round(p.x * 4)},${Math.round(p.y * 4)}` : '-'}|${this.chunks.size}`;
-    // 솟은 벽은 어두워진다 (짓눌리는 느낌)
-    for (const m of this.mats.values()) if (m.tall) m.mat.color.copy(m.base).multiplyScalar(1 - 0.4 * f.closeIn);
+    // 솟은 벽은 어두워진다 (짓눌리는 느낌). 비쳐 보이는 짝도 같은 색
+    for (const m of this.mats.values()) {
+      if (m.tall) m.mat.color.copy(m.base).multiplyScalar(1 - 0.4 * f.closeIn);
+      m.ghost.color.copy(m.mat.color);
+    }
     if (key === this.blockKey && !built) return;
     this.blockKey = key;
     const c = this.cfg3;
     const inFront = (x: number, y: number, depth: number) => !!p && y + 1 > p.y && y < p.y + depth && Math.abs(x + 0.5 - p.x) < c.cutawayWidth;
     const tr = c.tree;
+    const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
     for (const ch of this.chunks.values()) {
       for (const b of ch.blocks) {
+        let n = 0;
         b.tiles.forEach((t, i) => {
-          let h = t.tall ? t.h * grow : t.h;
-          if (t.tall && inFront(t.x, t.y, c.cutawayDepth + Math.max(0, t.h - 1.35) * 0.7)) h = Math.min(h, c.cutawayHeight);
+          const h = t.tall ? t.h * grow : t.h;
           this.tmp.makeScale(1, h, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
-          b.mesh.setMatrixAt(i, this.tmp);
+          // 사람 키를 넘는 것만 가린다고 본다 (낮은 책상·침대는 그대로)
+          if (h > 0.8 && inFront(t.x, t.y, c.cutawayDepth + Math.max(0, h - 1.35) * 0.7)) {
+            b.ghost.setMatrixAt(n++, this.tmp);
+            b.mesh.setMatrixAt(i, hidden);
+          } else b.mesh.setMatrixAt(i, this.tmp);
         });
+        b.ghost.count = n;
         b.mesh.instanceMatrix.needsUpdate = true;
+        b.ghost.instanceMatrix.needsUpdate = true;
+      }
+      for (const pc of ch.pieces) {
+        const h = pc.tall ? pc.h * grow : pc.h;
+        pc.mesh.scale.y = h;
+        const hidesMe = !!p && h > 0.8 && pc.y + pc.d > p.y && pc.y < p.y + c.cutawayDepth + Math.max(0, h - 1.35) * 0.7 && pc.x + pc.w > p.x - c.cutawayWidth && pc.x < p.x + c.cutawayWidth;
+        pc.mesh.material = hidesMe ? pc.mat.ghost : pc.mat.mat;
+        pc.mesh.renderOrder = hidesMe ? 2 : 0;
       }
       if (ch.trees) {
-        const { trunk, canopy, tiles } = ch.trees;
+        const { trunk, canopy, ghost, tiles } = ch.trees;
+        let n = 0;
         tiles.forEach((t, i) => {
           const hsh = ((t.x * 73856093) ^ (t.y * 19349663)) >>> 0;
           const s = 0.85 + (hsh % 5) * 0.08;
-          // 플레이어를 가리는 나무는 수관을 작게 (밑을 지나면 보이게)
-          const cut = inFront(t.x, t.y, (tr.trunk + tr.canopy * 2) * 0.75);
-          const k = cut ? 0.35 : s;
-          this.tmp.makeScale(1, cut ? 0.5 : s, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
+          this.tmp.makeScale(1, s, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
           trunk.setMatrixAt(i, this.tmp);
-          this.tmp.makeScale(k, k * 0.85, k).setPosition(t.x + 0.5 + ((hsh >>> 4) % 5) * 0.06 - 0.12, (cut ? tr.trunk * 0.5 : tr.trunk * s) + tr.canopy * 0.55 * k, t.y + 0.5);
-          canopy.setMatrixAt(i, this.tmp);
+          this.tmp.makeScale(s, s * 0.85, s).setPosition(t.x + 0.5 + ((hsh >>> 4) % 5) * 0.06 - 0.12, tr.trunk * s + tr.canopy * 0.55 * s, t.y + 0.5);
+          // 플레이어를 가리는 수관은 비쳐 보이게 (밑을 지나도 내가 보인다)
+          if (inFront(t.x, t.y, (tr.trunk + tr.canopy * 2) * 0.75)) {
+            ghost.setMatrixAt(n++, this.tmp);
+            canopy.setMatrixAt(i, hidden);
+          } else canopy.setMatrixAt(i, this.tmp);
         });
+        ghost.count = n;
         trunk.instanceMatrix.needsUpdate = true;
         canopy.instanceMatrix.needsUpdate = true;
+        ghost.instanceMatrix.needsUpdate = true;
       }
     }
   }
@@ -565,10 +765,11 @@ export class Scene3D {
 
   private makeRoof(b: RoofBuilding): Roof3D {
     const th = this.cfg3.roof.thickness;
-    const mat = new THREE.MeshStandardMaterial({ color: b.color, roughness: 0.9 });
+    // 지붕: 2D 지붕 색을 조금 밝게 (파스텔), 모서리는 둥글게
+    const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(b.color).lerp(new THREE.Color('#fff4ea'), 0.3), roughness: 0.95 });
     const group = new THREE.Group();
     for (const r of b.outer) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(r[2] + 0.2, th, r[3] + 0.2), mat);
+      const m = new THREE.Mesh(new RoundedBoxGeometry(r[2] + 0.2, th, r[3] + 0.2, 2, Math.min(th / 2 - 0.001, 0.12)), mat);
       m.position.set(r[0] + r[2] / 2, this.roofHeight + th / 2, r[1] + r[3] / 2);
       m.castShadow = m.receiveShadow = true;
       group.add(m);
@@ -609,9 +810,21 @@ export class Scene3D {
       seen.add(b.key);
       let g = this.buses.get(b.key);
       if (!g) {
-        g = makeBus();
+        g = makeBus(this.colorOf('bus', BUS_BODY));
         this.buses.set(b.key, g);
         this.scene.add(g);
+      }
+      // 바퀴는 달린 만큼 굴러가고, 차체는 달릴 때 살짝 흔들리며 설 때 앞으로 꾸벅
+      const st = g.userData as { lastX?: number; spin?: number; dip?: number };
+      const moved = st.lastX === undefined ? 0 : Math.abs(b.x - st.lastX);
+      st.lastX = b.x;
+      st.spin = (st.spin ?? 0) - moved / 0.45;
+      st.dip = (st.dip ?? 0) + ((b.stopped ? 1 : 0) - (st.dip ?? 0)) * Math.min(1, f.dt * 3);
+      for (const w of g.children) if (w.name === 'wheel') w.rotation.z = st.spin;
+      const chassis = g.getObjectByName('chassis');
+      if (chassis) {
+        chassis.position.y = moved > 0.001 ? Math.sin(f.time * 7 + b.x * 0.3) * 0.02 : 0;
+        chassis.rotation.z = -0.02 * Math.sin(Math.min(1, st.dip) * Math.PI);
       }
       g.position.set(b.x, 0, b.y);
       g.rotation.y = b.dir === -1 ? Math.PI : 0;
@@ -642,6 +855,7 @@ export class Scene3D {
       const base = covered ? this.roofHeight * grow + 0.9 : 2.4;
       g.position.set(b.x, base + Math.abs(Math.sin(f.time * 3)) * 0.3, b.y);
       g.rotation.y = f.time * 1.2;
+      g.scale.setScalar(1 + Math.sin(f.time * 4) * 0.07);
     });
   }
 
@@ -664,6 +878,7 @@ export class Scene3D {
       const sink = p.sink ?? 0;
       g.scale.set(1 + sink * 0.3, 1 - sink * 0.45, 1 + sink * 0.3);
       if (p.kind === 'person') posePerson(g, p, f.time);
+      else poseCat(g, p, f.time);
     }
     // 안 보이는 사람은 숨기고, 한동안 안 보이면 버린다 (행인은 계속 바뀐다)
     for (const [id, e] of this.people) {
@@ -691,109 +906,213 @@ export class Scene3D {
 }
 
 // ───────────────────────── 사람 모형 (도형 조합) ─────────────────────────
+// 부드러운 감성: 둥근 캡슐 팔다리·몸통, 조금 큰 머리, 볼의 옅은 분홍, 발밑의 번진 그림자
 
 function mat(color: string): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.75 });
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.92 });
+}
+
+/** 아래로 갈수록 어두운 정점색: 바닥에 닿는 곳의 은은한 그늘 (윗면은 그대로 밝게) */
+function shadeByHeight(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  const pos = geo.getAttribute('position');
+  const nrm = geo.getAttribute('normal');
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const y = Math.min(1, Math.max(0, pos.getY(i)));
+    const up = nrm ? nrm.getY(i) : 0;
+    const k = up > 0.6 ? 1 : 0.74 + 0.26 * Math.pow(y, 0.6);
+    col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return geo;
+}
+
+let blobTexture: THREE.CanvasTexture | null = null;
+/** 발밑의 번진 그림자 (해 그림자와 별개로 늘 깔려 사람이 바닥에 붙어 보인다) */
+function blobMaterial(): THREE.MeshBasicMaterial {
+  if (!blobTexture) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+    grad.addColorStop(0, 'rgba(60, 40, 50, 0.42)');
+    grad.addColorStop(0.6, 'rgba(60, 40, 50, 0.16)');
+    grad.addColorStop(1, 'rgba(60, 40, 50, 0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    blobTexture = new THREE.CanvasTexture(c);
+  }
+  return new THREE.MeshBasicMaterial({ map: blobTexture, transparent: true, depthWrite: false });
+}
+
+function addBlob(g: THREE.Group, size: number): void {
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(size, size), blobMaterial());
+  blob.name = 'blob';
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.y = 0.015;
+  blob.renderOrder = 1;
+  g.add(blob);
 }
 
 interface PersonParts {
   top: THREE.MeshStandardMaterial;
   hair: THREE.MeshStandardMaterial | null;
   skin: THREE.Color;
+  cheek: THREE.MeshStandardMaterial;
   look: string;
+  /** 엉덩이 높이 (몸통이 매달린 곳) */
+  hipY: number;
+  shoulderY: number;
+  /** 움직임의 부드러운 상태 (갑자기 멈추거나 돌지 않게 매 프레임 조금씩 따라간다) */
+  anim: PersonAnim;
 }
 
+interface PersonAnim {
+  last: number;
+  seed: number;
+  walk: number;
+  run: number;
+  tension: number;
+  tired: number;
+  relax: number;
+  headYaw: number;
+  lookTarget: number;
+  lookTimer: number;
+  blink: number;
+  blinkTimer: number;
+  phone: number;
+}
+
+/**
+ * 사람 모형: 엉덩이에 매달린 다리(허벅지 → 무릎 → 정강이·신발), 엉덩이를 축으로 기우는 몸(몸통·목 → 머리, 어깨 → 위팔 → 팔꿈치 → 아래팔·손).
+ * 정면은 +x. 모든 관절은 z축으로 앞뒤로 접힌다
+ */
 function makePerson(look: Look, height: number, shadow: boolean): THREE.Group {
   const H = height;
   const g = new THREE.Group();
   const top = mat(look.top);
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material, name: string, x: number, y: number, z = 0) => {
-    const mesh = new THREE.Mesh(geo, m);
-    mesh.name = name;
-    mesh.position.set(x, y, z);
-    mesh.castShadow = shadow;
-    g.add(mesh);
-    return mesh;
+  const skinMat = mat(look.skin);
+  const mesh = (geo: THREE.BufferGeometry, m: THREE.Material, parent: THREE.Object3D, name = '') => {
+    const o = new THREE.Mesh(geo, m);
+    o.name = name;
+    o.castShadow = shadow;
+    parent.add(o);
+    return o;
   };
-  const W = 0.36 * look.build;
-  // 다리 (엉덩이에서 매달려 앞뒤로 흔든다)
+  const group = (name: string, parent: THREE.Object3D, x: number, y: number, z: number) => {
+    const o = new THREE.Group();
+    o.name = name;
+    o.position.set(x, y, z);
+    parent.add(o);
+    return o;
+  };
+  const W = 0.34 * look.build;
+  const hipY = H * 0.47;
+  const kneeDrop = H * 0.23;
+  // 다리: 허벅지 → 무릎 → 정강이와 둥근 신발
+  const bottom = mat(look.bottom);
+  const shoes = mat(look.shoes);
   for (const side of [-1, 1]) {
-    const leg = new THREE.Group();
-    leg.name = side < 0 ? 'legL' : 'legR';
-    leg.position.set(0, H * 0.46, side * 0.09);
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.13, H * 0.44, 0.12).translate(0, -H * 0.22, 0), mat(look.bottom));
-    l.castShadow = shadow;
-    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.07, 0.12).translate(0.04, -H * 0.44 + 0.03, 0), mat(look.shoes));
-    leg.add(l, shoe);
-    g.add(leg);
+    const leg = group(side < 0 ? 'legL' : 'legR', g, 0, hipY, side * 0.085);
+    mesh(new THREE.CapsuleGeometry(0.068, kneeDrop - 0.1, 4, 10).translate(0, -kneeDrop / 2, 0), bottom, leg);
+    const knee = group(side < 0 ? 'kneeL' : 'kneeR', leg, 0, -kneeDrop, 0);
+    const shin = hipY - kneeDrop - 0.05;
+    mesh(new THREE.CapsuleGeometry(0.06, shin - 0.1, 4, 10).translate(0, -shin / 2, 0), bottom, knee);
+    mesh(new THREE.SphereGeometry(0.075, 12, 8).scale(1.45, 0.62, 1).translate(0.035, -shin - 0.012, 0), shoes, knee);
   }
-  add(new THREE.BoxGeometry(0.24, H * 0.36, W), top, 'torso', 0, H * 0.64);
+  // 몸: 엉덩이를 축으로 기울고 비튼다
+  const body = group('body', g, 0, hipY, 0);
+  const torso = mesh(new THREE.CapsuleGeometry(0.16, H * 0.17, 6, 14), top, body, 'torso');
+  torso.position.set(0, H * 0.66 - hipY, 0);
+  torso.scale.set(0.78, 1, W / 0.32);
+  const shoulderY = H * 0.79 - hipY;
+  const upper = H * 0.155;
+  const fore = H * 0.15;
   for (const side of [-1, 1]) {
-    const arm = new THREE.Group();
-    arm.name = side < 0 ? 'armL' : 'armR';
-    arm.position.set(0, H * 0.8, side * (W / 2 + 0.05));
-    const a = new THREE.Mesh(new THREE.BoxGeometry(0.09, H * 0.34, 0.09).translate(0, -H * 0.17, 0), top);
-    a.castShadow = shadow;
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6).translate(0, -H * 0.35, 0), mat(look.skin));
-    arm.add(a, hand);
-    g.add(arm);
+    const arm = group(side < 0 ? 'armL' : 'armR', body, 0, shoulderY, side * (W / 2 + 0.035));
+    mesh(new THREE.CapsuleGeometry(0.05, upper - 0.06, 4, 10).translate(0, -upper / 2, 0), top, arm);
+    const elbow = group(side < 0 ? 'elbowL' : 'elbowR', arm, 0, -upper, 0);
+    mesh(new THREE.CapsuleGeometry(0.045, fore - 0.06, 4, 10).translate(0, -fore / 2, 0), top, elbow);
+    mesh(new THREE.SphereGeometry(0.052, 10, 8).translate(0, -fore - 0.02, 0), skinMat, elbow);
   }
-  const head = add(new THREE.SphereGeometry(0.15, 14, 10), mat(look.skin), 'head', 0.01, H * 0.9);
+  // 목 → 머리: 조금 크고 둥글게
+  const neck = group('neck', body, 0, H * 0.84 - hipY, 0);
+  const head = mesh(new THREE.SphereGeometry(0.178, 22, 16), mat(look.skin), neck, 'head');
+  head.position.set(0.01, H * 0.065, 0);
   let hairMat: THREE.MeshStandardMaterial | null = null;
   if (look.hairStyle !== 'bald') {
     hairMat = mat(look.hairStyle === 'cap' ? look.accent : look.hair);
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.158, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
-    hair.rotation.z = 0.35;
-    hair.position.x = -0.02;
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.186, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.56), hairMat);
+    hair.rotation.z = 0.38;
+    hair.position.x = -0.025;
     head.add(hair);
+    if (look.hairStyle === 'long' || look.hairStyle === 'ponytail' || look.hairStyle === 'bun') {
+      const back = new THREE.Mesh(new THREE.SphereGeometry(look.hairStyle === 'bun' ? 0.08 : 0.11, 12, 10).scale(1, look.hairStyle === 'long' ? 1.6 : 1, 1), hairMat);
+      back.name = 'hairBack';
+      back.position.set(-0.14, look.hairStyle === 'bun' ? 0.12 : -0.04, 0);
+      head.add(back);
+    }
   }
-  // 눈 (정면 +x 쪽)
+  // 눈 (정면 +x 쪽, 깜빡인다)과 볼의 옅은 분홍 (긴장하면 짙어진다)
   for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), mat('#2e2a30'));
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.021, 8, 6), mat('#3a3038'));
     eye.name = 'eye';
-    eye.position.set(0.14, 0.02, side * 0.055);
+    eye.position.set(0.165, 0.02, side * 0.06);
     head.add(eye);
   }
-  const phone = add(new THREE.BoxGeometry(0.03, 0.14, 0.09), mat('#20232b'), 'phone', 0.22, H * 0.68);
-  (phone.material as THREE.MeshStandardMaterial).emissive.set('#5a8fc8');
+  const cheekMat = new THREE.MeshStandardMaterial({ color: '#f2918a', roughness: 1, transparent: true, opacity: 0.28, depthWrite: false });
+  for (const side of [-1, 1]) {
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8).scale(0.35, 0.65, 1), cheekMat);
+    cheek.position.set(0.158, -0.04, side * 0.095);
+    head.add(cheek);
+  }
+  // 폰: 가슴 앞 (두 손으로 든다)
+  const phone = mesh(new THREE.BoxGeometry(0.03, 0.14, 0.09), mat('#2a2d36'), body, 'phone');
+  phone.position.set(0.24, H * 0.62 - hipY, 0);
+  phone.rotation.z = 0.5;
+  (phone.material as THREE.MeshStandardMaterial).emissive.set('#6a9fd8');
   phone.visible = false;
-  // 우산 (비 오는 날 바깥)
-  const umbrella = new THREE.Group();
-  umbrella.name = 'umbrella';
-  const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.28, 10, 1, true), new THREE.MeshStandardMaterial({ color: look.accent, roughness: 0.6, side: THREE.DoubleSide }));
+  // 우산 (비 오는 날 바깥): 오른손 위
+  const umbrella = group('umbrella', body, 0, 0, 0);
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.66, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.32), new THREE.MeshStandardMaterial({ color: look.accent, roughness: 0.8, side: THREE.DoubleSide }));
   canopy.name = 'umbrellaTop';
-  canopy.position.set(0.05, H * 1.12, 0);
+  canopy.position.set(0.05, H * 1.0 - hipY, 0);
   canopy.castShadow = shadow;
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, H * 0.42, 4), mat('#3a3a3a'));
-  stick.position.set(0.12, H * 0.92, 0.12);
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, H * 0.42, 4), mat('#4a4a4a'));
+  stick.position.set(0.12, H * 0.92 - hipY, 0.12);
   umbrella.add(canopy, stick);
   umbrella.visible = false;
-  g.add(umbrella);
   // 공유 자전거 (앞이 +x): 두 바퀴와 틀
-  const bike = new THREE.Group();
-  bike.name = 'bike';
-  const wheelGeo = new THREE.TorusGeometry(0.3, 0.035, 6, 16);
+  const bike = group('bike', g, 0, 0, 0);
+  const wheelGeo = new THREE.TorusGeometry(0.3, 0.04, 8, 20);
   for (const x of [-0.5, 0.5]) {
-    const w = new THREE.Mesh(wheelGeo, mat('#26282c'));
+    const w = mesh(wheelGeo, mat('#3a3c42'), bike, 'bikeWheel');
     w.position.set(x, 0.3, 0);
-    w.castShadow = shadow;
-    bike.add(w);
   }
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 0.05), mat('#7fbf6a'));
+  const frame = mesh(new THREE.CapsuleGeometry(0.03, 0.95, 4, 8).rotateZ(Math.PI / 2), mat('#8fcc84'), bike);
   frame.position.set(0, 0.55, 0);
   frame.rotation.z = 0.12;
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.5), mat('#3a3a3a'));
+  const bar = mesh(new THREE.CapsuleGeometry(0.022, 0.45, 4, 8).rotateX(Math.PI / 2), mat('#4a4a4a'), bike);
   bar.position.set(0.45, 0.85, 0);
-  bike.add(frame, bar);
   bike.visible = false;
-  g.add(bike);
-  const aura = new THREE.Mesh(new THREE.CircleGeometry(1.4, 24), new THREE.MeshBasicMaterial({ color: '#ffd65a', transparent: true, opacity: 0.25, depthWrite: false }));
+  const aura = new THREE.Mesh(new THREE.CircleGeometry(1.4, 32), new THREE.MeshBasicMaterial({ color: '#ffd978', transparent: true, opacity: 0.22, depthWrite: false }));
   aura.name = 'aura';
   aura.rotation.x = -Math.PI / 2;
   aura.position.y = 0.03;
   aura.visible = false;
   g.add(aura);
-  const parts: PersonParts = { top, hair: hairMat, skin: new THREE.Color(look.skin), look: lookKey(look) };
+  addBlob(g, 0.95);
+  const seed = Math.random() * 100;
+  const parts: PersonParts = {
+    top,
+    hair: hairMat,
+    skin: new THREE.Color(look.skin),
+    cheek: cheekMat,
+    look: lookKey(look),
+    hipY,
+    shoulderY,
+    anim: { last: -1, seed, walk: 0, run: 0, tension: 0, tired: 0, relax: 0, headYaw: 0, lookTarget: 0, lookTimer: 1 + Math.random() * 3, blink: 0, blinkTimer: 1 + Math.random() * 3, phone: 0 },
+  };
   g.userData['parts'] = parts;
   return g;
 }
@@ -802,10 +1121,18 @@ function lookKey(l: Look): string {
   return `${l.top}|${l.skin}|${l.hair}|${l.accent}`;
 }
 
-const BLUSH = new THREE.Color('#e8604f');
+const BLUSH = new THREE.Color('#ee7a6c');
+const approach = (cur: number, target: number, rate: number, dt: number) => cur + (target - cur) * Math.min(1, rate * dt);
 
+/**
+ * 사람의 움직임 (매 프레임). 걷기·달리기는 서서히 섞이고(갑자기 멈추지 않게), 서 있으면 숨쉬고 체중을 옮기고 두리번거리고 깜빡인다.
+ * 마음이 몸에 드러난다: 긴장하면 어깨가 오르고 움츠리며 보폭이 줄고, 지치면 고개가 처지고, 집에선 어깨가 풀린다. 진땀이면 떨린다
+ */
 function posePerson(g: THREE.Group, p: Person3D, time: number): void {
   const parts = g.userData['parts'] as PersonParts;
+  const a = parts.anim;
+  const dt = a.last < 0 ? 1 / 60 : Math.min(0.1, Math.max(0, time - a.last));
+  a.last = time;
   // 행인은 지칠수록 회색 덩어리로: 색이 바뀌면 재질 색만 갈아 끼운다
   const key = lookKey(p.look);
   if (key !== parts.look) {
@@ -815,74 +1142,222 @@ function posePerson(g: THREE.Group, p: Person3D, time: number): void {
     parts.hair?.color.set(p.look.hairStyle === 'cap' ? p.look.accent : p.look.hair);
     ((g.getObjectByName('umbrellaTop') as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(p.look.accent);
   }
-  const s = p.walking ? Math.sin(p.walkPhase) : 0;
-  const swing = s * 0.55;
+  a.walk = approach(a.walk, p.walking ? 1 : 0, 7, dt);
+  a.run = approach(a.run, p.running ? 1 : 0, 5, dt);
+  a.tension = approach(a.tension, p.tension ?? 0, 2.5, dt);
+  a.tired = approach(a.tired, p.tired ?? 0, 1.5, dt);
+  a.relax = approach(a.relax, p.relax ?? 0, 1.5, dt);
+  a.phone = approach(a.phone, p.phone ? 1 : 0, 8, dt);
+  const T = a.tension;
+  const idle = 1 - a.walk;
+  const t = time + a.seed;
+  const phi = p.walkPhase;
+  const s = Math.sin(phi);
+  const c = Math.cos(phi);
   const bike = !!p.bike;
-  // 자전거: 페달을 밟는 다리
-  const legL = p.seated ? 1.4 : bike ? 0.7 + s * 0.35 : swing;
-  const legR = p.seated ? 1.4 : bike ? 0.7 - s * 0.35 : -swing;
-  g.getObjectByName('legL')!.rotation.z = legL;
-  g.getObjectByName('legR')!.rotation.z = legR;
-  g.getObjectByName('bike')!.visible = bike;
-  const phone = !!p.phone;
   const umbrella = p.look.accessory === 'umbrella';
+
+  // 다리: 허벅지가 흔들리고, 앞으로 나오는 다리의 무릎이 접힌다. 긴장하면 보폭이 줄어든다
+  const stride = (0.48 + a.run * 0.38) * a.walk * (1 - T * 0.3) * (1 - a.tired * 0.2);
+  const kneeAmt = (0.55 + a.run * 0.6) * a.walk;
+  const legL = g.getObjectByName('legL')!;
+  const legR = g.getObjectByName('legR')!;
+  const kneeL = g.getObjectByName('kneeL')!;
+  const kneeR = g.getObjectByName('kneeR')!;
+  if (p.seated) {
+    legL.rotation.z = legR.rotation.z = 1.45;
+    kneeL.rotation.z = kneeR.rotation.z = -1.45;
+  } else if (bike) {
+    legL.rotation.z = 0.75 + s * 0.35;
+    legR.rotation.z = 0.75 - s * 0.35;
+    kneeL.rotation.z = -1.0 - Math.max(0, c) * 0.5;
+    kneeR.rotation.z = -1.0 - Math.max(0, -c) * 0.5;
+  } else {
+    legL.rotation.z = stride * s;
+    legR.rotation.z = -stride * s;
+    kneeL.rotation.z = -(0.06 * a.walk + kneeAmt * Math.max(0, c));
+    kneeR.rotation.z = -(0.06 * a.walk + kneeAmt * Math.max(0, -c));
+    // 서 있을 때 한쪽 무릎을 살짝 풀고 체중을 옮긴다
+    const shift = Math.sin(t * 0.45) * idle;
+    kneeL.rotation.z -= Math.max(0, shift) * 0.12;
+    kneeR.rotation.z -= Math.max(0, -shift) * 0.12;
+  }
+
+  // 몸: 걸음마다 오르내리고, 엉덩이와 어깨가 엇갈려 비틀리고, 달리면 앞으로 기운다
+  const body = g.getObjectByName('body')!;
+  body.rotation.y = a.walk * 0.12 * s;
+  body.rotation.x = a.walk * 0.035 * c + idle * Math.sin(t * 0.45) * 0.03;
+  body.rotation.z = -(a.run * a.walk * 0.24 + T * 0.13 + a.tired * 0.09) + a.relax * 0.04 - a.phone * 0.06;
+  const tremble = (p.tremble ?? 0) > 0.3 ? (p.tremble! - 0.3) * 0.012 : 0;
+  body.position.z = tremble ? (Math.random() - 0.5) * tremble : 0;
+  // 숨: 긴장하면 빠르고 얕게, 집에서는 느리고 깊게
+  const torso = g.getObjectByName('torso')!;
+  const breathRate = 2.0 + T * 2.2 - a.relax * 0.7;
+  torso.scale.y = 1 + Math.sin(t * breathRate) * (0.014 + a.relax * 0.008);
+
+  // 팔: 다리와 반대로 흔들고 팔꿈치는 살짝 접는다. 긴장하면 어깨가 오르고 팔이 몸에 붙는다
   const armL = g.getObjectByName('armL')!;
   const armR = g.getObjectByName('armR')!;
-  armL.rotation.z = phone ? 1.0 : -swing * 0.8;
-  armR.rotation.z = phone ? 1.0 : umbrella ? 1.2 : bike ? 0.9 : swing * 0.8;
-  if (bike) armL.rotation.z = 0.9;
-  g.getObjectByName('phone')!.visible = phone;
+  const elbowL = g.getObjectByName('elbowL')!;
+  const elbowR = g.getObjectByName('elbowR')!;
+  const lift = T * 0.04 - a.relax * 0.015;
+  armL.position.y = armR.position.y = parts.shoulderY + lift;
+  const swing = stride * 0.95;
+  const idleArm = idle * Math.sin(t * 1.1) * 0.03;
+  let aL = -swing * s + idleArm;
+  let aR = swing * s - idleArm;
+  let eL = 0.12 + a.walk * (0.15 + a.run * 1.0) + T * 0.15;
+  let eR = eL;
+  const spread = 0.08 - T * 0.06;
+  armL.rotation.x = spread;
+  armR.rotation.x = -spread;
+  if (a.phone > 0.01) {
+    // 폰: 두 손을 가슴 앞으로
+    aL = aL * (1 - a.phone) + 0.55 * a.phone;
+    aR = aR * (1 - a.phone) + 0.55 * a.phone;
+    eL = eL * (1 - a.phone) + 1.35 * a.phone;
+    eR = eR * (1 - a.phone) + 1.35 * a.phone;
+    armL.rotation.x = spread * (1 - a.phone) - 0.25 * a.phone;
+    armR.rotation.x = -spread * (1 - a.phone) + 0.25 * a.phone;
+  }
+  if (umbrella) {
+    aR = 0.9;
+    eR = 1.25;
+  }
+  if (bike) {
+    aL = aR = 0.85;
+    eL = eR = 0.5;
+  }
+  if (p.gesture === 'reach') {
+    // 전단지·시식: 손을 내민다
+    aR = 1.35 + Math.sin(t * 3) * 0.05;
+    eR = 0.12;
+  } else if (p.gesture === 'wave') {
+    aR = 2.6;
+    armR.rotation.x = -0.35;
+    eR = 0.5 + Math.sin(t * 9) * 0.35;
+  } else if (p.gesture === 'laugh') {
+    body.rotation.z += Math.abs(Math.sin(t * 11)) * 0.05;
+  }
+  armL.rotation.z = aL;
+  armR.rotation.z = aR;
+  elbowL.rotation.z = eL;
+  elbowR.rotation.z = eR;
+  g.getObjectByName('phone')!.visible = a.phone > 0.5;
   g.getObjectByName('umbrella')!.visible = umbrella;
+  g.getObjectByName('bike')!.visible = bike;
+
+  // 머리: 말을 걸려는 사람은 나를 보고, 한가하면 가끔 두리번거린다. 긴장·지침·폰은 고개를 숙이게 한다
+  a.lookTimer -= dt;
+  if (a.lookTimer <= 0) {
+    a.lookTimer = 2.5 + Math.random() * 4.5;
+    a.lookTarget = (Math.random() - 0.5) * (a.walk > 0.5 ? 0.5 : 1.2) * (1 - T * 0.6);
+  }
+  const yawTarget = p.headTurn !== undefined ? -Math.max(-1.1, Math.min(1.1, p.headTurn)) : a.lookTarget;
+  a.headYaw = approach(a.headYaw, yawTarget, p.headTurn !== undefined ? 5 : 2.2, dt);
+  const neck = g.getObjectByName('neck')!;
+  neck.rotation.y = a.headYaw;
+  neck.rotation.z = -(a.phone * 0.5 + T * 0.14 + a.tired * 0.18) + a.walk * 0.03 * Math.sin(phi * 2) + a.relax * 0.04;
+  neck.rotation.x = idle * Math.sin(t * 0.5) * 0.04;
+  // 깜빡임
+  a.blinkTimer -= dt;
+  if (a.blinkTimer <= 0) {
+    a.blink = 0.13;
+    a.blinkTimer = 2 + Math.random() * 4 - T * 1.2;
+  }
+  a.blink -= dt;
   const head = g.getObjectByName('head') as THREE.Mesh;
-  head.rotation.z = phone ? -0.45 : Math.sin(time * 2 + p.x) * 0.02;
-  for (const c of head.children) if (c.name === 'eye') c.visible = !p.faceless;
-  // 홍조: 얼굴이 붉어진다
-  (head.material as THREE.MeshStandardMaterial).color.copy(parts.skin).lerp(BLUSH, Math.min(0.6, (p.blush ?? 0) * 0.6));
+  for (const ch of head.children) {
+    if (ch.name === 'eye') {
+      ch.visible = !p.faceless;
+      ch.scale.y = a.blink > 0 ? 0.15 : 1;
+    } else if (ch.name === 'hairBack') ch.rotation.z = -a.walk * 0.08 * Math.sin(phi * 2) - a.run * 0.2;
+  }
+  // 홍조: 얼굴이 붉어지고 볼의 분홍이 짙어진다
+  const blush = p.blush ?? 0;
+  (head.material as THREE.MeshStandardMaterial).color.copy(parts.skin).lerp(BLUSH, Math.min(0.5, blush * 0.5));
+  parts.cheek.opacity = 0.28 + Math.min(0.6, blush * 0.6);
   g.getObjectByName('aura')!.visible = !!p.ally;
-  g.position.y = p.seated ? -0.25 : bike ? 0.12 : p.walking ? Math.abs(Math.sin(p.walkPhase)) * 0.025 : 0;
-  const bk = g.getObjectByName('bike')!;
-  bk.position.y = bike ? -0.12 : 0;
+  // 걸음마다 통통 (두 발이니 한 걸음에 두 번)
+  const bob = a.walk * (0.03 + a.run * 0.035) * Math.abs(s);
+  g.position.y = p.seated ? -0.25 : bike ? 0.12 : bob;
+  g.getObjectByName('bike')!.position.y = bike ? -0.12 : 0;
 }
 
 function makeCat(color: string): THREE.Group {
   const g = new THREE.Group();
-  const m = mat(color);
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.3, 4, 8).rotateZ(Math.PI / 2).translate(0, 0.17, 0), m);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8).translate(0.24, 0.27, 0), m);
-  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.32, 6).rotateZ(-0.8).translate(-0.27, 0.3, 0), m);
+  const m = new THREE.MeshStandardMaterial({ color, roughness: 0.95 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.28, 6, 12).rotateZ(Math.PI / 2).translate(0, 0.17, 0), m);
+  body.name = 'catBody';
+  const headG = new THREE.Group();
+  headG.name = 'catHead';
+  headG.position.set(0.24, 0.28, 0);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), m);
+  headG.add(head);
   for (const side of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 4).translate(0.24, 0.38, side * 0.05), m);
-    g.add(ear);
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.08, 8), m);
+    ear.name = 'catEar';
+    ear.position.set(0, 0.11, side * 0.055);
+    headG.add(ear);
   }
-  for (const part of [body, head, tail]) {
-    part.castShadow = true;
-    g.add(part);
-  }
+  const tail = new THREE.Group();
+  tail.name = 'catTail';
+  tail.position.set(-0.2, 0.2, 0);
+  const tailMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.3, 4, 8).translate(0, 0.17, 0), m);
+  tail.add(tailMesh);
+  tail.rotation.z = 0.8;
+  for (const part of [body, head, tailMesh]) part.castShadow = true;
+  g.add(body, headG, tail);
+  addBlob(g, 0.7);
+  g.userData['cat'] = { seed: Math.random() * 100 };
   return g;
+}
+
+/** 고양이: 꼬리가 느리게 살랑이고, 숨쉬고, 귀가 가끔 쫑긋, 걸으면 통통 */
+function poseCat(g: THREE.Group, p: Person3D, time: number): void {
+  const seed = (g.userData['cat'] as { seed: number }).seed;
+  const t = time + seed;
+  g.getObjectByName('catTail')!.rotation.x = Math.sin(t * 1.6) * 0.45;
+  g.getObjectByName('catBody')!.scale.y = 1 + Math.sin(t * 2.4) * 0.025;
+  const head = g.getObjectByName('catHead')!;
+  head.rotation.y = Math.sin(t * 0.4) * 0.35;
+  head.rotation.z = p.walking ? Math.sin(p.walkPhase * 2) * 0.05 : 0;
+  const twitch = Math.sin(t * 0.9) > 0.97 ? 0.4 : 0;
+  head.children.forEach((ch) => {
+    if (ch.name === 'catEar') ch.rotation.x = twitch * Math.sign(ch.position.z);
+  });
+  g.position.y = p.walking ? Math.abs(Math.sin(p.walkPhase)) * 0.02 : 0;
 }
 
 // ───────────────────────── 버스·표식·간판 ─────────────────────────
 
-/** 마을버스: 초록 차체, 흰 띠, 창 띠, 바퀴. 앞이 +x */
-function makeBus(): THREE.Group {
+/** 마을버스: 둥근 차체, 흰 띠, 창 띠, 바퀴. 앞이 +x */
+function makeBus(bodyColor: string): THREE.Group {
   const g = new THREE.Group();
   const L = BUS_LENGTH;
   const W = BUS_WIDTH;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(L, 2.3, W).translate(0, 0.35 + 1.15, 0), mat(BUS_BODY));
+  const body = new THREE.Mesh(new RoundedBoxGeometry(L, 2.3, W, 3, 0.35).translate(0, 0.35 + 1.15, 0), mat(bodyColor));
   body.castShadow = body.receiveShadow = true;
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(L + 0.02, 0.18, W + 0.02).translate(0, 1.05, 0), mat('#f4f1ea'));
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#2c3c4c', roughness: 0.2, metalness: 0.1 });
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(L - 0.6, 0.8, W + 0.03).translate(-0.1, 1.75, 0), glassMat);
+  const stripe = new THREE.Mesh(new RoundedBoxGeometry(L + 0.02, 0.18, W + 0.02, 2, 0.08).translate(0, 1.05, 0), mat('#fbf6ee'));
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#4a5a6c', roughness: 0.25, metalness: 0.05 });
+  const glass = new THREE.Mesh(new RoundedBoxGeometry(L - 0.7, 0.8, W + 0.03, 2, 0.12).translate(-0.1, 1.75, 0), glassMat);
   glass.name = 'glass';
-  const front = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.2, W - 0.3).translate(L / 2 + 0.01, 1.6, 0), glassMat);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.25, 1.4).translate(-1.5, 2.77, 0), mat('#d9ddd6'));
-  const brake = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.25, W - 0.4).translate(-L / 2 - 0.02, 0.85, 0), new THREE.MeshStandardMaterial({ color: '#f0463c', emissive: '#f0463c', emissiveIntensity: 1 }));
+  const front = new THREE.Mesh(new RoundedBoxGeometry(0.06, 1.2, W - 0.3, 2, 0.02).translate(L / 2 + 0.01, 1.6, 0), glassMat);
+  const top = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.25, 1.4, 2, 0.1).translate(-1.5, 2.77, 0), mat('#f0ece4'));
+  const brake = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.25, W - 0.4).translate(-L / 2 - 0.02, 0.85, 0), new THREE.MeshStandardMaterial({ color: '#f07a70', emissive: '#f07a70', emissiveIntensity: 1 }));
   brake.name = 'brake';
-  g.add(body, stripe, glass, front, top, brake);
-  const wheel = new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12).rotateX(Math.PI / 2);
+  const chassis = new THREE.Group();
+  chassis.name = 'chassis';
+  chassis.add(body, stripe, glass, front, top, brake);
+  g.add(chassis);
+  // 바퀴: 바퀴살 무늬가 있어야 굴러가는 게 보인다
+  const wheel = new THREE.CylinderGeometry(0.45, 0.45, 0.3, 16).rotateX(Math.PI / 2);
+  const hub = new THREE.BoxGeometry(0.62, 0.1, 0.32);
   for (const x of [-L / 2 + 1.8, L / 2 - 1.8]) {
     for (const z of [-W / 2, W / 2]) {
-      const w = new THREE.Mesh(wheel, mat('#22252a'));
+      const w = new THREE.Group();
+      w.name = 'wheel';
+      w.add(new THREE.Mesh(wheel, mat('#3a3c42')), new THREE.Mesh(hub, mat('#8a8c92')));
       w.position.set(x, 0.45, z);
       g.add(w);
     }
@@ -921,7 +1396,7 @@ function makeLabel(l: Label3D): THREE.Sprite {
   g.fillText(l.text, w / 2, 38);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, toneMapped: false }));
   const hgt = 0.85;
   s.scale.set((hgt * w) / 72, hgt, 1);
   return s;

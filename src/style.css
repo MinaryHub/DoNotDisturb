@@ -14,7 +14,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #0d0e12;
+  background: #1f1c24;
   color: var(--ink);
   font-family: var(--font);
 }
@@ -39,6 +39,27 @@ kbd {
   inset: 0;
   pointer-events: none;
   z-index: 10;
+}
+
+/* 나나 다가오는 사람을 가리는 UI는 투명하게 비켜 준다 (GameUI.updateCovering, TouchControls) */
+.memo,
+.notifs,
+.gauges,
+.call,
+.toasts,
+.hotbar,
+.skills,
+.status,
+.touch__btn {
+  transition: opacity 0.18s ease-out;
+}
+
+.is-covering {
+  opacity: 0.22 !important;
+}
+
+.touch__btn.is-covering {
+  opacity: 0.35 !important;
 }
 
 /* ───── 오늘 할 일 메모 ───── */
@@ -1017,6 +1038,7 @@ body.is-touch .hotbar {
   justify-content: center;
   background: rgba(12, 12, 16, 0.86);
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .screen[data-kind='title'] {
@@ -1035,6 +1057,7 @@ body.is-touch .hotbar {
 
 .screen__box {
   max-width: 600px;
+  margin: auto;
   padding: 24px;
   text-align: center;
 }
@@ -1510,10 +1533,13 @@ body.is-touch .hotbar {
   align-items: center;
   justify-content: center;
   background: rgba(10, 10, 14, 0.7);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .options__box {
   width: min(420px, 92vw);
+  margin: auto;
   padding: 20px 24px;
   border-radius: 16px;
   background: #1c1c23;
@@ -1609,7 +1635,7 @@ body.is-touch {
   display: grid;
   grid-template-columns: repeat(3, auto);
   justify-items: stretch;
-  gap: 6px;
+  gap: 8px;
   max-width: 40vw;
   pointer-events: none;
 }
@@ -1753,6 +1779,10 @@ body.is-touch .notifs {
 body.is-touch .call {
   bottom: auto;
   top: 30%;
+  /* 오른쪽 버튼 묶음을 뺀 나머지의 가운데 */
+  left: calc((100vw - min(40vw, 270px)) / 2);
+  min-width: 0;
+  max-width: calc(100vw - min(40vw, 270px) - 24px);
 }
 
 body.is-touch .dlg__choices kbd,
@@ -1760,8 +1790,187 @@ body.is-touch .hint {
   display: none;
 }
 
+/* 위 버튼 줄은 오른쪽 위에 (가운데에 두면 폰·메모·안내 글과 겹친다). 게이지는 그 아래 */
+body.is-touch .touch__top {
+  left: auto;
+  right: max(12px, env(safe-area-inset-right));
+  transform: none;
+}
+
+body.is-touch .gauges {
+  top: 50px;
+}
+
+/* 지금 켠 것(이어폰·마스크·은신·안전지대)은 위 가운데 한 줄로: 오른쪽 위 버튼 줄과 겹치지 않게 */
+body.is-touch .skills {
+  right: auto;
+  left: 50%;
+  top: max(10px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 600px);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-height: 520px) {
+  body.is-touch .toasts {
+    top: 22%;
+  }
+
+  /* 하단 패널(대화·업무·상점)이 떠 있으면 메모를 접고, 전화 수신 창은 위로 올려 패널과 겹치지 않게 */
+  body.is-touch .ui[data-panel='1'] .memo {
+    display: none !important;
+  }
+
+  body.is-touch .ui[data-panel='1'] .call {
+    top: max(8px, env(safe-area-inset-top));
+  }
+}
+
+/* 대화의 반응·업무의 메신저는 왼쪽 창에서 바로 누른다 (오른손은 미소 유지·집중을 누르고 있다) */
+body.is-touch .dlg__choices li,
+body.is-touch .ping {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+}
+
+body.is-touch .dlg__choices li {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+}
+
+body.is-touch .dlg__choices li:active,
+body.is-touch .ping:active {
+  background: rgba(255, 250, 240, 0.35);
+  transform: scale(0.97);
+}
+
+body.is-touch .ping::after {
+  content: ' 👆';
+}
+
+/* 이동할 수 있을 때: 왼쪽 아래에 흐린 조이스틱 자리 */
+.touch__stickHint {
+  position: absolute;
+  left: max(70px, calc(env(safe-area-inset-left) + 60px));
+  bottom: 70px;
+  width: 96px;
+  height: 96px;
+  margin: 0 0 -48px -48px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.22);
+  background: radial-gradient(circle, rgba(255, 250, 240, 0.18) 0 22px, transparent 23px);
+  pointer-events: none;
+}
+
+/* 터치 화면: 키보드 안내는 감추고, 넘치는 창은 손가락으로 끌어 넘긴다 */
+body.is-touch .screen__keys,
+body.is-touch .phone__hint,
+body.is-touch .shop__hint,
+body.is-touch .dlg__foot,
+body.is-touch .map__hint,
+body.is-touch .options__close {
+  display: none;
+}
+
+body.is-touch .screen,
+body.is-touch .options,
+body.is-touch .panel,
+body.is-touch .phone__list {
+  touch-action: pan-y;
+}
+
+/* 위 가운데 버튼 줄(설정·전체화면)과 오른쪽 아래 버튼 묶음을 피해 둔다 */
+body.is-touch .screen {
+  padding: max(52px, env(safe-area-inset-top)) calc(min(40vw, 270px) + 12px) 8px max(8px, env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+
+body.is-touch .screen__box {
+  max-width: 600px;
+  padding: 8px 12px;
+}
+
+body.is-touch .options {
+  padding: 8px calc(min(40vw, 150px) + 12px) 8px 8px;
+  box-sizing: border-box;
+}
+
+/* 알림은 왼쪽 아래(메모 밑)에: 오른쪽 버튼을 가리지 않게 */
+body.is-touch .notifs {
+  left: max(12px, env(safe-area-inset-left));
+  right: auto;
+  top: auto;
+  bottom: calc(12px + var(--panel-h, 0px));
+  width: min(240px, 34vw);
+}
+
+/* 폰은 버튼 묶음 왼쪽에, 화면 높이에 맞춘다 */
+body.is-touch .phone {
+  right: calc(min(40vw, 270px) + 16px);
+  bottom: auto;
+  top: max(8px, env(safe-area-inset-top));
+  height: min(460px, calc(100vh - 16px));
+  height: min(460px, calc(100dvh - 16px));
+}
+
+body.is-touch .phone__list {
+  max-height: calc(100% - 70px);
+  overflow-y: auto;
+}
+
+/* 하단 패널(대화·상점·업무)은 화면보다 길면 안에서 넘긴다 */
+body.is-touch .panel {
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body.is-touch .shop__list li {
+  grid-template-columns: 8em 1fr 2.5em 5em;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
 /* 낮은 화면(가로로 든 휴대폰): HUD를 줄인다 */
 @media (max-height: 520px) {
+  body.is-touch .options__row {
+    margin: 6px 0;
+  }
+
+  body.is-touch .options__box {
+    padding: 12px 16px;
+  }
+
+  .map__canvas {
+    max-height: 70vh;
+  }
+
+  .notif {
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+
+  .call {
+    padding: 8px 14px;
+  }
+
+  .toast {
+    font-size: 13px;
+    padding: 4px 12px;
+  }
+
+  .screen__title {
+    font-size: 22px;
+  }
+
   .memo {
     transform: scale(0.72) rotate(-1deg);
     transform-origin: top left;
@@ -1782,7 +1991,7 @@ body.is-touch .hint {
   }
 
   .screen__box {
-    transform: scale(0.82);
+    font-size: 13px;
   }
 }
 
@@ -2081,5 +2290,90 @@ body.is-touch .hint {
   .splash__pick {
     animation-duration: 0.01s;
     animation-delay: 0s;
+  }
+}
+
+/* ───── 부드러운 움직임 (2026-11-20): 창·알림·안내가 툭 나타나지 않고 살며시 떠오른다 ───── */
+@keyframes soft-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes soft-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes soft-slide {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.toast {
+  animation: soft-rise 0.45s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.notif {
+  animation: soft-slide 0.5s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.panel,
+.phone,
+.options__box {
+  animation: soft-rise 0.4s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.call {
+  animation: soft-fade 0.25s ease-out both;
+}
+
+.screen__box {
+  animation: soft-rise 0.8s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+.screen {
+  animation: soft-fade 0.6s ease-out both;
+}
+
+.prompt,
+.monologue {
+  transition: opacity 0.35s ease-out;
+}
+
+/* 목표를 마치면 줄이 살며시 그어진다 */
+.memo__item {
+  transition:
+    opacity 0.6s ease,
+    color 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .notif,
+  .panel,
+  .phone,
+  .options__box,
+  .call,
+  .screen,
+  .screen__box {
+    animation: none;
   }
 }

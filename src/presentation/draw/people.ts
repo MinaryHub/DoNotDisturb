@@ -117,7 +117,8 @@ export interface PoseOptions {
 
 /** 해가 비치는 방향 (월드, 왼쪽 위) */
 const LIGHT = { x: -0.55, y: -0.83 };
-const OUTLINE = 'rgba(25, 22, 30, 0.38)';
+// 부드러운 감성: 검은 테두리 대신 옅은 자줏빛 갈색
+const OUTLINE = 'rgba(70, 50, 60, 0.26)';
 
 /** (x, y)에 사람 하나. ctx는 월드 좌표(1 = 1m) */
 export function drawPerson(ctx: CanvasRenderingContext2D, x: number, y: number, look: Look, o: PoseOptions): void {

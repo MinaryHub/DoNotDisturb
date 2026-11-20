@@ -298,6 +298,12 @@ export class GameSession {
   private firedPhone = new Set<number>();
   private pendingEscalations: string[] = [];
   private personalSpaceCd = 0;
+  /** 화장실 칸·피팅룸: 칸마다 마지막으로 쉬기 시작한 시각 (게임 분). 같은 칸은 balance.safe.reuseMin이 지나야 다시 쉬어진다 */
+  private readonly safeUsedAt = new Map<string, number>();
+  /** 지금 잠근 칸에서 쉬어지는지 (방금 쉰 칸이면 숨기만 한다) */
+  private safeRests = false;
+  /** 근무 시간에 자리를 비운 시간 (게임 분) */
+  private deskAwayMin = 0;
   private ignoredBossMessages = 0;
   private mandatoryRetry: { contact: string; textKey: string; timer: number } | null = null;
   private dinnerSeatTimer = -1;
@@ -423,6 +429,8 @@ export class GameSession {
     this.monologue.reset(this.day.id, new Map(this.story));
     this.marksToday.clear();
     this.nodded.clear();
+    this.safeUsedAt.clear();
+    this.deskAwayMin = 0;
     this.regularGreeted.clear();
     this.firedPhone = new Set();
     this.pendingEscalations = [];
@@ -807,6 +815,7 @@ export class GameSession {
     this.updatePhone(dt, c);
     this.updateWorld(dt);
     this.updateSim(dt);
+    this.updateDeskAway(dt, minutesPerSec);
     this.updateMonologue(dt);
     this.announceLifeChanges();
   }
@@ -1040,6 +1049,7 @@ export class GameSession {
       const s = p.lockedSafe;
       if (s.kind === 'fitting' && !this.objectives.isDone('tryOn') && p.inventory.clothes && p.safeTime > 3) this.gameEvent('tryOn');
       if (p.safeTime >= s.noiseAfterSec) {
+        if (p.safeTime - dt < s.noiseAfterSec && this.safeRests) this.toast('safe.waiting');
         p.knockTimer -= dt;
         if (p.knockTimer <= 0) {
           p.knockTimer = this.cfg.balance.safe.knockRepeatSec;
@@ -1078,7 +1088,11 @@ export class GameSession {
       p.safeTime = 0;
       p.knockTimer = 0;
       for (const n of this.npcs) n.loseTrack();
-      this.toast('safe.locked');
+      // 같은 칸에서 방금 쉬었다면 숨을 수는 있어도 쉬어지지 않는다
+      const last = this.safeUsedAt.get(safe.id);
+      this.safeRests = last === undefined || this.clock.minutes - last >= this.cfg.balance.safe.reuseMin;
+      if (this.safeRests) this.safeUsedAt.set(safe.id, this.clock.minutes);
+      this.toast(this.safeRests ? 'safe.locked' : 'safe.tooSoon');
       this.gameEvent('safe:lock');
     }
   }
@@ -2441,6 +2455,26 @@ export class GameSession {
     return true;
   }
 
+  /**
+   * 근무 시간(출근한 뒤 업무를 마치기 전)에 사무실 밖에 있거나 화장실 칸에 숨어 있으면 시간이 쌓이고,
+   * balance.deskAway.everyMin마다 팀장님이 찾는다 (업무 평판). 쉴 곳은 있어도 시간에는 값이 있다
+   */
+  private updateDeskAway(dt: number, minutesPerSec: number): void {
+    const d = this.cfg.balance.deskAway;
+    const working = !!this.day.work && !this.onLeave && this.objectives.isDone('commute') && !this.objectives.resolved('work');
+    const away = working && this.mode.kind === 'free' && (!!this.player.lockedSafe || !d.areas.includes(this.area?.id ?? ''));
+    if (!away) {
+      this.deskAwayMin = 0;
+      return;
+    }
+    this.deskAwayMin += dt * minutesPerSec;
+    if (this.deskAwayMin < d.everyMin) return;
+    this.deskAwayMin = 0;
+    this.toast('toast.deskAway');
+    this.sim.life.apply(this.cfg.life.rewards.deskAway, 'deskAway');
+    this.gameEvent('deskAway');
+  }
+
   /** 지금 나를 보고 있는 시선 수 */
   gazeCount(): number {
     let n = 0;
@@ -2503,7 +2537,8 @@ export class GameSession {
     if (ally) extra += b.recovery.allyNearPerSec;
     this.sim.step(dt, {
       outdoor: this.area?.kind === 'outdoor',
-      inSafe: !!p.lockedSafe,
+      // 칸에서 쉬어지는 건 노크(누가 기다린다) 전까지, 방금 쉰 칸이 아닐 때만
+      inSafe: !!p.lockedSafe && this.safeRests && p.safeTime < p.lockedSafe.noiseAfterSec,
       extraRecoverPerSec: extra,
       modifiers,
       gazeCount: this.gazeCount(),

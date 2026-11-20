@@ -2,7 +2,7 @@ import type { GameConfig } from '../../core/config';
 import type { Input } from '../../core/Input';
 import type { GameSession } from '../../gameplay/GameSession';
 import { t } from '../../core/config';
-import { el, show } from './dom';
+import { coversAny, el, show } from './dom';
 import { itemIcon } from './icons';
 
 // 휴대폰·태블릿 터치 조작. 키보드 입력을 흉내 낸다(Input.touchDown/touchUp, Input.stick).
@@ -13,6 +13,8 @@ interface Btn {
   /** 텍스트 키 (data/text/ko.json의 touch.*) */
   label: string;
   hold?: boolean;
+  /** 한 번 누르면 켜지고 다시 누르면 꺼진다 (달리기: 왼손은 이동, 오른손은 자유롭게) */
+  toggle?: boolean;
   big?: boolean;
 }
 
@@ -21,6 +23,8 @@ export interface TouchContext {
   session: GameSession | null;
   optionsOpen: boolean;
   mapOpen: boolean;
+  /** 화면 px: 나와 다가오는 사람 (그 위의 버튼은 투명하게) */
+  focus?: readonly { x: number; y: number }[];
 }
 
 export function isTouchDevice(): boolean {
@@ -34,6 +38,10 @@ export class TouchControls {
   private readonly stickZone = el('div', 'touch__zone', this.root);
   private readonly stickBase = el('div', 'touch__stick', this.root);
   private readonly stickKnob = el('div', 'touch__knob', this.stickBase);
+  /** 이동할 수 있을 때 왼쪽 아래에 흐리게: 여기를 눌러 움직인다 */
+  private readonly stickHint = el('div', 'touch__stickHint', this.root);
+  /** 켜 둔 토글 버튼 (키 코드) */
+  private readonly toggled = new Set<string>();
   private readonly pad = el('div', 'touch__pad', this.root);
   private readonly top = el('div', 'touch__top', this.root);
   private readonly rotate = el('div', 'touch__rotate', document.body);
@@ -74,6 +82,7 @@ export class TouchControls {
     const { main, top, stick } = this.layout(ctx);
     this.updateTray(ctx, main.some((b) => b.code === '#bag'));
     show(this.stickZone, stick);
+    show(this.stickHint, stick && this.stickId === null);
     if (!stick) this.releaseStick();
     const sig = JSON.stringify([main, top]);
     if (sig !== this.signature) {
@@ -82,6 +91,17 @@ export class TouchControls {
       this.build(this.pad, main);
       this.build(this.top, top);
     }
+    this.markState(ctx);
+    // 버튼이 나나 다가오는 사람을 가리면 투명하게 (눌리기는 그대로)
+    const pts = ctx.focus ?? [];
+    for (const b of [...this.pad.children, ...this.top.children] as HTMLElement[]) b.classList.toggle('is-covering', pts.length > 0 && coversAny(b, pts, 6));
+  }
+
+  /** 켜고 끄는 기술(이어폰·마스크)은 켜져 있는 동안 버튼을 밝게: 지금 상태를 버튼에서 바로 본다 */
+  private markState(ctx: TouchContext): void {
+    const p = ctx.session?.player;
+    const on: Record<string, boolean> = { KeyE: !!p?.earphones, KeyV: !!p?.mask };
+    for (const [code, v] of Object.entries(on)) this.pad.querySelector(`[data-code="${code}"]`)?.classList.toggle('is-on', v);
   }
 
   /** 상황별 버튼 구성 */
@@ -108,7 +128,9 @@ export class TouchControls {
     if (m === 'night' || m === 'final') return { main: [{ code: 'Enter', label: 'touch.continue', big: true }], top, stick: false };
     if (m === 'burnout') return { main: [{ code: 'Enter', label: 'touch.wakeHome', big: true }], top, stick: false };
     if (m === 'collapse') return { main: [{ code: 'KeyR', label: 'touch.retry', big: true }], top, stick: false };
-    if (s.phoneOpen) {
+    // 대화·발화·업무처럼 창이 뜨는 일이 먼저다 (폰을 연 채 붙잡혀도 미소 유지 버튼이 보이게)
+    const busy = m === 'dialogue' || m === 'speech' || m === 'work' || m === 'seated' || m === 'shop' || m === 'metroMenu' || m === 'piano';
+    if (s.phoneOpen && !busy) {
       return {
         main: [
           { code: 'ArrowUp', label: 'touch.up' },
@@ -126,22 +148,16 @@ export class TouchControls {
     switch (m) {
       case 'dialogue':
         return {
-          main: [
-            ...call,
-            { code: 'Digit1', label: 'touch.nod' },
-            { code: 'Digit2', label: 'touch.agree' },
-            { code: 'Digit3', label: 'touch.short' },
-            { code: 'Digit4', label: 'touch.exit' },
-            { code: 'Space', label: 'touch.smile', hold: true, big: true },
-            { code: 'KeyT', label: 'touch.sos' },
-          ],
+          // 반응(끄덕·맞장구·짧게·이탈)은 왼쪽 대화창의 칸을 누른다: 오른손은 미소 유지를 누르고 있으니까
+          main: [...call, { code: 'Space', label: 'touch.smile', hold: true, big: true }, { code: 'KeyT', label: 'touch.sos' }],
           top,
           stick: false,
         };
       case 'speech':
         return { main: [...call, { code: 'Space', label: 'touch.speak', big: true }], top, stick: false };
       case 'work':
-        return { main: [...call, { code: 'Space', label: 'touch.focus', hold: true, big: true }, { code: 'Digit1', label: 'touch.reply' }, { code: 'Escape', label: 'touch.break' }], top, stick: false };
+        // 메신저 답장은 왼쪽 업무 창의 메신저 칸을 누른다 (오른손은 집중을 누르고 있으니까)
+        return { main: [...call, { code: 'Space', label: 'touch.focus', hold: true, big: true }, { code: 'Escape', label: 'touch.break' }], top, stick: false };
       case 'piano':
         return {
           main: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ'].map((code, i) => ({ code, label: `touch.note${i + 1}` })).concat([{ code: 'Escape', label: 'touch.stop' }]),
@@ -156,6 +172,8 @@ export class TouchControls {
         };
       case 'shop':
         return { main: [{ code: 'ArrowUp', label: 'touch.up' }, { code: 'ArrowDown', label: 'touch.down' }, { code: 'KeyF', label: 'touch.buy', big: true }, { code: 'Escape', label: 'touch.close' }], top, stick: false };
+      case 'metroMenu':
+        return { main: [{ code: 'ArrowUp', label: 'touch.up' }, { code: 'ArrowDown', label: 'touch.down' }, { code: 'KeyF', label: 'touch.board', big: true }, { code: 'Escape', label: 'touch.close' }], top, stick: false };
       case 'priceTag':
         return { main: [...call, { code: 'Space', label: 'touch.peek', hold: true, big: true }, { code: 'Escape', label: 'touch.stop' }], top, stick: true };
       case 'free':
@@ -163,7 +181,7 @@ export class TouchControls {
           main: [
             ...call,
             { code: 'KeyF', label: 'touch.interact', big: true, hold: true },
-            { code: 'ShiftLeft', label: 'touch.run', hold: true },
+            { code: 'ShiftLeft', label: 'touch.run', toggle: true },
             { code: 'KeyE', label: 'touch.earphones' },
             { code: 'KeyQ', label: 'touch.phonePretend', hold: true },
             { code: 'KeyC', label: 'touch.cover', hold: true },
@@ -183,10 +201,18 @@ export class TouchControls {
   private build(host: HTMLElement, btns: Btn[]): void {
     host.replaceChildren();
     for (const b of btns) {
-      const e = el('button', `touch__btn${b.big ? ' touch__btn--big' : ''}${b.hold ? ' touch__btn--hold' : ''}`, host, this.tx(b.label));
+      const on = b.toggle && this.toggled.has(b.code);
+      const e = el('button', `touch__btn${b.big ? ' touch__btn--big' : ''}${b.hold ? ' touch__btn--hold' : ''}${on ? ' is-on' : ''}`, host, this.tx(b.label));
       e.type = 'button';
+      e.dataset['code'] = b.code;
       e.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
+        if (b.toggle) {
+          const now = !this.toggled.has(b.code);
+          this.setToggle(b.code, now);
+          e.classList.toggle('is-on', now);
+          return;
+        }
         if (b.code === '#fullscreen') {
           toggleFullscreen();
           return;
@@ -255,6 +281,17 @@ export class TouchControls {
     this.held.clear();
   }
 
+  private setToggle(code: string, on: boolean): void {
+    if (on === this.toggled.has(code)) return;
+    if (on) {
+      this.toggled.add(code);
+      this.input.touchDown(code);
+    } else {
+      this.toggled.delete(code);
+      this.input.touchUp(code);
+    }
+  }
+
   private readonly onStickDown = (e: PointerEvent): void => {
     if (this.stickId !== null) return;
     e.preventDefault();
@@ -286,6 +323,11 @@ export class TouchControls {
   };
 
   private releaseStick(): void {
+    // 손을 떼면 달리기도 멈춘다 (다음에 움직일 때 다시 켠다)
+    if (this.toggled.has('ShiftLeft')) {
+      this.setToggle('ShiftLeft', false);
+      this.signature = '';
+    }
     this.stickId = null;
     this.input.stick = null;
     this.stickBase.classList.remove('is-on');
