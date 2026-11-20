@@ -1188,6 +1188,10 @@ export class Renderer {
         kind: n.type === 'pet' ? 'cat' : 'person',
         seated: n.state === 'seated',
         ally: n.type === 'ally',
+        running: n.speed > 2.6,
+        // 나를 알아챈 사람은 고개를 나에게 (대화 중엔 몸이 이미 나를 본다)
+        headTurn: n.notice > 0.3 && n.state !== 'dialogue' ? headToward(n.pos, n.facing, s.player.pos) : undefined,
+        gesture: n.state === 'dialogue' && n.gesture === 'none' ? 'laugh' : n.gesture,
       });
     }
     for (const a of s.crowd.agents) {
@@ -1226,6 +1230,11 @@ export class Renderer {
         sink: ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0,
         phone: ps.phone > 0.4,
         bike: pl.biking,
+        running: pl.running,
+        tension: Math.min(1, ps.stress),
+        tired: Math.min(1, ps.tired * 0.6 + ps.danger * 0.6 + ps.critical * 0.4),
+        tremble: ps.sweat,
+        relax: ps.sanctuary,
       });
     }
     const buses: Bus3D[] = onGround
@@ -1780,3 +1789,9 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export type { Vec2 };
+
+/** 몸이 향한 방향 기준으로, 이 점을 보려면 고개를 얼마나 돌려야 하는지 (-π~π) */
+function headToward(from: Vec2, facing: number, to: Vec2): number {
+  const d = Math.atan2(to.y - from.y, to.x - from.x) - facing;
+  return Math.atan2(Math.sin(d), Math.cos(d));
+}
