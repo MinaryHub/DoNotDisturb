@@ -92,13 +92,26 @@ interface Tile3D {
 
 interface BlockGroup {
   mesh: THREE.InstancedMesh;
+  /** 플레이어를 가리는 칸만 모아 반투명하게 그리는 짝 */
+  ghost: THREE.InstancedMesh;
   tiles: Tile3D[];
 }
 
 interface TreeGroup {
   trunk: THREE.InstancedMesh;
   canopy: THREE.InstancedMesh;
+  /** 플레이어를 가리는 수관 (반투명) */
+  ghost: THREE.InstancedMesh;
   tiles: Vec2[];
+}
+
+interface TileMat {
+  mat: THREE.MeshStandardMaterial;
+  /** 플레이어를 가릴 때 쓰는 반투명 짝 */
+  ghost: THREE.MeshStandardMaterial;
+  base: THREE.Color;
+  tall: boolean;
+  glass: boolean;
 }
 
 interface Chunk3D {
@@ -152,7 +165,7 @@ export class Scene3D {
   /** 공유 자원 (청크마다 만들지 않는다) */
   private readonly box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   private readonly floorGeo: THREE.PlaneGeometry;
-  private readonly mats = new Map<string, { mat: THREE.MeshStandardMaterial; base: THREE.Color; tall: boolean; glass: boolean }>();
+  private readonly mats = new Map<string, TileMat>();
   private readonly potGeo = new THREE.CylinderGeometry(0.22, 0.16, 0.38, 10).translate(0, 0.19, 0);
   private readonly potMat = new THREE.MeshStandardMaterial({ color: '#b5764f', roughness: 0.9 });
   private readonly leafGeo = new THREE.IcosahedronGeometry(0.42, 1);
@@ -160,6 +173,7 @@ export class Scene3D {
   private readonly canopyGeo: THREE.IcosahedronGeometry;
   private readonly trunkMat = new THREE.MeshStandardMaterial({ color: '#6b4f3a', roughness: 0.95 });
   private readonly canopyMat: THREE.MeshStandardMaterial;
+  private readonly canopyGhost: THREE.MeshStandardMaterial;
   /** 벽 높이를 다시 계산해야 하는지 알아보는 열쇠 */
   private blockKey = '';
   private readonly wallScale: number;
@@ -209,6 +223,7 @@ export class Scene3D {
     this.trunkGeo = new THREE.CylinderGeometry(0.1, 0.14, tr.trunk, 6).translate(0, tr.trunk / 2, 0);
     this.canopyGeo = new THREE.IcosahedronGeometry(tr.canopy, 1);
     this.canopyMat = new THREE.MeshStandardMaterial({ color: cfg.tiles.find((t) => t.id === 'tree')?.color ?? '#4f7a4b', roughness: 0.85, flatShading: true });
+    this.canopyGhost = this.ghostOf(this.canopyMat);
     this.buildLamps();
 
     this.overlay = document.createElement('canvas');
@@ -407,8 +422,13 @@ export class Scene3D {
       const mesh = new THREE.InstancedMesh(this.box, m.mat, tiles.length);
       mesh.castShadow = !m.glass;
       mesh.receiveShadow = true;
-      this.scene.add(mesh);
-      ch.blocks.push({ mesh, tiles });
+      const ghost = new THREE.InstancedMesh(this.box, m.ghost, tiles.length);
+      ghost.count = 0;
+      // 비쳐 보여도 그림자는 그대로 (빛이 갑자기 바뀌지 않게)
+      ghost.castShadow = !m.glass;
+      ghost.renderOrder = 2;
+      this.scene.add(mesh, ghost);
+      ch.blocks.push({ mesh, ghost, tiles });
     }
     if (trees.length) ch.trees = this.treesFor(trees);
     this.chunks.set(`${cx},${cy}`, ch);
@@ -424,11 +444,15 @@ export class Scene3D {
       this.scene.remove(ch.floor);
     }
     // 공유 도형·재질은 남기고 인스턴스 버퍼만 버린다
-    for (const b of ch.blocks) this.dropInstanced(b.mesh);
+    for (const b of ch.blocks) {
+      this.dropInstanced(b.mesh);
+      this.dropInstanced(b.ghost);
+    }
     for (const m of ch.extra) this.dropInstanced(m);
     if (ch.trees) {
       this.dropInstanced(ch.trees.trunk);
       this.dropInstanced(ch.trees.canopy);
+      this.dropInstanced(ch.trees.ghost);
     }
     this.chunks.delete(key);
   }
@@ -438,7 +462,7 @@ export class Scene3D {
     m.dispose();
   }
 
-  private matFor(id: string): { mat: THREE.MeshStandardMaterial; base: THREE.Color; tall: boolean; glass: boolean } {
+  private matFor(id: string): TileMat {
     let m = this.mats.get(id);
     if (m) return m;
     const def = this.cfg.tiles.find((t) => t.id === id)!;
@@ -449,9 +473,18 @@ export class Scene3D {
       transparent: glass,
       opacity: glass ? 0.45 : 1,
     });
-    m = { mat, base: mat.color.clone(), tall: !!def.tall && !glass, glass };
+    m = { mat, ghost: this.ghostOf(mat), base: mat.color.clone(), tall: !!def.tall && !glass, glass };
     this.mats.set(id, m);
     return m;
+  }
+
+  /** 가리는 것을 비쳐 보이게 그릴 재질: 같은 색, 반투명, 뒤를 가리지 않음 */
+  private ghostOf(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+    const g = mat.clone();
+    g.transparent = true;
+    g.opacity = Math.min(mat.opacity, this.cfg3.occluderAlpha);
+    g.depthWrite = false;
+    return g;
   }
 
   private plants(tiles: Tile3D[]): THREE.InstancedMesh[] {
@@ -486,47 +519,65 @@ export class Scene3D {
     });
     trunk.castShadow = canopy.castShadow = true;
     canopy.receiveShadow = true;
-    this.scene.add(trunk, canopy);
-    return { trunk, canopy, tiles };
+    const ghost = new THREE.InstancedMesh(this.canopyGeo, this.canopyGhost, tiles.length);
+    ghost.count = 0;
+    ghost.castShadow = true;
+    ghost.renderOrder = 2;
+    this.scene.add(trunk, canopy, ghost);
+    return { trunk, canopy, ghost, tiles };
   }
 
-  /** 벽 높이: Danger 이하에서 솟고, 플레이어 앞(카메라 쪽)을 가리는 벽·나무는 낮춘다 (컷어웨이) */
+  /** 벽 높이: Danger 이하에서 솟는다. 플레이어 앞(카메라 쪽)을 가리는 벽·가구·수관은 높이 그대로 반투명하게 */
   private updateBlocks(f: Frame3D, built: boolean): void {
     const grow = 1 + (this.cfg3.dangerGrow ?? 0) * f.closeIn * (1 + 0.05 * Math.sin(f.time * 2));
     const p = f.focus;
     const key = `${grow.toFixed(3)}|${p ? `${Math.round(p.x * 4)},${Math.round(p.y * 4)}` : '-'}|${this.chunks.size}`;
-    // 솟은 벽은 어두워진다 (짓눌리는 느낌)
-    for (const m of this.mats.values()) if (m.tall) m.mat.color.copy(m.base).multiplyScalar(1 - 0.4 * f.closeIn);
+    // 솟은 벽은 어두워진다 (짓눌리는 느낌). 비쳐 보이는 짝도 같은 색
+    for (const m of this.mats.values()) {
+      if (m.tall) m.mat.color.copy(m.base).multiplyScalar(1 - 0.4 * f.closeIn);
+      m.ghost.color.copy(m.mat.color);
+    }
     if (key === this.blockKey && !built) return;
     this.blockKey = key;
     const c = this.cfg3;
     const inFront = (x: number, y: number, depth: number) => !!p && y + 1 > p.y && y < p.y + depth && Math.abs(x + 0.5 - p.x) < c.cutawayWidth;
     const tr = c.tree;
+    const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
     for (const ch of this.chunks.values()) {
       for (const b of ch.blocks) {
+        let n = 0;
         b.tiles.forEach((t, i) => {
-          let h = t.tall ? t.h * grow : t.h;
-          if (t.tall && inFront(t.x, t.y, c.cutawayDepth + Math.max(0, t.h - 1.35) * 0.7)) h = Math.min(h, c.cutawayHeight);
+          const h = t.tall ? t.h * grow : t.h;
           this.tmp.makeScale(1, h, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
-          b.mesh.setMatrixAt(i, this.tmp);
+          // 사람 키를 넘는 것만 가린다고 본다 (낮은 책상·침대는 그대로)
+          if (h > 0.8 && inFront(t.x, t.y, c.cutawayDepth + Math.max(0, h - 1.35) * 0.7)) {
+            b.ghost.setMatrixAt(n++, this.tmp);
+            b.mesh.setMatrixAt(i, hidden);
+          } else b.mesh.setMatrixAt(i, this.tmp);
         });
+        b.ghost.count = n;
         b.mesh.instanceMatrix.needsUpdate = true;
+        b.ghost.instanceMatrix.needsUpdate = true;
       }
       if (ch.trees) {
-        const { trunk, canopy, tiles } = ch.trees;
+        const { trunk, canopy, ghost, tiles } = ch.trees;
+        let n = 0;
         tiles.forEach((t, i) => {
           const hsh = ((t.x * 73856093) ^ (t.y * 19349663)) >>> 0;
           const s = 0.85 + (hsh % 5) * 0.08;
-          // 플레이어를 가리는 나무는 수관을 작게 (밑을 지나면 보이게)
-          const cut = inFront(t.x, t.y, (tr.trunk + tr.canopy * 2) * 0.75);
-          const k = cut ? 0.35 : s;
-          this.tmp.makeScale(1, cut ? 0.5 : s, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
+          this.tmp.makeScale(1, s, 1).setPosition(t.x + 0.5, 0, t.y + 0.5);
           trunk.setMatrixAt(i, this.tmp);
-          this.tmp.makeScale(k, k * 0.85, k).setPosition(t.x + 0.5 + ((hsh >>> 4) % 5) * 0.06 - 0.12, (cut ? tr.trunk * 0.5 : tr.trunk * s) + tr.canopy * 0.55 * k, t.y + 0.5);
-          canopy.setMatrixAt(i, this.tmp);
+          this.tmp.makeScale(s, s * 0.85, s).setPosition(t.x + 0.5 + ((hsh >>> 4) % 5) * 0.06 - 0.12, tr.trunk * s + tr.canopy * 0.55 * s, t.y + 0.5);
+          // 플레이어를 가리는 수관은 비쳐 보이게 (밑을 지나도 내가 보인다)
+          if (inFront(t.x, t.y, (tr.trunk + tr.canopy * 2) * 0.75)) {
+            ghost.setMatrixAt(n++, this.tmp);
+            canopy.setMatrixAt(i, hidden);
+          } else canopy.setMatrixAt(i, this.tmp);
         });
+        ghost.count = n;
         trunk.instanceMatrix.needsUpdate = true;
         canopy.instanceMatrix.needsUpdate = true;
+        ghost.instanceMatrix.needsUpdate = true;
       }
     }
   }

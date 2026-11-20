@@ -2,7 +2,7 @@ import type { GameConfig } from '../../core/config';
 import type { Input } from '../../core/Input';
 import type { GameSession } from '../../gameplay/GameSession';
 import { t } from '../../core/config';
-import { el, show } from './dom';
+import { coversAny, el, show } from './dom';
 import { itemIcon } from './icons';
 
 // 휴대폰·태블릿 터치 조작. 키보드 입력을 흉내 낸다(Input.touchDown/touchUp, Input.stick).
@@ -23,6 +23,8 @@ export interface TouchContext {
   session: GameSession | null;
   optionsOpen: boolean;
   mapOpen: boolean;
+  /** 화면 px: 나와 다가오는 사람 (그 위의 버튼은 투명하게) */
+  focus?: readonly { x: number; y: number }[];
 }
 
 export function isTouchDevice(): boolean {
@@ -90,6 +92,9 @@ export class TouchControls {
       this.build(this.top, top);
     }
     this.markState(ctx);
+    // 버튼이 나나 다가오는 사람을 가리면 투명하게 (눌리기는 그대로)
+    const pts = ctx.focus ?? [];
+    for (const b of [...this.pad.children, ...this.top.children] as HTMLElement[]) b.classList.toggle('is-covering', pts.length > 0 && coversAny(b, pts, 6));
   }
 
   /** 켜고 끄는 기술(이어폰·마스크)은 켜져 있는 동안 버튼을 밝게: 지금 상태를 버튼에서 바로 본다 */

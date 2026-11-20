@@ -414,10 +414,11 @@ export const presentationConfigSchema = z.object({
       dangerGrow: nonNegative,
       personHeight: positive,
       shadows: z.boolean(),
-      /** 플레이어 앞(카메라 쪽)에서 낮출 벽의 깊이·폭·남길 높이 (칸) */
+      /** 플레이어 앞(카메라 쪽)에서 비쳐 보이게 할 벽·나무의 깊이·폭 (칸) */
       cutawayDepth: positive,
       cutawayWidth: positive,
-      cutawayHeight: nonNegative,
+      /** 플레이어를 가리는 벽·가구·수관의 불투명도 (0 = 안 보임) */
+      occluderAlpha: z.number().min(0).max(1),
       /** 층마다 벽(tall 타일) 높이 배율. 지상 건물은 사람보다 훨씬 높게 */
       wallScale: z.record(z.string(), positive),
       /** 카메라 주변 이 거리(칸) 안의 청크만 장면에 둔다 */

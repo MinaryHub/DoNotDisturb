@@ -12,7 +12,7 @@ import type { PresentationState } from '../PresentationState';
 import type { Settings } from '../Settings';
 import { layerOf } from '../../world/World';
 import { epilogueKeys } from '../../gameplay/Story';
-import { el, escapeHtml, setHtml, setText, show } from './dom';
+import { coversAny, el, escapeHtml, setHtml, setText, show } from './dom';
 import { itemIcon } from './icons';
 
 // 플레이 화면 HTML 오버레이. 배터리·스트레스 수치는 보여주지 않는다 (디버그 패널 전용).
@@ -250,6 +250,29 @@ export class GameUI {
     this.updateSymptoms(dt, s, playing);
     show(this.hint, playing && this.settings.controlsHint);
     this.updateMap(s);
+    this.updateCovering(s, cam, playing);
+  }
+
+  /** 화면 px: 나와 나에게 다가오는 사람. 그 위를 덮은 UI는 투명하게 비켜 준다 (TouchControls도 같은 점을 쓴다) */
+  focusPoints: { x: number; y: number }[] = [];
+
+  /** 메모·알림·게이지·전화·알림 글·아이템 막대가 나나 다가오는 사람을 가리면 투명해진다 */
+  private updateCovering(s: GameSession, cam: Camera2D, playing: boolean): void {
+    const pts: { x: number; y: number }[] = [];
+    if (playing) {
+      const head = (p: { x: number; y: number }) => cam.toScreen({ x: p.x, y: p.y - 0.9 - cam.headLift }, 1.6);
+      const p = s.player.pos;
+      pts.push(cam.toScreen(p), head(p));
+      for (const n of s.activeNpcs()) {
+        if (n.state !== 'approach' && n.notice < 0.4) continue;
+        if (Math.abs(n.pos.x - p.x) > 30 || Math.abs(n.pos.y - p.y) > 20) continue;
+        pts.push(cam.toScreen(n.pos), head(n.pos));
+      }
+    }
+    this.focusPoints = pts;
+    for (const e of [this.memo, this.notifs, this.gauges, this.call, this.toastsEl, this.hotbar, this.skills, this.status]) {
+      e.classList.toggle('is-covering', pts.length > 0 && coversAny(e, pts));
+    }
   }
 
   /** 에너지: 가득(초록) → 지침(노랑) → 위험(주황) → 바닥(빨강, 떨림). 옆의 ▼는 지금 심리 상태 때문에 닳는 속도 */
@@ -1158,3 +1181,4 @@ function keepSelectedInView(host: HTMLElement): void {
   scrolledSel.add(sel);
   sel.scrollIntoView({ block: 'nearest' });
 }
+

@@ -189,7 +189,7 @@
     "shadows": true,
     "cutawayDepth": 4,
     "cutawayWidth": 2.5,
-    "cutawayHeight": 0.35,
+    "occluderAlpha": 0.22,
     "wallScale": {
       "ground": 2.3,
       "subway": 1.7

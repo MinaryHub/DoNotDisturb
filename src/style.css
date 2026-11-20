@@ -41,6 +41,27 @@ kbd {
   z-index: 10;
 }
 
+/* 나나 다가오는 사람을 가리는 UI는 투명하게 비켜 준다 (GameUI.updateCovering, TouchControls) */
+.memo,
+.notifs,
+.gauges,
+.call,
+.toasts,
+.hotbar,
+.skills,
+.status,
+.touch__btn {
+  transition: opacity 0.18s ease-out;
+}
+
+.is-covering {
+  opacity: 0.22 !important;
+}
+
+.touch__btn.is-covering {
+  opacity: 0.35 !important;
+}
+
 /* ───── 오늘 할 일 메모 ───── */
 .memo {
   position: absolute;

@@ -28,3 +28,10 @@ export function show(e: HTMLElement, visible: boolean, display = 'block'): void 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
+
+/** 이 요소가 화면의 점(들) 위에 떠 있는지 (조금 넉넉하게) */
+export function coversAny(e: HTMLElement, pts: readonly { x: number; y: number }[], pad = 14): boolean {
+  const r = e.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return false;
+  return pts.some((p) => p.x > r.left - pad && p.x < r.right + pad && p.y > r.top - pad && p.y < r.bottom + pad);
+}
