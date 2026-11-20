@@ -289,7 +289,7 @@ export function crossCheck(cfg: GameConfig): string[] {
   for (const [id, s] of Object.entries(cfg.speeches)) {
     needStim(s.stimulus, `speech ${id}`);
     needText(s.introKey, `speech ${id}`);
-    if (s.grant && !cfg.items.consumables.some((c) => c.id === s.grant!.item)) errors.push(`speech ${id}: 아이템 없음 "${s.grant.item}"`);
+    if (s.grant?.item && !cfg.items.consumables.some((c) => c.id === s.grant!.item)) errors.push(`speech ${id}: 아이템 없음 "${s.grant.item}"`);
     if (s.next && !has(cfg.speeches, s.next)) errors.push(`speech ${id}: 이어지는 발화 없음 "${s.next}"`);
   }
   for (const [id, c] of Object.entries(cfg.life.contacts)) {

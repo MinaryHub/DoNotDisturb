@@ -228,7 +228,7 @@
       "skip": {
         "bond": -8
       },
-      "marker": "cafe",
+      "marker": "riverKiosk",
       "if": [
         "jiu.answered"
       ]
@@ -426,7 +426,7 @@
     {
       "id": "friend",
       "profile": "friend",
-      "at": "friendCafe",
+      "at": "friendRiver",
       "from": "11:00",
       "to": "17:00",
       "if": [

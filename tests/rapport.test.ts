@@ -113,3 +113,44 @@ describe('돈을 쓸 곳', () => {
     }
   });
 });
+
+describe('넓은 도시를 캠페인에서 쓴다 (게임성 검토 2)', () => {
+  const inHomeDistrict = (at: readonly [number, number]) => at[0] < 340 && at[1] < 140;
+  const where = (id: string) => cfg.world.interactables.find((i) => i.id === id)?.at;
+
+  it('수요일 반차 오후: 도심 백화점에서 엄마 선물 (말하고 값을 치르면 끝, 못 하면 관계만 깎이고 하루는 끝난다)', () => {
+    const idx = cfg.days.findIndex((d) => d.id === 'dayWed');
+    const gift = cfg.days[idx]!.objectives.find((o) => o.id === 'gift')!;
+    expect(inHomeDistrict(where(gift.marker!)!)).toBe(false);
+    expect(gift.closes).toBeDefined();
+    expect(gift.missed?.bond).toBeLessThan(0);
+
+    const s = new GameSession(cfg);
+    s.startDay(idx);
+    s.step(dt, { ...NO_CONTROLS, confirm: true });
+    for (const o of s.objectives.list) if (o.def.id === 'commute' || o.def.id === 'work') o.done = true;
+    const at = where('deptGift')!;
+    s.player.pos.x = at[0];
+    s.player.pos.y = at[1];
+    for (let i = 0; i < 6; i++) s.step(dt, NO_CONTROLS);
+    const money = s.sim.life.money;
+    s.step(dt, { ...NO_CONTROLS, interactPressed: true });
+    expect(s.mode.kind).toBe('speech');
+    for (let i = 0; i < 60 * 40 && s.mode.kind === 'speech'; i++) {
+      const m = s.mode as Extract<typeof s.mode, { kind: 'speech' }>;
+      const ch = m.challenge;
+      s.step(dt, { ...NO_CONTROLS, spacePressed: ch.marker > ch.zone.from + 0.02 && ch.marker < ch.zone.to - 0.02 });
+    }
+    expect(s.objectives.isDone('gift')).toBe(true);
+    expect(s.sim.life.money).toBe(money - cfg.speeches['giftWrap']!.grant!.price);
+  });
+
+  it('토요일 지우와의 마지막 만남은 한빛강 강변에서', () => {
+    const day4 = cfg.days.find((d) => d.id === 'day4')!;
+    const friend = day4.npcs.find((n) => n.id === 'friend')!;
+    const spawn = cfg.world.spawns[friend.at]!;
+    expect(inHomeDistrict(spawn)).toBe(false);
+    const area = cfg.world.areas.find((a) => a.id === day4.objectives.find((o) => o.id === 'friend')!.marker)!;
+    expect(Math.hypot(area.rect[0] + area.rect[2] / 2 - spawn[0], area.rect[1] + area.rect[3] / 2 - spawn[1])).toBeLessThan(20);
+  });
+});

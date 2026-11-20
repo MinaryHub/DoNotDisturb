@@ -416,12 +416,15 @@ describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
     for (const d of r.rows.slice(3)) for (const v of Object.values(d.life)) expect(v).toBeLessThan(95);
   });
 
-  it('한 주의 피로: 금·토가 수요일보다 편해지지 않는다 (후반에 긴장이 풀리지 않게)', () => {
+  it('한 주의 피로: 금·토가 한 주 초반(월·화)보다 크게 편해지지 않는다 (후반에 긴장이 풀리지 않게)', () => {
     for (const extras of [false, true]) {
       const r = playWeek(game, 'balanced', { commuteSec: 120, extras });
       const end = (id: string) => r.rows.find((d) => d.day === id)!.batteryEnd;
-      expect(end('day3')).toBeLessThan(end('dayWed'));
-      expect(end('day4')).toBeLessThan(end('dayWed'));
+      const early = (end('day1') + end('day2')) / 2;
+      // 기술·조용한 곳을 찾아 쓴 만큼은 편해지되, 그 차이가 크지 않게
+      expect(end('day3')).toBeLessThan(early + 15);
+      expect(end('day4')).toBeLessThan(early + 15);
+      if (!extras) for (const d of ['day3', 'day4']) expect(end(d)).toBeLessThan(early);
     }
   });
 

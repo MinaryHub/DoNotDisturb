@@ -559,7 +559,8 @@ export const speechesSchema = z.record(
     /** 그날 목표가 아니어도 할 수 있는 발화 (약국 등) */
     anytime: z.boolean().optional(),
     /** 끝나면 이 소모품을 값을 치르고 받는다 */
-    grant: z.object({ item: z.string(), price: nonNegative }).optional(),
+    /** 말을 마치면 값을 치르고 (item이 있으면) 받는다. item 없이 값만 치를 수도 있다 (선물 포장 등) */
+    grant: z.object({ item: z.string().optional(), price: nonNegative }).optional(),
     /** 끝나면 이어서 시작하는 발화 (발표 → 질문 시간) */
     next: z.string().optional(),
     /** 잘 끝나도 이불킥이 온다 */

@@ -1224,7 +1224,9 @@ export class GameSession {
       case 'speech': {
         const speechId = this.day.interactAt?.[it.id]?.speech ?? it.speech!;
         const sp = this.cfg.speeches[speechId]!;
-        if (this.objectiveAvailable(sp.objectiveEvent) || sp.anytime) this.startSpeech(speechId);
+        // 값을 치러야 하는 말(약국·선물 포장)은 돈이 모자라면 말을 꺼내지 않는다
+        if (sp.grant && sp.grant.price > this.sim.life.money) this.toast('noMoney');
+        else if (this.objectiveAvailable(sp.objectiveEvent) || sp.anytime) this.startSpeech(speechId);
         else this.toast('interact.bed.notYet');
         break;
       }
@@ -1914,8 +1916,11 @@ export class GameSession {
       this.gameEvent(sp.objectiveEvent);
     }
     if (sp.grant && this.pay(sp.grant.price)) {
-      this.addItem(sp.grant.item);
-      this.toast('shop.bought', { item: this.cfg.text[this.consumable(sp.grant.item)!.nameKey] ?? sp.grant.item });
+      const item = sp.grant.item;
+      if (item) {
+        this.addItem(item);
+        this.toast('shop.bought', { item: this.cfg.text[this.consumable(item)!.nameKey] ?? item });
+      } else if (sp.grant.price > 0) this.toast('shop.paid', { money: sp.grant.price.toLocaleString('ko-KR') });
     }
     this.mode = this.resumeMode();
     if (sp.next) {
