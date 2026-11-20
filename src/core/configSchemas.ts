@@ -400,6 +400,26 @@ export const presentationConfigSchema = z.object({
   }),
   /** 사람 그리기 (src/presentation/draw/people.ts) */
   people: z.object({ visualScale: positive }),
+  /** 3D 시점 시제품 (src/presentation/three/Scene3D.ts, Three.js): 지정한 층만. 높이는 view25d.heights를 같이 쓴다 */
+  view3d: z
+    .object({
+      layers: z.array(z.string()),
+      fov: positive,
+      /** 카메라가 내려다보는 각도 (90 = 바로 위) */
+      pitchDeg: z.number().min(20).max(89),
+      /** 카메라와 바라보는 점 사이 거리 (칸) */
+      distance: positive,
+      /** Danger 이하에서 카메라가 이만큼 배로 멀어진다 */
+      dangerDistance: positive,
+      dangerGrow: nonNegative,
+      personHeight: positive,
+      shadows: z.boolean(),
+      /** 플레이어 앞(카메라 쪽)에서 낮출 벽의 깊이·폭·남길 높이 (칸) */
+      cutawayDepth: positive,
+      cutawayWidth: positive,
+      cutawayHeight: nonNegative,
+    })
+    .optional(),
   /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
   view25d: z
     .object({

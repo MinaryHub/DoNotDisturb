@@ -1088,7 +1088,7 @@ export class GameUI {
         this.onSettings(s);
       });
     };
-    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge' | 'symptomGauge' | 'controlsHint' | 'view25d', label: string) => {
+    const toggle = (key: 'shake' | 'chromatic' | 'flash' | 'visualCues' | 'stressGauge' | 'symptomGauge' | 'controlsHint' | 'view25d' | 'view3d', label: string) => {
       const row = el('label', 'options__row', box);
       el('span', '', row, this.tx(label));
       const input = el('input', '', row);
@@ -1112,6 +1112,7 @@ export class GameUI {
     toggle('symptomGauge', 'options.symptomGauge');
     toggle('controlsHint', 'options.controlsHint');
     toggle('view25d', 'options.view25d');
+    toggle('view3d', 'options.view3d');
     // 언어: 바꾸면 저장하고 다시 불러온다 (주소의 ?lang=은 지운다)
     const langRow = el('label', 'options__row', box);
     el('span', '', langRow, this.tx('options.language'));

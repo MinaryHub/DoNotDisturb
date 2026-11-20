@@ -94,7 +94,10 @@ function boot(): void {
   document.documentElement.lang = settings.lang;
   // ?view=2d|25d: 2.5D 시점 시제품 비교용 (저장하지 않음)
   const viewParam = params.get('view');
-  if (viewParam === '2d' || viewParam === '25d') settings.view25d = viewParam === '25d';
+  if (viewParam === '2d' || viewParam === '25d' || viewParam === '3d') {
+    settings.view25d = viewParam === '25d';
+    settings.view3d = viewParam === '3d';
+  }
   try {
     cfg = loadConfig(settings.lang);
   } catch (e) {

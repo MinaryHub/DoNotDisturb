@@ -1221,5 +1221,6 @@
   "speech.gift.intro": "The gift-wrap counter. The clerk waits with a smile. A 39,000 won handkerchief set.",
   "obj.gift": "(Half-day afternoon) Buy Mom's birthday gift at the downtown department store",
   "note.wed.gift": "Saturday is Mom's birthday. Pick up a gift at the Hanbit department store this afternoon. The subway is fast but crowded; the bus, a bike or walking each cost something else.",
-  "shop.paid": "Paid {money} won."
+  "shop.paid": "Paid {money} won.",
+  "options.view3d": "3D view (prototype · home & 3F hallway)"
 }

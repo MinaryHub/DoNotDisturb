@@ -168,5 +168,20 @@
     "personHeight": 1.55,
     "fadeAlpha": 0.3,
     "dangerGrow": 0.8
+  },
+  "view3d": {
+    "layers": [
+      "apartment"
+    ],
+    "fov": 34,
+    "pitchDeg": 56,
+    "distance": 22,
+    "dangerDistance": 1.35,
+    "dangerGrow": 0.8,
+    "personHeight": 1.6,
+    "shadows": true,
+    "cutawayDepth": 4,
+    "cutawayWidth": 2.5,
+    "cutawayHeight": 0.35
   }
 }

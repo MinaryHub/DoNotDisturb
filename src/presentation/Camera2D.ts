@@ -12,6 +12,8 @@ export class Camera2D {
   shakeY = 0;
   /** 사람이 서 있게 그려지는 시점(2.5D)에서 머리가 발보다 위로 올라간 만큼 (칸). UI가 이름표·독백을 그만큼 올린다 */
   headLift = 0;
+  /** 3D 시점: 월드 바닥 점(높이 h칸)을 화면 좌표로 (Three 카메라가 정한다). null이면 2D 위에서 본 투영 */
+  projector: ((x: number, y: number, h: number) => Vec2) | null = null;
 
   follow(target: Vec2, dt: number, lerp: number, snap = false): void {
     if (snap || Math.hypot(target.x - this.x, target.y - this.y) > 30) {
@@ -24,7 +26,11 @@ export class Camera2D {
     this.y += (target.y - this.y) * k;
   }
 
-  toScreen(p: Vec2): Vec2 {
+  toScreen(p: Vec2, h = 0): Vec2 {
+    if (this.projector) {
+      const s = this.projector(p.x, p.y, h);
+      return { x: s.x + this.shakeX, y: s.y + this.shakeY };
+    }
     return { x: (p.x - this.x) * this.scale + this.viewW / 2 + this.shakeX, y: (p.y - this.y) * this.scale + this.viewH / 2 + this.shakeY };
   }
 

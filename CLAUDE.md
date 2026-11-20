@@ -53,7 +53,7 @@
 
 - 웹 배포 (2026-10-25): https://apps.kimserv.com/donotdisturb/ . Vercel 프로젝트 `donotdisturb`(이 저장소, `vercel.json`이 `BASE_PATH=/donotdisturb/`로 빌드)에 `vercel deploy --prod`. `apps.kimserv.com` 도메인은 라우터 프로젝트 `apps-kimserv`(`/Users/smic/apps-kimserv`)가 갖고 하위 경로마다 각 프로젝트로 넘긴다(`/dotty/`, `/donotdisturb/`). 진행 저장·설정은 브라우저 `localStorage`라 사람(브라우저)마다 따로 플레이한다
 - 의존성은 안정 버전으로 정확히 고정(`^` 없이)하고, 위 목록 외 라이브러리를 추가할 때는 이유를 설명하고 승인을 받는다.
-- 3D 판에서 쓰던 Three.js·postprocessing·Rapier·recast-navigation·@gltf-transform은 2D 전환과 함께 제거했다.
+- 3D 판에서 쓰던 Three.js·postprocessing·Rapier·recast-navigation·@gltf-transform은 2D 전환과 함께 제거했다. Three.js(0.186.1)는 3D 시점 시제품(2026-11-20, 사용자 요청 "3d로")에서 다시 쓴다: 3D가 처음 필요할 때만 따로 불러오는 조각(`Scene3D`, gzip 약 137KB)이라 2D만 하는 플레이어의 첫 로딩은 늘지 않는다. 물리·길찾기는 계속 자체 2D 구현
 
 ## 4. 월드 데이터 파이프라인
 
@@ -343,6 +343,15 @@
 - `src/presentation/draw/view25d.ts`: 벽·가구를 높이만큼 세워 그림(`presentation.json` `view25d.heights`), 서 있는 사람·고양이, 바닥 y 순서 정렬, 사람을 가리는 벽은 반투명, Danger 이하에서 벽이 솟고 어두워짐
 - 켜고 끄기: [O] 설정 '2.5D 시점', 주소 `?view=2d` / `?view=25d`
 - 남은 판단: 다른 층(지상·지하)으로 넓힐지, 상호작용 표식·시야 콘을 높이에 맞출지
+
+### 3D 시점 시제품 (2026-11-20) — 검토 중
+- 사용자 선택: 시점은 '위에서 비스듬히', 범위는 '집·3층 복도 먼저'. 게임 판정·데이터·sim은 그대로, 그리기만 Three.js
+- `src/presentation/three/Scene3D.ts`: 바닥 = 2D 렌더러의 바닥 청크 그림을 텍스처로, 벽·가구 = `view25d.heights` 높이의 상자(InstancedMesh), 화분, 도형으로 만든 사람(다리·팔 걷기, 폰 보기, 홍조로 붉어지는 얼굴, 주저앉음)·고양이, 해 그림자. 플레이어 앞(카메라 쪽) 벽은 낮춰 보인다(컷어웨이)
+- 바닥 표시(구역·상호작용·목표·시야 콘·시선 선·소리 파동·개인 공간)는 2D 그리기 함수를 그대로 써서 캔버스에 그리고 바닥 바로 위 평면에 덮는다
+- 3D 장면을 월드 캔버스로 넘겨 기존 합성(채도·블러·앰버·색수차·늘림)과 심리 오버레이(비네팅·터널·홍조·암전)를 그대로 쓴다. Danger 이하에서 카메라가 멀어지고(`dangerDistance`) 벽이 솟으며 어두워진다
+- `Camera2D.projector`: 3D일 때 화면 좌표 변환을 Three 카메라가 맡아 이름표·독백·상호작용 안내·시야 반경이 맞는다
+- 설정 [O] '3D 시점'(2.5D보다 먼저), 주소 `?view=3d` / `?view=25d` / `?view=2d`. 수치는 `presentation.json` `view3d`
+- 확인: `/donotdisturb/` 하위 경로 빌드에서 동작. 남은 판단: 지상·지하로 넓힐지(넓은 도시는 건물 700채라 성능 확인 필요), 가구 윗면 장식, 마우스 조준(기울어진 화면이라 약간 어긋남)
 
 ### Phase 4 · 다듬기와 데스크톱
 1. 수치 플레이테스트·조정 (디버그 패널 수치 + 실제 플레이 시간)

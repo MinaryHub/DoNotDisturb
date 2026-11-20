@@ -14,6 +14,7 @@ import { Canopies } from './draw/trees';
 import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, shade, type Accessory, type Look } from './draw/people';
 import { drawBlock, drawCatStanding, drawStanding, type Drawable } from './draw/view25d';
 import type { PresentationState } from './PresentationState';
+import type { Person3D as Person3DInput, Scene3D } from './three/Scene3D';
 import type { Settings } from './Settings';
 
 // 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
@@ -42,7 +43,8 @@ export class Renderer {
   readonly camera = new Camera2D();
   private readonly ctx: CanvasRenderingContext2D;
   private readonly world: HTMLCanvasElement;
-  private readonly wctx: CanvasRenderingContext2D;
+  /** 월드를 그리는 캔버스 (3D 시점에서는 잠깐 바닥 표시 캔버스로 바뀐다) */
+  private wctx: CanvasRenderingContext2D;
   /** 밤 조명: 어둠을 칠하고 불빛 자리를 지워 낸 뒤 월드 위에 덮는다 */
   private readonly light: HTMLCanvasElement;
   private readonly lctx: CanvasRenderingContext2D;
@@ -75,6 +77,11 @@ export class Renderer {
   private v25 = false;
   /** 2.5D에서 시선 선을 눈높이에서 긋기 위한 높이 (칸) */
   private eyeLift = 0;
+  /** 3D 시점 시제품: 층마다 한 번 만든 장면 (Three.js는 처음 필요할 때 불러온다) */
+  private scene3d: Scene3D | null = null;
+  private scene3dLoading = false;
+  private v3d = false;
+  private zoom3d = 1;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -109,6 +116,7 @@ export class Renderer {
     this.canvas.style.height = `${h}px`;
     this.camera.viewW = w;
     this.camera.viewH = h;
+    this.scene3d?.resize(w, h, this.dpr);
   }
 
   render(dt: number, s: GameSession, ps: PresentationState, st: Settings): void {
@@ -121,9 +129,19 @@ export class Renderer {
     const target = s.viewTarget ?? p.pos;
     this.layer = this.cfg.world.layers.find((l) => inRect(l.rect, target.x, target.y)) ?? this.cfg.world.layers[0]!;
     const v25 = pc.view25d;
-    this.v25 = !!v25 && st.view25d && v25.layers.includes(this.layer.id);
+    const want3d = !!pc.view3d && st.view3d && pc.view3d.layers.includes(this.layer.id);
+    this.v3d = want3d && this.ensureScene3d();
+    // 3D 장면을 불러오는 동안은 2.5D로 그린다
+    this.v25 = !this.v3d && !!v25 && (st.view25d || want3d) && v25.layers.includes(this.layer.id);
     this.eyeLift = this.v25 ? v25!.personHeight * 0.85 : 0;
     cam.headLift = this.v25 ? v25!.personHeight * 0.7 : 0;
+    cam.projector = null;
+    if (this.v3d) {
+      // 서 있는 사람의 머리 높이를 바닥에서 앞뒤 거리로 바꿔 이름표·독백을 머리 위에 (기울어진 카메라)
+      const pitch = (pc.view3d!.pitchDeg * Math.PI) / 180;
+      cam.headLift = ((pc.view3d!.personHeight + 0.35) * Math.cos(pitch)) / Math.sin(pitch) - 0.9;
+      this.eyeLift = 0;
+    }
     cam.follow(target, dt, pc.camera.followLerp, this.firstFrame || s.mode.kind === 'travel');
     this.firstFrame = false;
     const peep = s.mode.kind === 'peephole' ? -0.35 : 0;
@@ -131,6 +149,11 @@ export class Renderer {
     // 휴대폰처럼 작은 화면은 칸을 줄여 주변이 충분히 보이게
     const small = Math.min(1, Math.max(0.55, Math.min(cam.viewW / 1280, cam.viewH / 720)));
     cam.scale = pc.camera.tilePx * small * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
+    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom));
+    if (this.v3d) {
+      const scene = this.scene3d!;
+      cam.projector = (x, y, h) => scene.project(x, y, h);
+    }
     const shake = st.shake ? ps.trauma * ps.trauma * pc.camera.shakePx : 0;
     cam.shakeX = (Math.random() * 2 - 1) * shake + (st.shake ? Math.sin(ps.time * 40) * ps.sweat * 0.6 : 0);
     cam.shakeY = (Math.random() * 2 - 1) * shake;
@@ -143,6 +166,10 @@ export class Renderer {
   // ───────────────────────── 월드 ─────────────────────────
 
   private drawWorld(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    if (this.v3d) {
+      this.drawWorld3d(s, ps, st, dt);
+      return;
+    }
     const ctx = this.wctx;
     this.frameDt = dt;
     const cam = this.camera;
@@ -1033,6 +1060,114 @@ export class Renderer {
       ctx.fill();
     }
     ctx.restore();
+  }
+
+  // ───────────────────────── 3D 시제품 ─────────────────────────
+
+  /** 3D 장면이 준비됐는지. 처음이면 Three.js를 불러오기 시작한다 (그동안 false) */
+  private ensureScene3d(): boolean {
+    const layer = this.layer!;
+    if (this.scene3d && this.scene3d.layer.id === layer.id) return true;
+    if (this.scene3dLoading) return false;
+    this.scene3dLoading = true;
+    void import('./three/Scene3D').then(({ Scene3D }) => {
+      this.scene3d?.dispose();
+      // 바닥 청크는 그 층 기준으로 (불러오는 사이 다른 층으로 갔을 수도 있다)
+      const floor = (cx: number, cy: number) => {
+        const prev = this.layer;
+        this.layer = layer;
+        const c = this.chunk(cx, cy, true);
+        this.layer = prev;
+        return c;
+      };
+      this.scene3d = new Scene3D(this.cfg, this.map, layer, floor, CHUNK);
+      this.scene3d.resize(this.camera.viewW, this.camera.viewH, this.dpr);
+      this.scene3dLoading = false;
+    });
+    return false;
+  }
+
+  private drawWorld3d(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    const scene = this.scene3d!;
+    const cam = this.camera;
+    this.frameDt = dt;
+    const cfg = this.cfg.presentation;
+    const closeIn = Math.min(1, cfg.fx.wallCloseIn * (ps.danger + ps.critical * 0.6) * st.distortion * 2.5);
+
+    // 바닥 표시(구역·상호작용·목표·시야 콘·시선 선·소리 파동·개인 공간)를 2D 그대로 그려 바닥에 덮는다
+    scene.placeOverlay({ x: cam.x, y: cam.y });
+    const o = scene.overlay.getContext('2d')!;
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.clearRect(0, 0, scene.overlay.width, scene.overlay.height);
+    const k = scene.overlayScale;
+    const [ox, oy] = scene.overlayRect;
+    o.setTransform(k, 0, 0, k, -ox * k, -oy * k);
+    const worldCtx = this.wctx;
+    this.wctx = o;
+    try {
+      this.drawZones(s, ps);
+      this.drawInteractHints(s, ps);
+      this.drawQuietSpots(s, ps.time);
+      this.drawViewCones(s, ps);
+      this.drawGaze(s, ps);
+      this.updateRings(s, ps, st, dt);
+      const p = s.player.pos;
+      o.strokeStyle = `rgba(255,255,255,${0.12 + ps.stress * 0.15})`;
+      o.lineWidth = 0.05;
+      o.setLineDash([0.14, 0.12]);
+      o.beginPath();
+      o.arc(p.x, p.y, this.cfg.balance.personalSpace.radius, 0, Math.PI * 2);
+      o.stroke();
+      o.setLineDash([]);
+    } finally {
+      this.wctx = worldCtx;
+    }
+
+    // 사람들
+    const H = cfg.view3d!.personHeight;
+    const people: Person3DInput[] = [];
+    for (const n of s.activeNpcs()) {
+      if (!this.visible(n.pos)) continue;
+      people.push({
+        id: n.id,
+        x: n.pos.x,
+        y: n.pos.y,
+        facing: this.turned(n.id, n.facing),
+        look: n.type === 'pet' ? { ...this.lookOf(n), top: n.profile.color } : this.lookOf(n),
+        walking: n.speed > 0.1,
+        walkPhase: ps.time * 9 + (hashOf(n.id) % 100),
+        height: H * (0.94 + (hashOf(n.id) % 10) * 0.012),
+        kind: n.type === 'pet' ? 'cat' : 'person',
+        seated: n.state === 'seated',
+        ally: n.type === 'ally',
+      });
+    }
+    const pl = s.player;
+    const hidePlayer = s.mode.kind === 'travel' || s.mode.kind === 'metro' || (s.mode.kind === 'bus' && s.mode.phase === 'riding');
+    if (!hidePlayer) {
+      people.push({
+        id: 'player',
+        x: pl.pos.x,
+        y: pl.pos.y,
+        facing: this.turned('player', pl.facing),
+        look: PLAYER_LOOK_BASE(pl.hidden ? '#567a8f' : '#6c8fb2', '#f0dac4'),
+        walking: pl.moving && ps.cover < 0.3,
+        walkPhase: pl.walkPhase,
+        height: H,
+        kind: 'person',
+        blush: ps.flush,
+        sink: ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0,
+        phone: ps.phone > 0.4,
+      });
+    }
+    scene.render({ target: { x: cam.x, y: cam.y }, zoom: this.zoom3d, closeIn, people, focus: hidePlayer ? null : pl.pos, time: ps.time });
+
+    // 3D 장면을 월드 캔버스로 (흔들림만 더한다). 이후 합성·심리 오버레이는 2D와 같다
+    const ctx = this.wctx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = this.cfg.tiles[0]!.color;
+    ctx.fillRect(0, 0, this.world.width, this.world.height);
+    ctx.drawImage(scene.canvas, cam.shakeX * this.dpr, cam.shakeY * this.dpr, this.world.width, this.world.height);
   }
 
   // ───────────────────────── 2.5D 시제품 ─────────────────────────
