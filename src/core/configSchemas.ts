@@ -144,7 +144,10 @@ export const balanceConfigSchema = z.object({
     rushHours: z.array(z.tuple([hhmm, hhmm])),
     rushCrowdMultiplier: positive,
   }),
-  safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive }),
+  /** 화장실 칸·피팅룸: 노크가 시작되면(누가 기다린다) 회복이 멈추고, 같은 칸은 reuseMin(게임 분)이 지나야 다시 회복된다 */
+  safe: z.object({ knockRepeatSec: positive, fittingAnswerSec: positive, reuseMin: nonNegative }),
+  /** 근무 시간에 자리를 비우면(사무실 밖·화장실 칸에 숨음) everyMin(게임 분)마다 팀장님이 찾는다: 업무 평판 life.rewards.deskAway */
+  deskAway: z.object({ areas: z.array(z.string()), everyMin: positive }),
   /** 코인세탁방: 기다리는 시간(실제 초), 게임 시계 진행(분), 생활 필수 보상 */
   laundry: z.object({ waitSec: positive, minutes: nonNegative, essentials: nonNegative }),
   rehearsal: z.object({ damageScale: unit, flushScale: unit }),
@@ -329,6 +332,8 @@ export const lifeConfigSchema = z.object({
     homeMealEssentials: z.number(),
     allyMeet: lifeDelta,
     mandatorySkipped: lifeDelta,
+    /** 근무 시간에 자리를 오래 비움 (balance.deskAway) */
+    deskAway: lifeDelta,
   }),
 });
 export type LifeConfig = z.infer<typeof lifeConfigSchema>;

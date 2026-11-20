@@ -308,6 +308,9 @@
     },
     "mandatorySkipped": {
       "income": -20
+    },
+    "deskAway": {
+      "income": -3
     }
   }
 }

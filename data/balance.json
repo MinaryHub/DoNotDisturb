@@ -3,7 +3,7 @@
     "max": 100,
     "start": 100,
     "outdoorDrainPerSec": 0.02,
-    "safeRecoverPerSec": 1,
+    "safeRecoverPerSec": 0.4,
     "tiers": {
       "tired": 69,
       "danger": 39,
@@ -103,7 +103,12 @@
   },
   "safe": {
     "knockRepeatSec": 15,
-    "fittingAnswerSec": 3
+    "fittingAnswerSec": 3,
+    "reuseMin": 90
+  },
+  "deskAway": {
+    "areas": ["officeFloor", "officeLobby", "pantry", "meetingRoom"],
+    "everyMin": 30
   },
   "laundry": { "waitSec": 25, "minutes": 40, "essentials": 12 },
   "rehearsal": {
