@@ -147,6 +147,7 @@ export class Scene3D {
   private readonly v = new THREE.Vector3();
   private w = 1;
   private h = 1;
+  private readonly lite: boolean;
   private readonly cfg3: NonNullable<GameConfig['presentation']['view3d']>;
   /** 공유 자원 (청크마다 만들지 않는다) */
   private readonly box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
@@ -177,7 +178,9 @@ export class Scene3D {
     this.wallScale = this.cfg3.wallScale[layer.id] ?? 1;
     this.roofHeight = (cfg.presentation.view25d?.heights['wall'] ?? 1.35) * this.wallScale;
     this.canvas = document.createElement('canvas');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
+    // 휴대폰·태블릿: 해상도·그림자를 낮춰 가볍게
+    this.lite = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.lite, alpha: false, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = this.cfg3.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -189,7 +192,7 @@ export class Scene3D {
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight('#fff1dc', 1.6);
     this.sun.castShadow = this.cfg3.shadows;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.setScalar(this.lite ? 1024 : 2048);
     const sc = this.sun.shadow.camera;
     sc.left = -30;
     sc.right = 30;
@@ -235,7 +238,7 @@ export class Scene3D {
   resize(w: number, h: number, dpr: number): void {
     this.w = w;
     this.h = h;
-    this.renderer.setPixelRatio(dpr);
+    this.renderer.setPixelRatio(this.lite ? Math.min(dpr, 1.5) : dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -258,7 +261,7 @@ export class Scene3D {
   render(f: Frame3D): void {
     const c = this.cfg3;
     const pitch = (c.pitchDeg * Math.PI) / 180;
-    const dist = (c.distance * (1 + (c.dangerDistance - 1) * f.closeIn)) / Math.max(0.4, f.zoom);
+    const dist = (c.distance * (1 + (c.dangerDistance - 1) * f.closeIn)) / Math.max(0.3, f.zoom);
     const t = f.target;
     this.camera.position.set(t.x, Math.sin(pitch) * dist, t.y + Math.cos(pitch) * dist);
     this.camera.lookAt(t.x, 0, t.y);

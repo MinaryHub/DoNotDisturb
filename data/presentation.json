@@ -194,7 +194,7 @@
       "ground": 2.3,
       "subway": 1.7
     },
-    "streamRadius": 34,
+    "streamRadius": 38,
     "floorPx": 32,
     "buildPerFrame": 2,
     "tree": {

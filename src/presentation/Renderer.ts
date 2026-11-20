@@ -151,7 +151,8 @@ export class Renderer {
     // 휴대폰처럼 작은 화면은 칸을 줄여 주변이 충분히 보이게
     const small = Math.min(1, Math.max(0.55, Math.min(cam.viewW / 1280, cam.viewH / 720)));
     cam.scale = pc.camera.tilePx * small * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
-    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom));
+    // 작은 화면은 2D처럼 더 멀리서 (휴대폰 가로 화면에서 주변이 충분히 보이게)
+    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom)) * small;
     if (this.v3d) {
       const scene = this.scene3d!;
       cam.projector = (x, y, h) => scene.project(x, y, h);

@@ -91,7 +91,13 @@ export class GameUI {
   }
 
   private tx(key: string, vars?: Record<string, string | number>): string {
+    // 터치 화면: 키보드 키 대신 버튼 이름으로 안내하는 문구가 있으면 그쪽 (`<키>.touch`)
+    if (this.touch && this.cfg.text[`${key}.touch`] !== undefined) return t(this.cfg.text, `${key}.touch`, vars);
     return t(this.cfg.text, key, vars);
+  }
+
+  private get touch(): boolean {
+    return document.body.classList.contains('is-touch');
   }
 
   /** 돈 표시 (₩, 언어별 자릿수 구분) */
@@ -440,7 +446,8 @@ export class GameUI {
     const visible = playing && (s.mode.kind === 'free' || s.mode.kind === 'peephole') && pr !== null && !s.phoneOpen;
     show(this.prompt, visible);
     if (!visible || !pr) return;
-    setText(this.prompt, `[F] ${this.tx(pr.labelKey)}`);
+    // 터치 화면에는 [F] 대신 오른쪽 '상호작용' 버튼을 누른다
+    setText(this.prompt, this.touch ? `👆 ${this.tx(pr.labelKey)}` : `[F] ${this.tx(pr.labelKey)}`);
     const sp = cam.toScreen(pr.at);
     this.prompt.style.transform = `translate(${Math.round(sp.x)}px, ${Math.round(sp.y - 34)}px) translate(-50%, -100%)`;
   }
@@ -500,13 +507,17 @@ export class GameUI {
     const contactName = (id: string) => this.tx(this.cfg.life.contacts[id]?.nameKey ?? id);
     // 안 읽은 알림이 화면 오른쪽 아래를 가린다
     const unread = phone.messages.filter((m) => !m.read && !m.resolved && !this.cfg.life.contacts[m.contactId]?.muted);
-    show(this.notifs, playing && !s.phoneOpen && unread.length > 0);
+    show(this.notifs, playing && !s.phoneOpen && unread.length > 0 && !(window.innerHeight < 520 && this.panelH > 0));
+    // 낮은 화면(가로로 든 휴대폰)에서는 두 개만 쌓고 나머지는 숫자로
+    // 하단 패널(대화·업무·상점)이 떠 있으면 알림은 메모의 '읽지 않은 메시지'로만 (겹치지 않게)
+    const low = window.innerHeight < 520;
+    const maxNotifs = low ? (this.panelH > 0 ? 0 : 2) : 4;
     setHtml(
       this.notifs,
       unread
-        .slice(-4)
+        .slice(-maxNotifs)
         .map((m) => `<div class="notif"><b>${escapeHtml(contactName(m.contactId))}</b><span>${escapeHtml(this.tx(m.textKey))}</span></div>`)
-        .join('') + (unread.length > 4 ? `<div class="notif notif--more">+${unread.length - 4}</div>` : ''),
+        .join('') + (unread.length > maxNotifs ? `<div class="notif notif--more">+${unread.length - maxNotifs}</div>` : ''),
     );
 
     const c = phone.call;
@@ -523,8 +534,10 @@ export class GameUI {
       );
     }
 
-    show(this.phonePanel, playing && s.phoneOpen);
-    if (!s.phoneOpen) return;
+    // 낮은 화면에서 하단 패널(대화·업무)이 떠 있으면 폰은 접어 둔다 (겹치지 않게)
+    const phoneShown = playing && s.phoneOpen && !(this.touch && window.innerHeight < 520 && this.panelH > 0);
+    show(this.phonePanel, phoneShown);
+    if (!phoneShown) return;
     const msgs = phone.messages.filter((m) => !m.resolved);
     const snap = s.snapshot;
     // 폰 상태 표시줄: 사회적 배터리를 숫자 없이 아이콘으로만
@@ -546,6 +559,7 @@ export class GameUI {
        ${phone.waitingReply ? `<div class="phone__wait">${escapeHtml(this.tx('phone.waiting'))}</div>` : ''}
        <div class="phone__hint">${escapeHtml(this.tx('phone.msg.hint'))}</div>`,
     );
+    keepSelectedInView(this.phonePanel);
     this.phonePanel.style.filter = ps.sweat > 0.5 ? `blur(${(ps.sweat * 0.6).toFixed(2)}px)` : '';
   }
 
@@ -582,11 +596,13 @@ export class GameUI {
     show(this.panel, html !== '');
     this.panel.dataset['kind'] = m.kind;
     setHtml(this.panel, html);
+    if (m.kind === 'shop' || m.kind === 'metroMenu') keepSelectedInView(this.panel);
     // 하단 패널이 떠 있으면 전화 수신 창·알림을 그 위로 올린다 (업무 중 전화 안내가 가려지지 않게)
     const panelH = html !== '' ? this.panel.offsetHeight + 28 : 0;
     if (panelH !== this.panelH) {
       this.panelH = panelH;
       this.root.style.setProperty('--panel-h', `${panelH}px`);
+      this.root.dataset['panel'] = panelH > 0 ? '1' : '0';
     }
     if (m.kind === 'dialogue') {
       // 미소 유지 중: 화면 가장자리 떨림 / 편두통: 선택지 진동
@@ -611,7 +627,7 @@ export class GameUI {
     const myLine = m.myLine && m.myLineTime < 1.6 ? this.tx(m.myLine) : '';
     const shownMy = myLine && s.sim.somatic.active('stutter') ? stutterText(myLine) : myLine;
     const choices = replies
-      .map((r, i) => `<li class="${b.inWindow && (r === 'exit' ? line.kind === 'opening' : true) ? 'hot' : ''}"><kbd>${i + 1}</kbd>${escapeHtml(this.tx(`dialogue.reply.${r}`))}</li>`)
+      .map((r, i) => `<li data-code="Digit${i + 1}" class="${b.inWindow && (r === 'exit' ? line.kind === 'opening' : true) ? 'hot' : ''}"><kbd>${i + 1}</kbd>${escapeHtml(this.tx(`dialogue.reply.${r}`))}</li>`)
       .join('');
     const smile = ally ? '' : `<span class="dlg__smile">${escapeHtml(this.tx('dialogue.smile'))}</span>`;
     const sos = !ally && !s.sosUsed && s.sim.life.get('bond') >= this.cfg.balance.sos.bondMin ? `<span>${escapeHtml(this.tx('dialogue.sos'))}</span>` : '';
@@ -709,7 +725,7 @@ export class GameUI {
     const pings = g.pings
       .map(
         (p) =>
-          `<div class="ping ping--${p.from}" style="--age:${(p.age / timeout).toFixed(2)}"><b>${escapeHtml(this.tx('work.ping'))}</b> ${escapeHtml(this.tx(`work.ping.${p.from}`))}<em>${escapeHtml(this.tx(`work.cost.${p.from}`))}</em></div>`,
+          `<div class="ping ping--${p.from}" data-code="Digit1" style="--age:${(p.age / timeout).toFixed(2)}"><b>${escapeHtml(this.tx('work.ping'))}</b> ${escapeHtml(this.tx(`work.ping.${p.from}`))}<em>${escapeHtml(this.tx(`work.cost.${p.from}`))}</em></div>`,
       )
       .join('');
     const income = s.sim.life.get('income');
@@ -881,7 +897,7 @@ export class GameUI {
           ${this.leaveHtml(s)}
           ${s.dayIndex === 0 ? `<p class="screen__gauges">${escapeHtml(this.tx('intro.gauges'))}</p>` : ''}
           <p class="screen__cta">${escapeHtml(this.tx('screen.dayIntro.hint'))}</p>
-          <p class="screen__hint">${escapeHtml(this.tx('hud.controls'))}</p>
+          <p class="screen__hint screen__keys">${escapeHtml(this.tx('hud.controls'))}</p>
         </div>`;
         break;
       case 'burnout':
@@ -1132,4 +1148,13 @@ export class GameUI {
     el('p', 'options__warn', box, this.tx('screen.photosensitive'));
     el('p', 'options__close', box, this.tx('options.close'));
   }
+}
+
+/** 고른 줄이 넘치는 목록(낮은 화면의 상점·폰) 밖으로 나가지 않게. 목록을 새로 그렸을 때만 */
+const scrolledSel = new WeakSet<Element>();
+function keepSelectedInView(host: HTMLElement): void {
+  const sel = host.querySelector('li.sel');
+  if (!sel || scrolledSel.has(sel)) return;
+  scrolledSel.add(sel);
+  sel.scrollIntoView({ block: 'nearest' });
 }
