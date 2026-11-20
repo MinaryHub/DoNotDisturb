@@ -438,6 +438,14 @@ export const presentationConfigSchema = z.object({
       roof: z.object({ thickness: positive, occludedAlpha: z.number().min(0).max(1) }),
       /** 밤: 해·하늘빛을 이만큼 줄이고, 플레이어 둘레에 작은 빛 */
       night: z.object({ dim: z.number().min(0).max(1), playerLight: nonNegative }),
+      /** 부드러운 감성: 노출(톤 매핑), 가구 모서리 둥글기(칸), 그림자 번짐 */
+      exposure: positive,
+      roundness: nonNegative,
+      shadowSoftness: nonNegative,
+      /** 하늘·안개 색 (지상은 멀수록 이 색으로 옅어진다). fogNear·fogFar는 카메라 거리의 배수 */
+      sky: z.object({ day: z.string(), dusk: z.string(), night: z.string(), indoor: z.string(), fogNear: positive, fogFar: positive }),
+      /** 3D에서만 쓰는 부드러운 색 (타일 id·tree·trunk·bus·skin 등). 없으면 타일 색 그대로 */
+      palette: z.record(z.string(), z.string()),
     })
     .optional(),
   /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
@@ -453,6 +461,13 @@ export const presentationConfigSchema = z.object({
       /** Danger 이하에서 벽이 높아지는 정도 (1 = 두 배) */
       dangerGrow: nonNegative,
     })
+    .optional(),
+  /**
+   * 부드러운 감성 (설정 '부드러운 빛'): 화면을 1/scale로 줄여 흐린 그림을 screen으로 얹어 빛이 번지게(glow),
+   * 어둠을 따뜻한 색으로 살짝 들어 올리고(lift), 전체를 조금 덜 짙게(saturate)
+   */
+  soft: z
+    .object({ scale: z.number().int().min(2).max(8), blurPx: nonNegative, glow: unit, lift: unit, liftColor: z.string(), saturate: positive, contrast: positive })
     .optional(),
   /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
   particles: z.object({
@@ -489,6 +504,20 @@ export const presentationConfigSchema = z.object({
     migraineWhineGain: nonNegative,
     sanctuaryMusicGain: nonNegative,
     crossfadeSec: positive,
+    /**
+     * 부드러운 소리: 공간감(리버브 길이·양), 높은 소리 깎기(warmth: 이 Hz 위를 -warmthDb), 마음이 고요할 때만 들리는 배경 화음(padGain),
+     * 낮의 새소리·밤의 풀벌레(바깥, 사람이 적을 때), 집의 오르골 선율(melodyGain)
+     */
+    soft: z.object({
+      reverbSec: positive,
+      reverbWet: unit,
+      warmthHz: positive,
+      warmthDb: z.number().max(0),
+      padGain: nonNegative,
+      birdsGain: nonNegative,
+      cricketsGain: nonNegative,
+      melodyGain: nonNegative,
+    }),
   }),
 });
 export type PresentationConfig = z.infer<typeof presentationConfigSchema>;

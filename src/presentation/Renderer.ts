@@ -47,6 +47,8 @@ export class Renderer {
   private wctx: CanvasRenderingContext2D;
   /** 밤 조명: 어둠을 칠하고 불빛 자리를 지워 낸 뒤 월드 위에 덮는다 */
   private readonly light: HTMLCanvasElement;
+  /** 부드러운 빛을 만들 작은 캔버스 */
+  private glowCanvas: HTMLCanvasElement | null = null;
   private readonly lctx: CanvasRenderingContext2D;
   private readonly chunks = new Map<string, HTMLCanvasElement>();
   private dpr = 1;
@@ -1471,9 +1473,11 @@ export class Renderer {
       ctx.rotate(-this.stretchAxis);
       ctx.translate(-pp.x * this.dpr, -pp.y * this.dpr);
     }
-    ctx.filter = filter;
+    const soft = st.softGlow ? this.cfg.presentation.soft : undefined;
+    ctx.filter = soft ? `${filter} saturate(${soft.saturate}) contrast(${soft.contrast})` : filter;
     ctx.drawImage(this.world, 0, 0);
     ctx.filter = 'none';
+    if (soft) this.softGlow(soft, W, H);
     // 편두통: 색수차(겹쳐 보임)와 번지는 빛
     if (st.chromatic && ps.migraine > 0.04) {
       const off = fx.chromaticPx * ps.migraine * dist * this.dpr * (1 + 0.3 * Math.sin(ps.time * 5));
@@ -1492,6 +1496,35 @@ export class Renderer {
     }
     ctx.restore();
     this.finish(ps, st, W, H);
+  }
+
+  /**
+   * 부드러운 빛: 줄인 그림을 흐려 screen으로 얹어 밝은 곳이 은은하게 번지고(필름의 할레이션 같은),
+   * 가장 어두운 곳도 검정이 아니라 따뜻한 색으로 살짝 들린다. 줄여서 흐리므로 가볍다
+   */
+  private softGlow(soft: NonNullable<GameConfig['presentation']['soft']>, W: number, H: number): void {
+    const gw = Math.max(1, Math.round(W / soft.scale));
+    const gh = Math.max(1, Math.round(H / soft.scale));
+    const c = (this.glowCanvas ??= document.createElement('canvas'));
+    if (c.width !== gw || c.height !== gh) {
+      c.width = gw;
+      c.height = gh;
+    }
+    const g = c.getContext('2d')!;
+    g.filter = `blur(${soft.blurPx}px)`;
+    g.clearRect(0, 0, gw, gh);
+    g.drawImage(this.world, 0, 0, gw, gh);
+    g.filter = 'none';
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = soft.glow;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(c, 0, 0, W, H);
+    ctx.globalAlpha = soft.lift;
+    ctx.fillStyle = soft.liftColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 
   /** 마무리: 늘 깔리는 은은한 가장자리 어둠과 필름 결 (깜빡임을 끄면 결이 멈춘다) */

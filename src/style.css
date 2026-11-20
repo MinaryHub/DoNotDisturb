@@ -14,7 +14,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #0d0e12;
+  background: #1f1c24;
   color: var(--ink);
   font-family: var(--font);
 }

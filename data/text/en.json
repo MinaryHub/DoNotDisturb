@@ -1265,5 +1265,6 @@
   "obj.gift": "(Half-day afternoon) Buy Mom's birthday gift at the downtown department store",
   "note.wed.gift": "Saturday is Mom's birthday. Pick up a gift at the Hanbit department store this afternoon. The subway is fast but crowded; the bus, a bike or walking each cost something else.",
   "shop.paid": "Paid {money} won.",
-  "options.view3d": "3D view (prototype · home & 3F hallway)"
+  "options.view3d": "3D view (prototype · home & 3F hallway)",
+  "options.softGlow": "Soft light (a gentle glow over the screen)"
 }
