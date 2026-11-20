@@ -2618,6 +2618,7 @@ export class GameSession {
       bedMinutes: this.clock.minutes,
       housing: life.get('housing'),
       essentials: life.get('essentials'),
+      daysLived: this.vacation ? undefined : this.dayIndex + 1,
     });
     const report = this.sim.report;
     this.reports = [...this.reports.slice(0, this.dayIndex), report];

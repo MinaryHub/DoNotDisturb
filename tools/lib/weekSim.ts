@@ -164,6 +164,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       bedMinutes: parseTime('22:00'),
       housing: sim.life.get('housing'),
       essentials: sim.life.get('essentials'),
+      daysLived: rows.length,
     }).nextMax;
     if (opts.extras) {
       const pick = game.perks.list.find((k) => k.id === EXTRA_PERKS[perks.length]);

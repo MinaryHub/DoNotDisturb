@@ -55,6 +55,8 @@ export interface NightConfig {
   /** 생활 필수가 이 미만이면 (먹을 게 없음) 감소 */
   essentialsLow: number;
   essentialsLowPenalty: number;
+  /** 한 주의 피로: startAfterDay일째 밤부터 지난 날 하나마다 −perDay */
+  weekFatigue?: { perDay: number; startAfterDay: number };
 }
 
 export interface NightInput {
@@ -64,6 +66,8 @@ export interface NightInput {
   bedMinutes: number;
   housing: number;
   essentials: number;
+  /** 오늘까지 지낸 날 수 (월요일 밤 = 1). 없으면 한 주의 피로를 따지지 않는다 (휴가 등) */
+  daysLived?: number;
 }
 
 export interface Breakdown {
@@ -84,6 +88,8 @@ export function nightRecovery(cfg: NightConfig, input: NightInput): { nextMax: n
   if (lateHours > 0) add('night.late', -lateHours * cfg.latePenaltyPerHour);
   if (input.housing < cfg.housingLow) add('night.housing', -cfg.housingLowPenalty);
   if (input.essentials < cfg.essentialsLow) add('night.essentials', -cfg.essentialsLowPenalty);
+  const wf = cfg.weekFatigue;
+  if (wf && input.daysLived !== undefined) add('night.weekFatigue', -Math.max(0, input.daysLived - wf.startAfterDay) * wf.perDay);
   const total = breakdown.reduce((s, b) => s + b.delta, 0);
   return { nextMax: Math.max(cfg.minMax, Math.min(cfg.baseMax, cfg.baseMax + total)), breakdown };
 }

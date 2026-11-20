@@ -305,6 +305,8 @@ export const lifeConfigSchema = z.object({
     housingLowPenalty: nonNegative,
     essentialsLow: nonNegative,
     essentialsLowPenalty: nonNegative,
+    /** 한 주의 피로: startAfterDay일째 밤부터 지난 날 하나마다 다음 날 상한 −perDay (주말이 다가올수록 이미 지쳐 있다) */
+    weekFatigue: z.object({ perDay: nonNegative, startAfterDay: z.number().int().min(0) }).optional(),
   }),
   rewards: z.object({
     workDone: lifeDelta,

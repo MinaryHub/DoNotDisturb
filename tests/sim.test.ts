@@ -375,6 +375,12 @@ describe('DayCycle', () => {
     expect(good.nextMax).toBe(game.life.night.baseMax);
     expect(bad.nextMax).toBeLessThan(80);
     expect(bad.nextMax).toBeGreaterThanOrEqual(game.life.night.minMax);
+    // 한 주의 피로: 지낸 날이 쌓일수록 상한이 낮아진다 (휴가처럼 날을 세지 않으면 없음)
+    const calm = { stressAtBed: 0, ruminations: 0, hobbyDone: false, bedMinutes: parseTime('22:00'), housing: 60, essentials: 60 };
+    const wf = game.life.night.weekFatigue!;
+    expect(nightRecovery(game.life.night, { ...calm, daysLived: wf.startAfterDay }).nextMax).toBe(game.life.night.baseMax);
+    expect(nightRecovery(game.life.night, { ...calm, daysLived: wf.startAfterDay + 2 }).nextMax).toBe(game.life.night.baseMax - wf.perDay * 2);
+    expect(nightRecovery(game.life.night, calm).nextMax).toBe(game.life.night.baseMax);
     const life = new LifeStats(game.life.stats);
     const lines = settleDay(game.life.settlement, life, { weeklyEval: true, monthEnd: true });
     expect(lines.map((l) => l.key)).toContain('settle.month.salary');
@@ -405,6 +411,15 @@ describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
   it('적당히 해도 생활 지표가 위에서 꽉 차지 않는다 (후반에도 회피의 대가가 남는다)', () => {
     const r = playWeek(game, 'balanced');
     for (const d of r.rows.slice(3)) for (const v of Object.values(d.life)) expect(v).toBeLessThan(95);
+  });
+
+  it('한 주의 피로: 금·토가 수요일보다 편해지지 않는다 (후반에 긴장이 풀리지 않게)', () => {
+    for (const extras of [false, true]) {
+      const r = playWeek(game, 'balanced', { commuteSec: 120, extras });
+      const end = (id: string) => r.rows.find((d) => d.day === id)!.batteryEnd;
+      expect(end('day3')).toBeLessThan(end('dayWed'));
+      expect(end('day4')).toBeLessThan(end('dayWed'));
+    }
   });
 
   it('기술·조용한 곳·부탁까지 써도 한 주의 정점(목요일)은 여전히 빠듯하다', () => {

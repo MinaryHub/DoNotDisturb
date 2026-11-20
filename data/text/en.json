@@ -1206,5 +1206,6 @@
   "diff.normal.desc": "As this game intends",
   "diff.deep.desc": "Stimuli hit harder and mornings start with less energy",
   "touch.difficulty": "Tiredness",
-  "options.view25d": "2.5D view (prototype · home & 3F hallway)"
+  "options.view25d": "2.5D view (prototype · home & 3F hallway)",
+  "night.weekFatigue": "A week of tiredness piling up"
 }
