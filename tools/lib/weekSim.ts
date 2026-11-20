@@ -1,5 +1,5 @@
 import { simConfigOf, type GameConfig } from '../../src/core/config';
-import { nightRecovery, parseTime, settleDay } from '../../src/sim/DayCycle';
+import { nightRecovery, parseTime, salaryOf, settleDay } from '../../src/sim/DayCycle';
 import { NO_MODIFIERS } from '../../src/sim/EnergyModel';
 import { applyContactOutcome, type CallHow, type MessageHow } from '../../src/sim/Phone';
 import { Simulation } from '../../src/sim/Simulation';
@@ -41,6 +41,11 @@ export interface WeekResult {
 }
 
 const IMPORTANT = ['boss', 'landlord', 'mgmtOffice', 'delivery'];
+/** 해오름동(손으로 만든 동네) 바깥에 표식이 있는 목표 = 도심 볼일 */
+const HOME_DISTRICT = { w: 340, h: 140 };
+/** 도심 볼일(필수가 아닌 발화 목표, 예: 수요일 선물 포장)을 다녀오는 시간 (초, 지하철 인파 속) */
+const DOWNTOWN_TRIP_SEC = 60;
+const DOWNTOWN_CROWD = 0.5;
 /** extras: 주간 시뮬레이션이 다룰 수 있는 기술을 이 순서로 밤마다 하나씩 */
 const EXTRA_PERKS = ['deepSleep', 'shortAnswers', 'crowdIsland', 'restMaster', 'helper'];
 
@@ -54,9 +59,9 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
     for (let i = 0; i < Math.round(sec * 60); i++) sim.step(1 / 60, ctx);
   };
   /** 출퇴근: 거리 군중 속을 걷는다 (밀도만큼 군중 자극 + 긴장, 게임과 같은 규칙) */
-  const commute = (sec: number) => {
+  const commute = (sec: number, crowd = opts.crowd ?? 0.5) => {
     const cd = game.balance.crowdDensity;
-    const density = (opts.crowd ?? 0.5) * mul('crowdScale');
+    const density = crowd * mul('crowdScale');
     sim.bus.setContinuous('crowd', 'crowd', density);
     const ctx = { outdoor: true, inSafe: false, modifiers: NO_MODIFIERS };
     for (let i = 0; i < Math.round(sec * 60); i++) {
@@ -74,6 +79,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       for (const m of marksFor(game.story, event, day.id)) applyMark(story, m);
     };
     sim.startDay(nextMax);
+    if (day.flags.payday) sim.life.addMoney(salaryOf(game.life.settlement, sim.life));
     let talks = 0;
     const encounter = (stimulus: string, talkSec: number) => {
       talks++;
@@ -94,6 +100,21 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
         if (speech.next) encounter(game.speeches[speech.next]!.stimulus, 0.1);
         if (speech.rumination || (speech.next && game.speeches[speech.next]!.rumination)) sim.bus.emit('rumination');
       }
+    }
+    // 도심 볼일 (해오름동 바깥의 필수 아닌 발화 목표): 피하면 놓친 대가, 아니면 다녀와서 말하고 값을 치른다
+    for (const o of day.objectives) {
+      const speech = Object.values(game.speeches).find((s) => s.objectiveEvent === o.on);
+      const at = game.world.interactables.find((i) => i.id === o.marker)?.at;
+      const downtown = !!at && (at[0] >= HOME_DISTRICT.w || at[1] >= HOME_DISTRICT.h);
+      if (!speech || o.mandatory || !downtown) continue;
+      if (policy === 'avoid') {
+        if (o.missed) sim.life.apply(o.missed);
+        continue;
+      }
+      commute(DOWNTOWN_TRIP_SEC, DOWNTOWN_CROWD);
+      encounter(speech.stimulus, 0.1);
+      if (speech.grant) sim.life.spend(speech.grant.price);
+      mark(o.on);
     }
     // 전화·문자
     for (const ev of day.phone) {
@@ -164,6 +185,7 @@ export function playWeek(game: GameConfig, policy: Policy, opts: WeekOptions = {
       bedMinutes: parseTime('22:00'),
       housing: sim.life.get('housing'),
       essentials: sim.life.get('essentials'),
+      daysLived: rows.length,
     }).nextMax;
     if (opts.extras) {
       const pick = game.perks.list.find((k) => k.id === EXTRA_PERKS[perks.length]);

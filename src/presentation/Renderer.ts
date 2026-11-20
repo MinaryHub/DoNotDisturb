@@ -12,7 +12,9 @@ import { Pigeons, Roofs, drawCloudShadows, timeTint } from './draw/ambient';
 import { Particles } from './draw/particles';
 import { Canopies } from './draw/trees';
 import { drawPerson, drawUmbrella, hashOf, hslHex, lookFor, shade, type Accessory, type Look } from './draw/people';
+import { drawBlock, drawCatStanding, drawStanding, type Drawable } from './draw/view25d';
 import type { PresentationState } from './PresentationState';
+import type { Bus3D, Person3D as Person3DInput, Scene3D, Scene3DExtras } from './three/Scene3D';
 import type { Settings } from './Settings';
 
 // 2D 탑다운 렌더러. 그래픽의 세밀함 대신, 플레이어의 심리 상태가 화면 전체를 어떻게 바꾸는지에 집중한다.
@@ -41,7 +43,8 @@ export class Renderer {
   readonly camera = new Camera2D();
   private readonly ctx: CanvasRenderingContext2D;
   private readonly world: HTMLCanvasElement;
-  private readonly wctx: CanvasRenderingContext2D;
+  /** 월드를 그리는 캔버스 (3D 시점에서는 잠깐 바닥 표시 캔버스로 바뀐다) */
+  private wctx: CanvasRenderingContext2D;
   /** 밤 조명: 어둠을 칠하고 불빛 자리를 지워 낸 뒤 월드 위에 덮는다 */
   private readonly light: HTMLCanvasElement;
   private readonly lctx: CanvasRenderingContext2D;
@@ -70,6 +73,17 @@ export class Renderer {
   private lastTrauma = 0;
   /** 필름 결: 미리 만든 잡음 타일 */
   private grain: HTMLCanvasElement | null = null;
+  /** 이번 프레임이 2.5D 시점인지 (시제품: 지정한 층만) */
+  private v25 = false;
+  /** 2.5D에서 시선 선을 눈높이에서 긋기 위한 높이 (칸) */
+  private eyeLift = 0;
+  /** 3D 시점 시제품: 층마다 한 번 만든 장면 (Three.js는 처음 필요할 때 불러온다) */
+  private scene3d: Scene3D | null = null;
+  private readonly scenes3d = new Map<string, Scene3D>();
+  private three3d: typeof import('./three/Scene3D') | null = null;
+  private scene3dLoading = false;
+  private v3d = false;
+  private zoom3d = 1;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -104,6 +118,7 @@ export class Renderer {
     this.canvas.style.height = `${h}px`;
     this.camera.viewW = w;
     this.camera.viewH = h;
+    for (const sc of this.scenes3d.values()) sc.resize(w, h, this.dpr);
   }
 
   render(dt: number, s: GameSession, ps: PresentationState, st: Settings): void {
@@ -115,6 +130,20 @@ export class Renderer {
     // 카메라: 플레이어 (외시경이면 복도). Danger 이하에서는 세상이 멀어진다(줌 아웃)
     const target = s.viewTarget ?? p.pos;
     this.layer = this.cfg.world.layers.find((l) => inRect(l.rect, target.x, target.y)) ?? this.cfg.world.layers[0]!;
+    const v25 = pc.view25d;
+    const want3d = !!pc.view3d && st.view3d && pc.view3d.layers.includes(this.layer.id);
+    this.v3d = want3d && this.ensureScene3d();
+    // 3D 장면을 불러오는 동안은 2.5D로 그린다
+    this.v25 = !this.v3d && !!v25 && (st.view25d || want3d) && v25.layers.includes(this.layer.id);
+    this.eyeLift = this.v25 ? v25!.personHeight * 0.85 : 0;
+    cam.headLift = this.v25 ? v25!.personHeight * 0.7 : 0;
+    cam.projector = null;
+    if (this.v3d) {
+      // 서 있는 사람의 머리 높이를 바닥에서 앞뒤 거리로 바꿔 이름표·독백을 머리 위에 (기울어진 카메라)
+      const pitch = (pc.view3d!.pitchDeg * Math.PI) / 180;
+      cam.headLift = ((pc.view3d!.personHeight + 0.35) * Math.cos(pitch)) / Math.sin(pitch) - 0.9;
+      this.eyeLift = 0;
+    }
     cam.follow(target, dt, pc.camera.followLerp, this.firstFrame || s.mode.kind === 'travel');
     this.firstFrame = false;
     const peep = s.mode.kind === 'peephole' ? -0.35 : 0;
@@ -122,6 +151,11 @@ export class Renderer {
     // 휴대폰처럼 작은 화면은 칸을 줄여 주변이 충분히 보이게
     const small = Math.min(1, Math.max(0.55, Math.min(cam.viewW / 1280, cam.viewH / 720)));
     cam.scale = pc.camera.tilePx * small * Math.min(1.3, Math.max(0.6, zoom)) * (1 + ps.beat * pc.camera.heartbeatPulse * (ps.stress + ps.critical) * dist);
+    this.zoom3d = Math.min(1.3, Math.max(0.6, zoom));
+    if (this.v3d) {
+      const scene = this.scene3d!;
+      cam.projector = (x, y, h) => scene.project(x, y, h);
+    }
     const shake = st.shake ? ps.trauma * ps.trauma * pc.camera.shakePx : 0;
     cam.shakeX = (Math.random() * 2 - 1) * shake + (st.shake ? Math.sin(ps.time * 40) * ps.sweat * 0.6 : 0);
     cam.shakeY = (Math.random() * 2 - 1) * shake;
@@ -134,6 +168,10 @@ export class Renderer {
   // ───────────────────────── 월드 ─────────────────────────
 
   private drawWorld(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    if (this.v3d) {
+      this.drawWorld3d(s, ps, st, dt);
+      return;
+    }
     const ctx = this.wctx;
     this.frameDt = dt;
     const cam = this.camera;
@@ -154,14 +192,14 @@ export class Renderer {
     ctx.imageSmoothingEnabled = true;
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
-        const chunk = this.chunk(cx, cy);
+        const chunk = this.v25 ? this.chunk(cx, cy, true) : this.chunk(cx, cy);
         if (chunk) ctx.drawImage(chunk, cx * CHUNK, cy * CHUNK, CHUNK + SEAM, CHUNK + SEAM);
       }
     }
 
     // Danger: 벽이 조여 온다 (천장이 낮아지는 감각의 2D 번역)
     const closeIn = this.cfg.presentation.fx.wallCloseIn * (ps.danger + ps.critical * 0.6) * st.distortion;
-    if (closeIn > 0.01) {
+    if (closeIn > 0.01 && !this.v25) {
       ctx.fillStyle = `rgba(30, 30, 38, ${Math.min(0.85, 0.35 + closeIn)})`;
       const pulse = closeIn * (1 + 0.15 * Math.sin(ps.time * 2));
       for (let y = Math.max(0, v.y0); y <= Math.min(this.map.height - 1, v.y1); y++) {
@@ -193,9 +231,12 @@ export class Renderer {
     if (onGround) this.pigeons.draw(ctx, viewRect, ps.time, false);
     this.collectTrees();
     this.canopies.drawShadows(ctx, this.trees, ps.time);
-    this.drawCrowd(s, ps);
-    for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
-    this.drawPlayer(s, ps, st);
+    if (this.v25) this.drawSorted25(s, ps, st, closeIn, v);
+    else {
+      this.drawCrowd(s, ps);
+      for (const n of s.activeNpcs()) if (this.visible(n.pos)) this.drawNpc(s, n, ps);
+      this.drawPlayer(s, ps, st);
+    }
     this.updateParticles(s, ps, dt, viewRect, night, rainHere);
     this.particles.draw(ctx, ps.time);
     // 밤에는 수관도 어둡게 (단계별 색으로 미리 그린 그림을 쓴다)
@@ -359,7 +400,7 @@ export class Renderer {
   }
 
   /** 빗줄기: 화면 공간에 그리고, 실내 영역은 지워 낸다 */
-  private drawRain(time: number): void {
+  private drawRain(time: number, clipIndoor = true): void {
     const cam = this.camera;
     const l = this.lctx;
     const W = this.light.width;
@@ -381,13 +422,15 @@ export class Renderer {
       l.lineTo(x - len * 0.25, y + len);
     }
     l.stroke();
-    l.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    l.translate(cam.viewW / 2 + cam.shakeX, cam.viewH / 2 + cam.shakeY);
-    l.scale(cam.scale, cam.scale);
-    l.translate(-cam.x, -cam.y);
-    l.globalCompositeOperation = 'destination-out';
-    l.fillStyle = '#000';
-    for (const a of this.cfg.world.areas) if (a.kind !== 'outdoor') l.fillRect(a.rect[0], a.rect[1], a.rect[2], a.rect[3]);
+    if (clipIndoor) {
+      l.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      l.translate(cam.viewW / 2 + cam.shakeX, cam.viewH / 2 + cam.shakeY);
+      l.scale(cam.scale, cam.scale);
+      l.translate(-cam.x, -cam.y);
+      l.globalCompositeOperation = 'destination-out';
+      l.fillStyle = '#000';
+      for (const a of this.cfg.world.areas) if (a.kind !== 'outdoor') l.fillRect(a.rect[0], a.rect[1], a.rect[2], a.rect[3]);
+    }
     const ctx = this.wctx;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -433,6 +476,7 @@ export class Renderer {
     for (const p of this.cfg.world.props ?? []) {
       const [x, y] = p.at;
       if (Math.abs(x - this.camera.x) > 40 || Math.abs(y - this.camera.y) > 28 || !this.visible({ x, y })) continue;
+      if (this.v3d && p.kind === 'lamp') continue;
       drawProp(ctx, p.kind, x, y, p.rot ?? 0, night, time);
     }
   }
@@ -493,10 +537,11 @@ export class Renderer {
     return !this.layer || inRect(this.layer.rect, p.x, p.y);
   }
 
-  private chunk(cx: number, cy: number): HTMLCanvasElement | null {
+  /** floorOnly: 2.5D에서 세워 그릴 칸의 장식은 빼고 바닥만 */
+  private chunk(cx: number, cy: number, floorOnly = false): HTMLCanvasElement | null {
     if (cx < 0 || cy < 0 || cx * CHUNK >= this.map.width || cy * CHUNK >= this.map.height) return null;
     const layer = this.layer!;
-    const key = `${layer.id}:${cx},${cy}`;
+    const key = `${floorOnly ? '25d:' : ''}${layer.id}:${cx},${cy}`;
     let c = this.chunks.get(key);
     if (c) {
       // LRU: 최근 사용으로 이동
@@ -514,7 +559,10 @@ export class Renderer {
         for (let x = 0; x < CHUNK; x++) {
           const tx = cx * CHUNK + x;
           const ty = cy * CHUNK + y;
-          if (inRect(layer.rect, tx, ty)) this.paintTile(g, tx, ty, x, y, pass);
+          if (inRect(layer.rect, tx, ty)) {
+            if (floorOnly && pass === 'deco' && (this.height25(tx, ty) > 0 || this.map.def(tx, ty).id === 'tree')) continue;
+            this.paintTile(g, tx, ty, x, y, pass);
+          }
           else if (pass === 'floor') {
             g.fillStyle = this.cfg.tiles[0]!.color;
             g.fillRect(x, y, 1.02, 1.02);
@@ -678,6 +726,8 @@ export class Renderer {
     ctx.beginPath();
     ctx.arc(x, y, 0.18, 0, Math.PI * 2);
     ctx.fill();
+    // 3D에서는 떠 있는 화살표를 장면이 따로 세운다
+    if (this.v3d) return;
     const by = y - 1.05 - Math.abs(Math.sin(time * 3)) * 0.3;
     ctx.beginPath();
     ctx.moveTo(x - 0.32, by - 0.32);
@@ -798,19 +848,21 @@ export class Renderer {
       ctx.beginPath();
       ctx.ellipse(a.pos.x, a.pos.y + 0.18, r, r * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      // 피곤할수록 군중은 얼굴 없는 회색 덩어리처럼 보인다
-      const grey = Math.min(1, ps.tired * 0.6 + ps.danger * 0.4);
-      const sat = Math.round(30 * (1 - grey));
-      let base = lookFor(`crowd${a.id}`, '#000000');
-      // 비 오는 날 바깥 행인은 대부분 우산을 쓴다
-      if (s.raining && a.id % 5 !== 0 && this.outdoorAt(a.pos)) base = { ...base, accessory: 'umbrella', accent: UMBRELLAS[a.id % UMBRELLAS.length]! };
-      const look: Look =
-        grey > 0.5
-          ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: base.accessory === 'umbrella' ? 'umbrella' : 'none' }
-          : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
+      const look = this.crowdLook(s, ps, a);
       const facing = this.turned(`c${a.id}`, Math.atan2(a.dir.y, a.dir.x));
       drawPerson(ctx, a.pos.x, a.pos.y, look, { r: r * this.peopleScale, facing, walkPhase: a.phase, walking: true, bob, faceless: ps.danger > 0.3, time: ps.time, seed: a.id, headTurn: Math.sin(ps.time * 0.5 + a.id) * 0.25 });
     }
+  }
+
+  /** 행인 생김새: 피곤할수록 얼굴 없는 회색 덩어리처럼 보인다. 비 오는 날 바깥 행인은 대부분 우산을 쓴다 */
+  private crowdLook(s: GameSession, ps: PresentationState, a: GameSession['crowd']['agents'][number]): Look {
+    const grey = Math.min(1, ps.tired * 0.6 + ps.danger * 0.4);
+    const sat = Math.round(30 * (1 - grey));
+    let base = lookFor(`crowd${a.id}`, '#000000');
+    if (s.raining && a.id % 5 !== 0 && this.outdoorAt(a.pos)) base = { ...base, accessory: 'umbrella', accent: UMBRELLAS[a.id % UMBRELLAS.length]! };
+    return grey > 0.5
+      ? { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12), skin: hslHex(a.hue, 6, 70 - ps.danger * 10), hair: hslHex(a.hue, 6, 34), accessory: base.accessory === 'umbrella' ? 'umbrella' : 'none' }
+      : { ...base, top: hslHex(a.hue, sat, 52 - ps.danger * 12) };
   }
 
   private drawNpc(s: GameSession, n: Npc, ps: PresentationState): void {
@@ -1019,6 +1071,317 @@ export class Renderer {
     ctx.restore();
   }
 
+  // ───────────────────────── 3D 시제품 ─────────────────────────
+
+  /** 디버그: 3D 장면의 그리기 호출·청크 수 (2D면 null) */
+  stats3d(): { calls: number; triangles: number; chunks: number; layer: string } | null {
+    return this.v3d && this.scene3d ? { ...this.scene3d.stats(), layer: this.scene3d.layer.id } : null;
+  }
+
+  /** 3D 장면이 준비됐는지. 처음이면 Three.js를 불러오기 시작한다 (그동안 false). 장면은 층마다 하나씩 두고 다시 쓴다 */
+  private ensureScene3d(): boolean {
+    const layer = this.layer!;
+    const mod = this.three3d;
+    if (!mod) {
+      if (!this.scene3dLoading) {
+        this.scene3dLoading = true;
+        void import('./three/Scene3D').then((m) => {
+          this.three3d = m;
+        });
+      }
+      return false;
+    }
+    let scene = this.scenes3d.get(layer.id);
+    if (!scene) {
+      // 바닥 청크는 그 층 기준으로 (청크를 만드는 사이 다른 층으로 갔을 수도 있다)
+      const floor = (cx: number, cy: number) => {
+        const prev = this.layer;
+        this.layer = layer;
+        const c = this.chunk(cx, cy, true);
+        this.layer = prev;
+        return c;
+      };
+      const inLayer = (x: number, y: number) => inRect(layer.rect, x, y);
+      const extras: Scene3DExtras = {
+        roofs: layer.id === 'ground' ? this.roofs.list() : [],
+        labels: this.cfg.world.labels.filter((l) => inLayer(l.at[0], l.at[1])).map((l) => ({ x: l.at[0], y: l.at[1], text: t(this.cfg.text, l.textKey), color: l.color })),
+        lamps: (this.cfg.world.props ?? []).filter((p) => p.kind === 'lamp' && inLayer(p.at[0], p.at[1])).map((p) => ({ x: p.at[0], y: p.at[1] })),
+      };
+      scene = new mod.Scene3D(this.cfg, this.map, layer, floor, CHUNK, extras);
+      scene.resize(this.camera.viewW, this.camera.viewH, this.dpr);
+      this.scenes3d.set(layer.id, scene);
+    }
+    this.scene3d = scene;
+    return true;
+  }
+
+  private drawWorld3d(s: GameSession, ps: PresentationState, st: Settings, dt: number): void {
+    const scene = this.scene3d!;
+    const cam = this.camera;
+    this.frameDt = dt;
+    const cfg = this.cfg.presentation;
+    const closeIn = Math.min(1, cfg.fx.wallCloseIn * (ps.danger + ps.critical * 0.6) * st.distortion * 2.5);
+
+    const onGround = this.layer!.id === 'ground';
+    const night = onGround ? this.nightLevel(s) : 0;
+    const rainHere = s.raining && onGround;
+    this.roofs.update(dt, s.player.pos);
+
+    // 바닥 표시(구역·상호작용·목표·시야 콘·시선 선·소리 파동·개인 공간·좌판·소품·입자)를 2D 그대로 그려 바닥에 덮는다
+    scene.placeOverlay({ x: cam.x, y: cam.y });
+    const o = scene.overlay.getContext('2d')!;
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.clearRect(0, 0, scene.overlay.width, scene.overlay.height);
+    const k = scene.overlayScale;
+    const [ox, oy, ow, oh] = scene.overlayRect;
+    o.setTransform(k, 0, 0, k, -ox * k, -oy * k);
+    const worldCtx = this.wctx;
+    this.wctx = o;
+    try {
+      this.drawStalls(s);
+      this.drawProps(night, ps.time);
+      if (rainHere) this.drawPuddles(ps.time);
+      this.drawZones(s, ps);
+      this.drawInteractHints(s, ps);
+      this.drawQuietSpots(s, ps.time);
+      this.drawViewCones(s, ps);
+      this.drawGaze(s, ps);
+      this.updateRings(s, ps, st, dt);
+      const p = s.player.pos;
+      o.strokeStyle = `rgba(255,255,255,${0.12 + ps.stress * 0.15})`;
+      o.lineWidth = 0.05;
+      o.setLineDash([0.14, 0.12]);
+      o.beginPath();
+      o.arc(p.x, p.y, this.cfg.balance.personalSpace.radius, 0, Math.PI * 2);
+      o.stroke();
+      o.setLineDash([]);
+      const view: Rect = [ox, oy, ow, oh];
+      const others = s.crowd.agents.filter((a) => a.active).map((a) => a.pos);
+      this.pigeons.update(dt, s.player.pos, s.player.running, others);
+      if (onGround) this.pigeons.draw(o, view, ps.time, false);
+      this.updateParticles(s, ps, dt, view, night, rainHere);
+      this.particles.draw(o, ps.time);
+      this.drawItemBreak(s, ps);
+    } finally {
+      this.wctx = worldCtx;
+    }
+
+    // 사람들 (행인 포함)
+    const H = cfg.view3d!.personHeight;
+    const people: Person3DInput[] = [];
+    for (const n of s.activeNpcs()) {
+      if (!this.visible(n.pos) || Math.abs(n.pos.x - cam.x) > 40 || Math.abs(n.pos.y - cam.y) > 30) continue;
+      let look = n.type === 'pet' ? { ...this.lookOf(n), top: n.profile.color } : this.lookOf(n);
+      if (s.raining && n.type !== 'pet' && this.outdoorAt(n.pos)) look = { ...look, accessory: 'umbrella', accent: UMBRELLAS[hashOf(n.id) % UMBRELLAS.length]! };
+      people.push({
+        id: n.id,
+        x: n.pos.x,
+        y: n.pos.y,
+        facing: this.turned(n.id, n.facing),
+        look,
+        walking: n.speed > 0.1,
+        walkPhase: ps.time * 9 + (hashOf(n.id) % 100),
+        height: H * (0.94 + (hashOf(n.id) % 10) * 0.012),
+        kind: n.type === 'pet' ? 'cat' : 'person',
+        seated: n.state === 'seated',
+        ally: n.type === 'ally',
+      });
+    }
+    for (const a of s.crowd.agents) {
+      if (!a.active || !this.visible(a.pos) || Math.abs(a.pos.x - cam.x) > 34 || Math.abs(a.pos.y - cam.y) > 26) continue;
+      people.push({
+        id: `c${a.id}`,
+        x: a.pos.x,
+        y: a.pos.y,
+        facing: this.turned(`c${a.id}`, Math.atan2(a.dir.y, a.dir.x)),
+        look: this.crowdLook(s, ps, a),
+        walking: true,
+        walkPhase: a.phase,
+        height: H * (a.large ? 1.08 : 0.92 + (a.id % 10) * 0.014),
+        kind: 'person',
+        crowd: true,
+        faceless: ps.danger > 0.3,
+      });
+    }
+    const pl = s.player;
+    const m = s.mode;
+    const hidePlayer = m.kind === 'travel' || m.kind === 'metro' || (m.kind === 'bus' && m.phase === 'riding');
+    if (!hidePlayer) {
+      let look = PLAYER_LOOK_BASE(pl.hidden ? '#567a8f' : '#6c8fb2', '#f0dac4');
+      if (s.raining && this.outdoorAt(pl.pos) && !pl.biking) look = { ...look, accessory: 'umbrella', accent: '#3b6fb6' };
+      people.push({
+        id: 'player',
+        x: pl.pos.x,
+        y: pl.pos.y,
+        facing: this.turned('player', pl.facing),
+        look,
+        walking: pl.moving && ps.cover < 0.3,
+        walkPhase: pl.walkPhase,
+        height: H,
+        kind: 'person',
+        blush: ps.flush,
+        sink: ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0,
+        phone: ps.phone > 0.4,
+        bike: pl.biking,
+      });
+    }
+    const buses: Bus3D[] = onGround
+      ? s.busesOnRoad().filter((b) => Math.abs(b.x - cam.x) < 50 && Math.abs(b.y - cam.y) < 35).map((b) => ({ key: `${b.dir}:${b.depart}`, x: b.x, y: b.y, dir: b.dir, stopped: b.stopped }))
+      : [];
+    const markers = new Set(s.objectives.visible().map((ob) => ob.def.marker).filter((id): id is string => !!id));
+    const beacons = this.cfg.world.interactables
+      .filter((it) => markers.has(it.id) && this.visible({ x: it.at[0], y: it.at[1] }) && Math.abs(it.at[0] - cam.x) < 45 && Math.abs(it.at[1] - cam.y) < 32)
+      .map((it) => ({ x: it.at[0], y: it.at[1] }));
+    const indoor = !onGround || !this.outdoorAt(pl.pos);
+    scene.render({ target: { x: cam.x, y: cam.y }, zoom: this.zoom3d, closeIn, people, focus: hidePlayer ? null : pl.pos, time: ps.time, night, indoor, buses, beacons, dt });
+
+    // 3D 장면을 월드 캔버스로 (흔들림만 더한다). 이후 합성·심리 오버레이는 2D와 같다
+    const ctx = this.wctx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = this.cfg.tiles[0]!.color;
+    ctx.fillRect(0, 0, this.world.width, this.world.height);
+    ctx.drawImage(scene.canvas, cam.shakeX * this.dpr, cam.shakeY * this.dpr, this.world.width, this.world.height);
+    // 시간대 빛깔·빗줄기는 화면 공간에 (실내에 들어서면 비는 그친다)
+    this.drawTimeTint(s, dt, [0, 0, this.world.width, this.world.height]);
+    if (rainHere && !indoor) this.drawRain(ps.time, false);
+  }
+
+  // ───────────────────────── 2.5D 시제품 ─────────────────────────
+
+  /** 이 칸을 세워 그릴 높이 (칸). 0이면 바닥 */
+  private height25(tx: number, ty: number): number {
+    const v = this.cfg.presentation.view25d;
+    if (!v) return 0;
+    return v.heights[this.map.def(tx, ty).id] ?? 0;
+  }
+
+  /**
+   * 벽·가구와 사람을 '바닥에 닿는 아래쪽 y' 순서로 그린다 (앞에 있는 것이 뒤를 가린다).
+   * 사람을 가리는 벽은 반투명하게. Danger 이하에서는 벽이 높아지고 어두워진다 (천장이 낮아지는 감각 대신 벽이 솟는다)
+   */
+  private drawSorted25(s: GameSession, ps: PresentationState, st: Settings, closeIn: number, v: { x0: number; y0: number; x1: number; y1: number }): void {
+    const ctx = this.wctx;
+    const cfg = this.cfg.presentation.view25d!;
+    const m = this.map;
+    const grow = 1 + cfg.dangerGrow * Math.min(1, closeIn * 2.5) * (1 + 0.06 * Math.sin(ps.time * 2));
+    const dim = Math.min(1, closeIn * 2.5);
+    const H = cfg.personHeight;
+    const people: Vec2[] = [s.player.pos, ...s.activeNpcs().filter((n) => this.visible(n.pos)).map((n) => n.pos)];
+    const heightOf = (tx: number, ty: number) => {
+      const h = this.height25(tx, ty);
+      return h > 0 && m.def(tx, ty).tall ? h * grow : h;
+    };
+    const items: Drawable[] = [];
+    // 아래쪽 칸의 벽도 위로 솟아 화면에 들어오므로 아래로 몇 줄 더 본다
+    for (let ty = Math.max(0, v.y0); ty <= Math.min(m.height - 1, v.y1 + 3); ty++) {
+      for (let tx = Math.max(0, v.x0); tx <= Math.min(m.width - 1, v.x1); tx++) {
+        if (!inRect(this.layer!.rect, tx, ty)) continue;
+        const h = heightOf(tx, ty);
+        if (h <= 0) continue;
+        const d = m.def(tx, ty);
+        const hBelow = inRect(this.layer!.rect, tx, ty + 1) ? heightOf(tx, ty + 1) : 0;
+        const covers = people.some((p) => ty + 1 > p.y && tx < p.x + 0.35 && tx + 1 > p.x - 0.35 && ty - h < p.y && ty + 1 > p.y - H);
+        const n = { up: m.def(tx, ty - 1), down: m.def(tx, ty + 1), left: m.def(tx - 1, ty), right: m.def(tx + 1, ty), upLeft: m.def(tx - 1, ty - 1), upRight: m.def(tx + 1, ty - 1) };
+        items.push({ base: ty + 1, draw: () => drawBlock(ctx, d, n, tx, ty, h, hBelow, covers ? cfg.fadeAlpha : 1, d.tall ? dim : 0) });
+      }
+    }
+    for (const n of s.activeNpcs()) if (this.visible(n.pos)) items.push({ base: n.pos.y, draw: () => this.drawNpc25(s, n, ps, H) });
+    const hidePlayer = s.mode.kind === 'travel' || s.mode.kind === 'metro' || (s.mode.kind === 'bus' && s.mode.phase === 'riding');
+    if (!hidePlayer) items.push({ base: s.player.pos.y + 0.001, draw: () => this.drawPlayer25(s, ps, st, H) });
+    items.sort((a, b) => a.base - b.base);
+    for (const it of items) it.draw();
+  }
+
+  private drawNpc25(s: GameSession, n: Npc, ps: PresentationState, H: number): void {
+    const ctx = this.wctx;
+    const { x, y } = n.pos;
+    if (n.type === 'pet') {
+      drawCatStanding(ctx, x, y, this.turned(n.id, n.facing), n.profile.color, ps.time);
+      return;
+    }
+    if (n.type === 'ally') {
+      const g = ctx.createRadialGradient(x, y - H * 0.5, 0.2, x, y - H * 0.5, 2.2);
+      g.addColorStop(0, `rgba(255, 214, 90, ${0.3 + 0.08 * Math.sin(ps.time * 2)})`);
+      g.addColorStop(1, 'rgba(255, 214, 90, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 2.2, y - H * 0.5 - 2.2, 4.4, 4.4);
+    }
+    const walking = n.speed > 0.1;
+    const seed = hashOf(n.id) % 100;
+    const facing = this.turned(n.id, n.facing);
+    const toMe = Math.atan2(s.player.pos.y - y, s.player.pos.x - x) - facing;
+    const wrapped = Math.atan2(Math.sin(toMe), Math.cos(toMe));
+    drawStanding(ctx, x, y, this.lookOf(n), {
+      height: H * (0.94 + (seed % 10) * 0.012),
+      facing,
+      walkPhase: ps.time * 9 + seed,
+      walking,
+      running: n.speed > 2.4,
+      time: ps.time,
+      seed,
+      reach: n.gesture === 'reach' ? 0.3 : 0,
+      talk: n.state === 'dialogue' ? 1 : 0,
+      seated: n.state === 'seated',
+      headTurn: n.notice > 0.3 && n.state !== 'dialogue' ? wrapped : 0,
+    });
+    if (n.notice > 0.15 && n.type !== 'ally' && n.state !== 'dialogue' && n.state !== 'seated') {
+      const full = n.pursuing;
+      ctx.save();
+      ctx.font = `700 ${full ? 0.62 : 0.5}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = full ? '#ff8a6a' : `rgba(255, 240, 210, ${0.4 + n.notice * 0.6})`;
+      ctx.fillText(full ? '!' : '?', x, y - H - 0.25);
+      ctx.restore();
+    }
+  }
+
+  private drawPlayer25(s: GameSession, ps: PresentationState, st: Settings, H: number): void {
+    const ctx = this.wctx;
+    const p = s.player;
+    const { x, y } = p.pos;
+    // 개인 공간 버블 (바닥)
+    ctx.strokeStyle = `rgba(255,255,255,${0.08 + ps.stress * 0.12})`;
+    ctx.lineWidth = 0.04;
+    ctx.setLineDash([0.12, 0.12]);
+    ctx.beginPath();
+    ctx.ellipse(x, y, this.cfg.balance.personalSpace.radius, this.cfg.balance.personalSpace.radius * 0.8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 번아웃: 그 자리에 주저앉는다 (키가 줄고 옆으로 퍼진다)
+    const sink = ps.burnoutTime >= 0 ? Math.min(1, ps.burnoutTime / 1.5) : 0;
+    const fl = ps.flush;
+    const skin = `#${[240 + fl * 10, 218 - fl * 70, 196 - fl * 70].map((v) => Math.round(Math.min(255, v)).toString(16).padStart(2, '0')).join('')}`;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1 + sink * 0.3, 1 - sink * 0.45);
+    drawStanding(ctx, 0, 0, PLAYER_LOOK_BASE(p.hidden ? '#567a8f' : '#6c8fb2', skin), {
+      height: H,
+      facing: this.turned('player', p.facing),
+      walkPhase: p.walkPhase,
+      walking: p.moving && ps.cover < 0.3,
+      running: p.running && p.moving,
+      bob: p.moving ? Math.sin(p.walkPhase * 2) * 0.02 : 0,
+      time: ps.time,
+      seed: 7,
+      blush: fl,
+      eyesClosed: ps.eyes > 0.5,
+      mask: p.mask,
+      earphones: p.earphones,
+      coverFace: ps.cover > 0.3,
+      phoneHold: ps.phone,
+      hunch: Math.min(1, ps.stress * 0.9 + ps.danger * 0.4),
+      tremble: st.shake ? ps.sweat : 0,
+    });
+    if (ps.sweat > 0.3) {
+      ctx.fillStyle = 'rgba(170, 215, 255, 0.85)';
+      const k = (ps.time * 1.5) % 1;
+      ctx.beginPath();
+      ctx.arc(0.16, -H * 0.95 + k * 0.25, 0.04, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   /** 나를 보는 시선: 가늘고 따가운 선 */
   private drawGaze(s: GameSession, ps: PresentationState): void {
     const ctx = this.wctx;
@@ -1039,7 +1402,7 @@ export class Renderer {
         const nx = -(p.y - n.pos.y) / d;
         const ny = (p.x - n.pos.x) / d;
         const px = n.pos.x + (p.x - n.pos.x) * k + nx * jitter;
-        const py = n.pos.y + (p.y - n.pos.y) * k + ny * jitter;
+        const py = n.pos.y + (p.y - n.pos.y) * k + ny * jitter - this.eyeLift;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }

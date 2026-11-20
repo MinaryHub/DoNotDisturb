@@ -103,12 +103,26 @@
       "closes": "16:00"
     },
     {
+      "id": "gift",
+      "textKey": "obj.gift",
+      "on": "done:gift",
+      "requires": [
+        "work"
+      ],
+      "marker": "deptGift",
+      "closes": "20:00",
+      "missed": {
+        "bond": -8
+      }
+    },
+    {
       "id": "home",
       "textKey": "obj.home",
       "on": "interact:bed",
       "requires": [
         "pharmacy",
-        "laundry"
+        "laundry",
+        "gift"
       ],
       "endsDay": true,
       "marker": "bed"
@@ -465,5 +479,10 @@
       "income": -3
     },
     "noteKey": "leave.note.wed"
-  }
+  },
+  "notes": [
+    {
+      "textKey": "note.wed.gift"
+    }
+  ]
 }

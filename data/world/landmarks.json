@@ -190,6 +190,8 @@
     { "id": "stationBench", "kind": "bench", "at": [535, 97.6], "labelKey": "interact.bench" },
     { "id": "metroCentral", "kind": "metroGate", "at": [555, 118.4], "labelKey": "interact.metro", "target": "central" },
     { "id": "deptCafe", "kind": "shop", "at": [712, 123.4], "labelKey": "interact.cafeOrder", "shop": "cafe" },
+    { "id": "deptGift", "kind": "speech", "at": [663, 123.4], "labelKey": "interact.deptGift", "speech": "giftWrap" },
+    { "id": "deptLiving", "kind": "shop", "at": [703, 123.4], "labelKey": "interact.deptLiving", "shop": "deptLiving" },
     { "id": "deptPerfume", "kind": "flavor", "at": [656, 123.4], "labelKey": "interact.gen.perfume", "monologue": "mono.dept.perfume" },
     { "id": "deptDirectory", "kind": "flavor", "at": [686, 82.4], "labelKey": "interact.gen.directory", "monologue": "mono.dept.directory" },
     { "id": "mkTteok", "kind": "shop", "at": [50, 187.6], "labelKey": "interact.gen.tteok", "shop": "bakery" },
@@ -221,6 +223,7 @@
     { "id": "busE_campus", "kind": "busStop", "at": [300, 71.2], "labelKey": "interact.bus.toCampus", "target": "campus" }
   ],
   "spawns": {
+    "friendRiver": [576, 338],
     "deptClerk1": [681, 88],
     "deptClerk2": [686, 112],
     "mkSampler1": [110, 193],

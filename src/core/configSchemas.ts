@@ -205,7 +205,15 @@ export const itemsConfigSchema = z.object({
       }),
     ),
   /** 쓰면 없어지지 않는 물건 (우산 등). 상점 품목 item에 소모품 대신 이 id를 쓸 수 있다 */
-  gear: z.array(z.object({ id: z.string(), nameKey: z.string(), icon: z.enum(['umbrella']).optional() })),
+  gear: z.array(
+    z.object({
+      id: z.string(),
+      nameKey: z.string(),
+      icon: z.enum(['umbrella', 'earbuds', 'curtain', 'card']).optional(),
+      /** 가지고 있는 동안 늘 붙는 효과 (기술과 같은 효과 이름) */
+      effects: z.lazy(() => perkEffectsSchema).optional(),
+    }),
+  ),
   /** 상점·찬장·탕비실. price 0이면 무료, life는 돈 대신 쓰는 생활 지표(집 찬장), perDay는 하루에 챙길 수 있는 개수(탕비실) */
   shops: z.record(
     z.string(),
@@ -291,7 +299,10 @@ export const lifeConfigSchema = z.object({
     dailyDecay: lifeDelta,
     dailyCost: z.object({ money: nonNegative, unpaidEssentials: z.number() }),
     weekly: z.object({ goodIncome: nonNegative, goodBonusMoney: nonNegative, badIncomeDelta: z.number() }),
-    monthEnd: z.object({ rent: nonNegative, salaryBase: nonNegative, salaryPerIncome: nonNegative, unpaidHousingDelta: z.number() }),
+    /** 월말(토요일): 월세. 못 내면 주거 안정 감소 */
+    monthEnd: z.object({ rent: nonNegative, unpaidHousingDelta: z.number() }),
+    /** 월급날(하루 데이터 flags.payday, 그날 아침): 기본급 + 소득 지표 1당 가산. 한 주 동안 나눠 쓰고 토요일 월세를 남겨야 한다 */
+    payday: z.object({ salaryBase: nonNegative, salaryPerIncome: nonNegative }),
   }),
   night: z.object({
     baseMax: positive,
@@ -305,6 +316,8 @@ export const lifeConfigSchema = z.object({
     housingLowPenalty: nonNegative,
     essentialsLow: nonNegative,
     essentialsLowPenalty: nonNegative,
+    /** 한 주의 피로: startAfterDay일째 밤부터 지난 날 하나마다 다음 날 상한 −perDay (주말이 다가올수록 이미 지쳐 있다) */
+    weekFatigue: z.object({ perDay: nonNegative, startAfterDay: z.number().int().min(0) }).optional(),
   }),
   rewards: z.object({
     workDone: lifeDelta,
@@ -387,6 +400,54 @@ export const presentationConfigSchema = z.object({
   }),
   /** 사람 그리기 (src/presentation/draw/people.ts) */
   people: z.object({ visualScale: positive }),
+  /** 3D 시점 시제품 (src/presentation/three/Scene3D.ts, Three.js): 지정한 층만. 높이는 view25d.heights를 같이 쓴다 */
+  view3d: z
+    .object({
+      layers: z.array(z.string()),
+      fov: positive,
+      /** 카메라가 내려다보는 각도 (90 = 바로 위) */
+      pitchDeg: z.number().min(20).max(89),
+      /** 카메라와 바라보는 점 사이 거리 (칸) */
+      distance: positive,
+      /** Danger 이하에서 카메라가 이만큼 배로 멀어진다 */
+      dangerDistance: positive,
+      dangerGrow: nonNegative,
+      personHeight: positive,
+      shadows: z.boolean(),
+      /** 플레이어 앞(카메라 쪽)에서 낮출 벽의 깊이·폭·남길 높이 (칸) */
+      cutawayDepth: positive,
+      cutawayWidth: positive,
+      cutawayHeight: nonNegative,
+      /** 층마다 벽(tall 타일) 높이 배율. 지상 건물은 사람보다 훨씬 높게 */
+      wallScale: z.record(z.string(), positive),
+      /** 카메라 주변 이 거리(칸) 안의 청크만 장면에 둔다 */
+      streamRadius: positive,
+      /** 바닥 텍스처의 칸당 픽셀 */
+      floorPx: z.number().int().min(8).max(48),
+      /** 한 프레임에 새로 만들 청크 수 */
+      buildPerFrame: z.number().int().min(1),
+      /** 나무: 줄기 높이, 수관 반지름 (칸) */
+      tree: z.object({ trunk: positive, canopy: positive }),
+      /** 지붕: 두께, 플레이어를 가릴 때 남길 불투명도 */
+      roof: z.object({ thickness: positive, occludedAlpha: z.number().min(0).max(1) }),
+      /** 밤: 해·하늘빛을 이만큼 줄이고, 플레이어 둘레에 작은 빛 */
+      night: z.object({ dim: z.number().min(0).max(1), playerLight: nonNegative }),
+    })
+    .optional(),
+  /** 2.5D 시점 시제품 (src/presentation/draw/view25d.ts): 지정한 층만 비스듬히 내려다본다 */
+  view25d: z
+    .object({
+      layers: z.array(z.string()),
+      /** 타일 id → 세워 그릴 높이 (칸). 없으면 바닥 */
+      heights: z.record(z.string(), nonNegative),
+      /** 사람 키 (칸) */
+      personHeight: positive,
+      /** 사람을 가리는 벽·가구의 불투명도 */
+      fadeAlpha: unit,
+      /** Danger 이하에서 벽이 높아지는 정도 (1 = 두 배) */
+      dangerGrow: nonNegative,
+    })
+    .optional(),
   /** 작은 입자와 마무리 효과 (src/presentation/draw/particles.ts) */
   particles: z.object({
     /** 화면 칸 하나를 1초에 몇 번 들여다볼지. 아래 확률은 맞는 칸을 골랐을 때 생길 확률 */
@@ -532,7 +593,8 @@ export const speechesSchema = z.record(
     /** 그날 목표가 아니어도 할 수 있는 발화 (약국 등) */
     anytime: z.boolean().optional(),
     /** 끝나면 이 소모품을 값을 치르고 받는다 */
-    grant: z.object({ item: z.string(), price: nonNegative }).optional(),
+    /** 말을 마치면 값을 치르고 (item이 있으면) 받는다. item 없이 값만 치를 수도 있다 (선물 포장 등) */
+    grant: z.object({ item: z.string().optional(), price: nonNegative }).optional(),
     /** 끝나면 이어서 시작하는 발화 (발표 → 질문 시간) */
     next: z.string().optional(),
     /** 잘 끝나도 이불킥이 온다 */
@@ -752,7 +814,7 @@ export const daySchema = z.object({
   introKey: z.string(),
   start: hhmm,
   spawn: z.string(),
-  flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean() }),
+  flags: z.object({ weeklyEval: z.boolean(), monthEnd: z.boolean(), payday: z.boolean().optional() }),
   /** 비 오는 날: 바깥이 흐려지고, 우산 없이 실외에 있으면 rainSoaked 자극 */
   weather: z.enum(['clear', 'rain']).optional(),
   /** 그날만 생기는 군중 동선 (플리마켓 등) */
@@ -953,6 +1015,26 @@ export type FavorDef = FavorsConfig['list'][number];
  * 내향인의 기술 (data/perks.json): 밤마다 그날 한 일(tag)에 맞춰 offer개를 보여 주고 하나를 고른다. 한 주 동안 쌓인다.
  * 효과: 배율(…Scale)은 곱하고, 더하기(…Bonus·orderFree)는 더한다
  */
+/** 기술(perks)과 오래 쓰는 물건(items.gear)이 함께 쓰는 효과. 배율은 곱하고 나머지는 더한다 */
+export const perkEffectsSchema = z
+  .object({
+      noticeScale: positive,
+      parryBonusSec: nonNegative,
+      earphoneScale: positive,
+      smileDropScale: nonNegative,
+      dialogueDrainScale: nonNegative,
+      crowdScale: nonNegative,
+      restScale: positive,
+      nightMaxBonus: nonNegative,
+      breakScale: positive,
+      walkScale: positive,
+      orderFree: nonNegative,
+      favorScale: positive,
+      /** 공유 자전거 요금 없음 (정기권) */
+      bikeFree: nonNegative,
+  })
+  .partial();
+
 export const perksSchema = z.object({
   offer: z.number().int().min(1),
   list: z.array(
@@ -961,22 +1043,7 @@ export const perksSchema = z.object({
       tag: z.enum(['avoid', 'endure', 'rest', 'explore', 'favor']),
       nameKey: z.string(),
       descKey: z.string(),
-      effects: z
-        .object({
-          noticeScale: positive,
-          parryBonusSec: nonNegative,
-          earphoneScale: positive,
-          smileDropScale: nonNegative,
-          dialogueDrainScale: nonNegative,
-          crowdScale: nonNegative,
-          restScale: positive,
-          nightMaxBonus: nonNegative,
-          breakScale: positive,
-          walkScale: positive,
-          orderFree: nonNegative,
-          favorScale: positive,
-        })
-        .partial(),
+      effects: perkEffectsSchema,
     }),
   ),
 });

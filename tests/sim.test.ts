@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simConfigOf } from '../src/core/config';
 import { DialogueBattle, type DialogueConfig, type DialoguePool } from '../src/sim/DialogueBattle';
-import { GameClock, nightRecovery, parseTime, settleDay } from '../src/sim/DayCycle';
+import { GameClock, nightRecovery, parseTime, salaryOf, settleDay } from '../src/sim/DayCycle';
 import { EnergyModel, NO_MODIFIERS, tierOf, type EnergyConfig } from '../src/sim/EnergyModel';
 import { LifeStats } from '../src/sim/LifeStats';
 import { Phone, applyContactOutcome } from '../src/sim/Phone';
@@ -375,9 +375,18 @@ describe('DayCycle', () => {
     expect(good.nextMax).toBe(game.life.night.baseMax);
     expect(bad.nextMax).toBeLessThan(80);
     expect(bad.nextMax).toBeGreaterThanOrEqual(game.life.night.minMax);
+    // 한 주의 피로: 지낸 날이 쌓일수록 상한이 낮아진다 (휴가처럼 날을 세지 않으면 없음)
+    const calm = { stressAtBed: 0, ruminations: 0, hobbyDone: false, bedMinutes: parseTime('22:00'), housing: 60, essentials: 60 };
+    const wf = game.life.night.weekFatigue!;
+    expect(nightRecovery(game.life.night, { ...calm, daysLived: wf.startAfterDay }).nextMax).toBe(game.life.night.baseMax);
+    expect(nightRecovery(game.life.night, { ...calm, daysLived: wf.startAfterDay + 2 }).nextMax).toBe(game.life.night.baseMax - wf.perDay * 2);
+    expect(nightRecovery(game.life.night, calm).nextMax).toBe(game.life.night.baseMax);
     const life = new LifeStats(game.life.stats);
     const lines = settleDay(game.life.settlement, life, { weeklyEval: true, monthEnd: true });
-    expect(lines.map((l) => l.key)).toContain('settle.month.salary');
+    expect(lines.map((l) => l.key)).toContain('settle.month.unpaid');
+    // 월급날 아침의 급여는 소득·업무 평판을 따른다
+    const pay = game.life.settlement.payday;
+    expect(salaryOf(game.life.settlement, life)).toBe(Math.round(pay.salaryBase + life.get('income') * pay.salaryPerIncome));
   });
 });
 
@@ -405,6 +414,18 @@ describe('정책 시뮬레이션: 회피 vs 수용 vs 적당히', () => {
   it('적당히 해도 생활 지표가 위에서 꽉 차지 않는다 (후반에도 회피의 대가가 남는다)', () => {
     const r = playWeek(game, 'balanced');
     for (const d of r.rows.slice(3)) for (const v of Object.values(d.life)) expect(v).toBeLessThan(95);
+  });
+
+  it('한 주의 피로: 금·토가 한 주 초반(월·화)보다 크게 편해지지 않는다 (후반에 긴장이 풀리지 않게)', () => {
+    for (const extras of [false, true]) {
+      const r = playWeek(game, 'balanced', { commuteSec: 120, extras });
+      const end = (id: string) => r.rows.find((d) => d.day === id)!.batteryEnd;
+      const early = (end('day1') + end('day2')) / 2;
+      // 기술·조용한 곳을 찾아 쓴 만큼은 편해지되, 그 차이가 크지 않게
+      expect(end('day3')).toBeLessThan(early + 15);
+      expect(end('day4')).toBeLessThan(early + 15);
+      if (!extras) for (const d of ['day3', 'day4']) expect(end(d)).toBeLessThan(early);
+    }
   });
 
   it('기술·조용한 곳·부탁까지 써도 한 주의 정점(목요일)은 여전히 빠듯하다', () => {

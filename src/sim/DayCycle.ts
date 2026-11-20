@@ -55,6 +55,8 @@ export interface NightConfig {
   /** 생활 필수가 이 미만이면 (먹을 게 없음) 감소 */
   essentialsLow: number;
   essentialsLowPenalty: number;
+  /** 한 주의 피로: startAfterDay일째 밤부터 지난 날 하나마다 −perDay */
+  weekFatigue?: { perDay: number; startAfterDay: number };
 }
 
 export interface NightInput {
@@ -64,6 +66,8 @@ export interface NightInput {
   bedMinutes: number;
   housing: number;
   essentials: number;
+  /** 오늘까지 지낸 날 수 (월요일 밤 = 1). 없으면 한 주의 피로를 따지지 않는다 (휴가 등) */
+  daysLived?: number;
 }
 
 export interface Breakdown {
@@ -84,6 +88,8 @@ export function nightRecovery(cfg: NightConfig, input: NightInput): { nextMax: n
   if (lateHours > 0) add('night.late', -lateHours * cfg.latePenaltyPerHour);
   if (input.housing < cfg.housingLow) add('night.housing', -cfg.housingLowPenalty);
   if (input.essentials < cfg.essentialsLow) add('night.essentials', -cfg.essentialsLowPenalty);
+  const wf = cfg.weekFatigue;
+  if (wf && input.daysLived !== undefined) add('night.weekFatigue', -Math.max(0, input.daysLived - wf.startAfterDay) * wf.perDay);
   const total = breakdown.reduce((s, b) => s + b.delta, 0);
   return { nextMax: Math.max(cfg.minMax, Math.min(cfg.baseMax, cfg.baseMax + total)), breakdown };
 }
@@ -102,11 +108,13 @@ export interface SettlementConfig {
   };
   monthEnd: {
     rent: number;
-    salaryBase: number;
-    /** 소득 지표 1당 급여 가산 */
-    salaryPerIncome: number;
     /** 월세를 못 내면 주거 안정 감소 */
     unpaidHousingDelta: number;
+  };
+  /** 월급날 아침: 기본급 + 소득 지표 1당 가산 */
+  payday: {
+    salaryBase: number;
+    salaryPerIncome: number;
   };
 }
 
@@ -117,7 +125,12 @@ export interface SettlementLine {
   money?: number;
 }
 
-/** 하루 끝 정산. 금요일 업무 평가, 월말 월세·급여 */
+/** 월급날 아침에 들어오는 급여 (소득·업무 평판이 높을수록 많다) */
+export function salaryOf(cfg: SettlementConfig, life: LifeStats): number {
+  return Math.round(cfg.payday.salaryBase + life.get('income') * cfg.payday.salaryPerIncome);
+}
+
+/** 하루 끝 정산. 금요일 업무 평가, 월말 월세 (급여는 월급날 아침, salaryOf) */
 export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weeklyEval?: boolean; monthEnd?: boolean }): SettlementLine[] {
   const lines: SettlementLine[] = [];
   for (const [stat, delta] of Object.entries(cfg.dailyDecay) as [LifeStatId, number][]) {
@@ -142,9 +155,6 @@ export function settleDay(cfg: SettlementConfig, life: LifeStats, flags: { weekl
     }
   }
   if (flags.monthEnd) {
-    const salary = Math.round(cfg.monthEnd.salaryBase + life.get('income') * cfg.monthEnd.salaryPerIncome);
-    life.addMoney(salary);
-    lines.push({ key: 'settle.month.salary', money: salary });
     if (life.spend(cfg.monthEnd.rent)) {
       lines.push({ key: 'settle.month.rent', money: -cfg.monthEnd.rent });
     } else {

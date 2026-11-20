@@ -1,6 +1,6 @@
 // 소모품 아이콘 (인라인 SVG, 도형 조합). items.json의 icon 이름으로 고른다.
 
-export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box' | 'book' | 'fidget' | 'cream' | 'flower' | 'candy' | 'jelly' | 'vitamin' | 'star';
+export type ItemIcon = 'cup' | 'snack' | 'tumbler' | 'can' | 'bottle' | 'pill' | 'tea' | 'patch' | 'umbrella' | 'rice' | 'sandwich' | 'bread' | 'banana' | 'box' | 'book' | 'fidget' | 'cream' | 'flower' | 'candy' | 'jelly' | 'vitamin' | 'star' | 'earbuds' | 'curtain' | 'card';
 
 const SVG: Record<ItemIcon, string> = {
   // 찬 음료: 얼음 든 플라스틱 컵 + 빨대
@@ -40,6 +40,12 @@ const SVG: Record<ItemIcon, string> = {
   jelly: '<path d="M5 18c0-6 2.5-11 7-11s7 5 7 11z" fill="#c9e4a6"/><path d="M5 18h14v2H5z" fill="#9fc27a"/><path d="M9 11q1.5-2 3-2" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/><circle cx="12" cy="14" r="1.6" fill="#f2e8cf"/>',
   vitamin: '<rect x="6" y="5" width="12" height="16" rx="2.5" fill="#f29e4c"/><rect x="7.5" y="2.5" width="9" height="3.5" rx="1" fill="#f6f2e8"/><rect x="6" y="10" width="12" height="5" fill="#fff3d6"/><path d="M12 11v3M10.5 12.5h3" stroke="#e05a5a" stroke-width="1.4" stroke-linecap="round"/>',
   star: '<path d="M12 2.5l2.6 6.2 6.7.6-5.1 4.4 1.6 6.6L12 16.8l-5.8 3.5 1.6-6.6-5.1-4.4 6.7-.6z" fill="#c49bd8"/><path d="M12 6l1.4 3.4 3.6.3-2.7 2.4.8 3.5L12 13.7l-3.1 1.9.8-3.5-2.7-2.4 3.6-.3z" fill="#f6e7ff"/><circle cx="19" cy="4" r="1.2" fill="#f2c94c"/><circle cx="4.5" cy="18.5" r="1" fill="#f2c94c"/>',
+  // 좋은 노이즈 캔슬링 이어폰: 케이스와 이어폰 두 쪽
+  earbuds: '<rect x="4" y="11" width="16" height="9" rx="4.5" fill="#e8ecf0"/><path d="M4 15h16" stroke="#c9cdd2" stroke-width="1"/><circle cx="12" cy="17.5" r=".8" fill="#9fd38a"/><path d="M7 4a3 3 0 0 1 3 3v3H8V7.5a1.5 1.5 0 0 0-1-1.4z" fill="#f6f6f6"/><path d="M17 4a3 3 0 0 0-3 3v3h2V7.5a1.5 1.5 0 0 1 1-1.4z" fill="#f6f6f6"/>',
+  // 암막 커튼: 봉에 걸린 두 폭
+  curtain: '<rect x="3" y="3" width="18" height="2" rx="1" fill="#6b5b4b"/><path d="M4 5h7.5v15c-2 .8-5 .8-7.5 0z" fill="#3d4f6b"/><path d="M12.5 5H20v15c-2.5.8-5.5.8-7.5 0z" fill="#33445d"/><path d="M7 6v13M10 6v13M15 6v13M18 6v13" stroke="#2a3850" stroke-width=".8"/>',
+  // 자전거 정기권: 카드
+  card: '<rect x="2.5" y="6" width="19" height="12.5" rx="2" fill="#5b9a6b"/><rect x="2.5" y="9" width="19" height="2" fill="#3f6f4c"/><circle cx="8" cy="15" r="2" fill="none" stroke="#f6f2e8" stroke-width="1"/><circle cx="15" cy="15" r="2" fill="none" stroke="#f6f2e8" stroke-width="1"/><path d="M8 15l2.5-3h3l1.5 3" stroke="#f6f2e8" stroke-width="1" fill="none"/>',
   // 두통약: 알약 + 포장
   pill: '<rect x="4" y="6" width="16" height="12" rx="2" fill="#eef0f3"/><rect x="4" y="6" width="16" height="3.5" rx="1.5" fill="#6fb3ff"/><g transform="rotate(-35 12 13.5)"><rect x="7.5" y="11.5" width="9" height="4" rx="2" fill="#fff" stroke="#c9cdd2" stroke-width=".6"/><rect x="12" y="11.5" width="4.5" height="4" rx="2" fill="#e05a5a"/></g>',
 };

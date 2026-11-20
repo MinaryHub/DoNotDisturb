@@ -92,6 +92,12 @@ function boot(): void {
   const langParam = params.get('lang');
   if (langParam === 'ko' || langParam === 'en') settings.lang = langParam;
   document.documentElement.lang = settings.lang;
+  // ?view=2d|25d: 2.5D 시점 시제품 비교용 (저장하지 않음)
+  const viewParam = params.get('view');
+  if (viewParam === '2d' || viewParam === '25d' || viewParam === '3d') {
+    settings.view25d = viewParam === '25d';
+    settings.view3d = viewParam === '3d';
+  }
   try {
     cfg = loadConfig(settings.lang);
   } catch (e) {
@@ -323,7 +329,7 @@ function boot(): void {
   loop.start();
 
   // 자동화 테스트·디버그용
-  (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg };
+  (window as unknown as { dnd: unknown }).dnd = { get session() { return session; }, cfg, get view3d() { return renderer?.stats3d() ?? null; } };
 }
 
 start();

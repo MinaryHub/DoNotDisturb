@@ -7,7 +7,7 @@
     { "id": "smileMuscle", "tag": "endure", "nameKey": "perk.smileMuscle", "descKey": "perk.smileMuscle.desc", "effects": { "smileDropScale": 0.6 } },
     { "id": "shortAnswers", "tag": "endure", "nameKey": "perk.shortAnswers", "descKey": "perk.shortAnswers.desc", "effects": { "dialogueDrainScale": 0.75 } },
     { "id": "crowdIsland", "tag": "endure", "nameKey": "perk.crowdIsland", "descKey": "perk.crowdIsland.desc", "effects": { "crowdScale": 0.8 } },
-    { "id": "restMaster", "tag": "rest", "nameKey": "perk.restMaster", "descKey": "perk.restMaster.desc", "effects": { "restScale": 1.35 } },
+    { "id": "restMaster", "tag": "rest", "nameKey": "perk.restMaster", "descKey": "perk.restMaster.desc", "effects": { "restScale": 1.2 } },
     { "id": "deepSleep", "tag": "rest", "nameKey": "perk.deepSleep", "descKey": "perk.deepSleep.desc", "effects": { "nightMaxBonus": 6 } },
     { "id": "quickSnack", "tag": "rest", "nameKey": "perk.quickSnack", "descKey": "perk.quickSnack.desc", "effects": { "breakScale": 0.7 } },
     { "id": "cityWalker", "tag": "explore", "nameKey": "perk.cityWalker", "descKey": "perk.cityWalker.desc", "effects": { "walkScale": 1.08 } },
