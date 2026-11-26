@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "validate:world": "tsx tools/validate-world.ts",
-    "balance": "tsx tools/balance-week.ts"
+    "balance": "tsx tools/balance-week.ts",
+    "test:godot": "godot --headless --script res://game/tests/runner.gd"
   },
   "license": "UNLICENSED",
   "type": "module",

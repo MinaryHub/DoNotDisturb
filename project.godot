@@ -1,0 +1,28 @@
+; 방해 금지 모드 (Do Not Disturb) — Godot 4 프로젝트
+; 데이터는 res://data의 JSON·CSV (원본 그대로), 코드는 res://game
+
+config_version=5
+
+[application]
+
+config/name="방해 금지 모드 — Do Not Disturb"
+config/description="세상은 너무 시끄럽고, 나의 에너지는 한정되어 있다."
+config/features=PackedStringArray("4.5")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[physics]
+
+common/physics_ticks_per_second=60
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
