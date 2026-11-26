@@ -74,6 +74,17 @@ const SVG := {
 	"ui.face0": '<circle cx="12" cy="12" r="9" fill="#ffd98a"/><circle cx="9.2" cy="10.4" r="1.1" fill="#5a4630"/><circle cx="14.8" cy="10.4" r="1.1" fill="#5a4630"/><path d="M8.8 15.8q3.2-1.6 6.4.4" stroke="#5a4630" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M7.5 8.2l2.4-.8M16.5 8.2l-2.4-.8" stroke="#5a4630" stroke-width="1" stroke-linecap="round"/>',
 	# 지하철
 	"ui.metro": '<rect x="5" y="3" width="14" height="15" rx="3.5" fill="#6fb3e0"/><rect x="7" y="5.5" width="10" height="5" rx="1.2" fill="#e8f4fa"/><circle cx="8.5" cy="14" r="1.3" fill="#fff3d6"/><circle cx="15.5" cy="14" r="1.3" fill="#fff3d6"/><path d="M8 18l-2 3M16 18l2 3" stroke="#6fb3e0" stroke-width="1.6" stroke-linecap="round"/>',
+	# 기술: 이어폰 (헤드폰)
+	"ui.earphones": '<path d="M4 15v-3a8 8 0 0 1 16 0v3" stroke="#cfd6e6" stroke-width="2" fill="none"/><rect x="2.5" y="13" width="5" height="8" rx="2.2" fill="#8fb7e8"/><rect x="16.5" y="13" width="5" height="8" rx="2.2" fill="#8fb7e8"/>',
+	# 기술: 폰 보는 척 / 폰
+	"ui.phone": '<rect x="6.5" y="2.5" width="11" height="19" rx="2.6" fill="#3a3d48"/><rect x="8" y="5" width="8" height="13" rx="1" fill="#9fc6ff"/><rect x="10.5" y="19.2" width="3" height="1" rx=".5" fill="#cfd6e6"/><rect x="9" y="7" width="6" height="1.4" rx=".7" fill="#fff" opacity=".7"/><rect x="9" y="10" width="4.5" height="1.4" rx=".7" fill="#fff" opacity=".5"/>',
+	"ui.phonePretend": '<rect x="6.5" y="4.5" width="11" height="17" rx="2.6" fill="#3a3d48"/><rect x="8" y="7" width="8" height="11" rx="1" fill="#9fc6ff"/><path d="M8 3.5q4-2.5 8 0" stroke="#f3ece0" stroke-width="1.3" fill="none" stroke-linecap="round"/><circle cx="10" cy="2.2" r=".9" fill="#f3ece0"/><circle cx="14" cy="2.2" r=".9" fill="#f3ece0"/>',
+	# 기술: 모자·마스크
+	"ui.mask": '<path d="M4 9q8-3 16 0v4q-8 7-16 0z" fill="#eef2f6"/><path d="M4 10.5L1.5 9M20 10.5L22.5 9M4 12.5l-2.5 1.5M20 12.5l2.5 1.5" stroke="#cfd6e6" stroke-width="1.2" stroke-linecap="round"/><path d="M7 11h10M7 13.5h10" stroke="#c9cdd2" stroke-width=".9"/>',
+	# 기술: 볼 감싸기
+	"ui.cover": '<circle cx="12" cy="12" r="6.5" fill="#f3d0b4"/><circle cx="9.5" cy="11" r=".9" fill="#5a4630"/><circle cx="14.5" cy="11" r=".9" fill="#5a4630"/><ellipse cx="12" cy="14.6" rx="1.4" ry=".8" fill="#c97a6a"/><path d="M3.5 9.5q-1 5 3 8.5l2-1.5q-2.5-3-1.8-6.8z" fill="#f2c4a8"/><path d="M20.5 9.5q1 5-3 8.5l-2-1.5q2.5-3 1.8-6.8z" fill="#f2c4a8"/>',
+	# 기술: 눈 감기
+	"ui.eyes": '<path d="M3 11q9 8 18 0" stroke="#cfd6e6" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M6.5 14l-1.5 2.2M12 15.5V18M17.5 14l1.5 2.2" stroke="#cfd6e6" stroke-width="1.5" stroke-linecap="round"/>',
 	# 연습 대화 코치: 전구
 	"ui.bulb": '<path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" fill="#ffd98a"/><rect x="9" y="17" width="6" height="1.6" rx=".8" fill="#cfc6b4"/><rect x="9.8" y="19.4" width="4.4" height="1.6" rx=".8" fill="#cfc6b4"/><path d="M10.5 11.5l1.5 1.5 1.5-1.5" stroke="#d9a23a" stroke-width="1" fill="none"/>',
 }
