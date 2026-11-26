@@ -1288,7 +1288,7 @@ func _bar_cell(r: Dictionary, compact: bool) -> Control:
 	var border := Color("#a8d99a") if on and r["kind"] == "item" else UiTheme.WARM if on or sel else Color(1, 1, 1, 0.16)
 	var bg := Color(1, 0.82, 0.4, 0.26) if on and r["kind"] == "skill" else Color(0.094, 0.094, 0.118, 0.84)
 	var cell := _pc(UiTheme.box(bg, 12, Vector4(8, 18, 8, 6), border, 2 if (on or sel) else 1))
-	var item := r["kind"] == "item"
+	var item: bool = r["kind"] == "item"
 	var w := (64.0 if compact else 132.0) if item else (56.0 if compact else 64.0)
 	cell.custom_minimum_size = Vector2(w, 66 if not compact else 58)
 	var v := _vbox(1)
@@ -1962,7 +1962,7 @@ func _update_dialogue(s, ps, m: Dictionary) -> void:
 	var can_exit: bool = b.can_exit_now()
 	for i in 4:
 		var cell: PanelContainer = _p["choices"][i]
-		var exit := REPLIES[i] == "exit"
+		var exit: bool = REPLIES[i] == "exit"
 		var hot := in_window and (opening and can_exit if exit else true)
 		var col := (Color(0.51, 0.9, 0.59, 0.32) if exit else Color(1, 0.82, 0.4, 0.22)) if hot else Color(1, 1, 1, 0.07)
 		var border := (Color(0.51, 0.9, 0.59, 0.9) if exit else Color(1, 0.82, 0.4, 0.8)) if hot else Color(1, 1, 1, 0.14)
