@@ -56,6 +56,8 @@ static func load_config(lang: String = "ko") -> Dictionary:
 		"districts": read_json(DATA + "world/districts.json"),
 		"landmarks": read_json(DATA + "world/landmarks.json"),
 	}
+	var parts: Dictionary = cfg["worldParts"]
+	cfg["world"] = CityGen.merge_world(parts["city"], [CityGen.generate_city(parts["districts"]), parts["landmarks"]])
 	cfg["dialoguePools"] = _dialogue_pools(lang)
 	cfg["monologueTriggers"] = read_json(DATA + "monologue/triggers.json")
 	var mono := parse_key_text_csv(read_text(DATA + "monologue/ko.csv"))

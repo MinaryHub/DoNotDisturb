@@ -18,6 +18,12 @@ func _init() -> void:
 		if not (f.begins_with("test_") and f.ends_with(".gd")) or f == "test_case.gd":
 			continue
 		var script: GDScript = load(dir + f)
+		# 파싱에 실패한 파일은 멈추지 않고 실패로 센다 (전에는 여기서 끝나지 않고 걸려 있었다)
+		if script == null or not script.can_instantiate():
+			total += 1
+			failed.append(f)
+			print("✗ ", f, ": 스크립트를 불러오지 못함")
+			continue
 		var suite = script.new()
 		var methods: Array = []
 		for m in script.get_script_method_list():
