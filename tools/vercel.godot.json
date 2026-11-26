@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "true",
+  "buildCommand": "bash tools/build-web.sh",
+  "outputDirectory": "build/site",
+  "redirects": [
+    { "source": "/", "destination": "/donotdisturb/", "permanent": false },
+    { "source": "/donotdisturb", "destination": "/donotdisturb/", "permanent": false }
+  ],
+  "headers": [
+    { "source": "/donotdisturb/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
