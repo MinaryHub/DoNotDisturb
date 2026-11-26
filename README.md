@@ -6,6 +6,18 @@
 
 TypeScript + Canvas 2D + Web Audio. 개발 지시서는 [CLAUDE.md](CLAUDE.md), 월드 제작 규칙은 [docs/world-authoring.md](docs/world-authoring.md).
 
+## 스크린샷
+
+| | |
+|---|---|
+| ![아침의 집](docs/screenshots/03-home-morning.jpg) 잠근 집 — 하루가 시작되는 안전지대 | ![출근길 대로](docs/screenshots/04-street-rush.jpg) 출근길 러시아워 — 시야 콘과 행인, 7번 버스 |
+| ![대화 배틀](docs/screenshots/05-dialogue.jpg) 대화 배틀 — 틈에서 이탈하기 | ![위험 구간](docs/screenshots/06-danger-street.jpg) 기운이 바닥에 가까울 때 — 군중이 얼굴 없는 회색으로, 붉은 테두리 |
+| ![공원의 노을](docs/screenshots/07-park-dusk.jpg) 공원의 노을 | ![비 오는 밤](docs/screenshots/08-rainy-night.jpg) 비 오는 밤 거리 — 우산과 빗줄기 |
+| ![하루 시작](docs/screenshots/02-day-intro.jpg) 하루 시작 화면 | ![2D 시점](docs/screenshots/09-2d-city.jpg) 2D 시점 (설정 [O]에서 고른다) |
+| ![휴대폰 가로](docs/screenshots/10-mobile-landscape.jpg) 휴대폰 가로 화면 — 왼쪽 조이스틱, 오른쪽 상황별 버튼 | ![타이틀](docs/screenshots/01-title.jpg) 타이틀 |
+
+스크린샷은 `docs/screenshots/` (3D 시점·부드러운 빛 기본 설정, 1280×720).
+
 ## 실행
 
 ```bash
@@ -33,7 +45,7 @@ npm run dev               # http://localhost:5173
 | O | 설정 · 접근성 (왜곡 강도, 흔들림·색수차·깜빡임 끄기, 심박음·이명 볼륨) |
 | 대화 중 1~4 · Space · T | 끄덕 / 맞장구 / 짧게 대답 / 이탈 · 미소 유지 · SOS |
 
-휴대폰·태블릿: 화면 왼쪽을 누르고 끌면 조이스틱(끝까지 밀면 달리기), 오른쪽에 상황별 버튼, 메모의 아이템 아이콘을 누르면 사용. 가로 화면 권장. 같은 와이파이에서 `npm run preview -- --host` 후 표시되는 Network 주소로 접속 (`?touch`로 PC에서도 터치 UI 확인)
+휴대폰·태블릿: 화면 왼쪽을 누르고 끌면 조이스틱, 오른쪽에 상황별 버튼(달리기는 한 번 누르면 켜짐), 대화의 반응·업무 메신저 답장은 왼쪽 창을 바로 누른다. 가로 화면 권장. 같은 와이파이에서 `npm run preview -- --host` 후 표시되는 Network 주소로 접속 (`?touch`로 PC에서도 터치 UI 확인)
 
 개발용: F1 디버그 패널(배터리·스트레스·생활 지표 수치, 자극 발생, 하루 이동) · `?day=2` 특정 날로 시작
 
