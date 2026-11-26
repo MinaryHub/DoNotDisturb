@@ -11,3 +11,4 @@ dist/
 # Godot
 .godot/
 /build/
+tools/.godot/

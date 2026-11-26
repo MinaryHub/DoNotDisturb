@@ -8,6 +8,9 @@ config_version=5
 config/name="방해 금지 모드 — Do Not Disturb"
 config/description="세상은 너무 시끄럽고, 나의 에너지는 한정되어 있다."
 config/features=PackedStringArray("4.5")
+run/main_scene="res://game/main.tscn"
+boot_splash/bg_color=Color(0.165, 0.145, 0.188, 1)
+boot_splash/show_image=false
 
 [display]
 
