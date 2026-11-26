@@ -24,6 +24,9 @@ const PATTERNS := {"grid": 1, "plank": 2, "stripe": 3, "dots": 4}
 const SPECIALS := {"sidewalk": 1, "plaza": 2, "road": 3, "water": 4}
 ## 층 높이 배율을 받는 구조물 (LayerView3D와 같다)
 const STRUCTURE := ["wall", "window", "doorClosed"]
+## 빛의 세기 (낮). 그늘이 너무 깊지 않게 하늘빛을 넉넉히, 해는 따뜻하고 약하게
+const AMBIENT := 0.42
+const SUN := 0.5
 
 var cfg: Dictionary
 var world: World
@@ -140,14 +143,14 @@ func _build_floor_resources() -> void:
 			bytes[row + x] = t
 	var img := Image.create_from_data(W, H, false, Image.FORMAT_R8, bytes)
 	var ids := ImageTexture.create_from_image(img)
-	# 색표: 0줄 = 색 + 무늬, 1줄 = 줄눈 색 + 특수. 셰이더는 색을 선형으로 읽으니 미리 바꿔 둔다
+	# 색표: 0줄 = 색 + 무늬, 1줄 = 줄눈 색 + 특수 (sRGB 그대로: 호환 렌더러가 텍스처를 sRGB로 읽는다)
 	var pal := Image.create(defs.size(), 2, false, Image.FORMAT_RGBA8)
 	for i in defs.size():
 		var d: Dictionary = defs[i]
-		var c0 := Color(d["color"]).srgb_to_linear()
+		var c0 := Color(d["color"])
 		c0.a8 = PATTERNS.get(d.get("pattern", ""), 0)
 		pal.set_pixel(i, 0, c0)
-		var c1 := Color(d.get("accent", d["color"])).srgb_to_linear()
+		var c1 := Color(d.get("accent", d["color"]))
 		c1.a8 = SPECIALS.get(d["id"], 0)
 		pal.set_pixel(i, 1, c1)
 	floor_material = ShaderMaterial.new()
@@ -210,12 +213,10 @@ func _build_lights() -> void:
 	_env.ambient_light_color = Color("#fff3e8")
 	_env.ambient_light_energy = 1.0
 	# 톤 매핑: 밝은 곳이 하얗게 타지 않고 부드럽게 눕는다
-	_env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	_env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	_env.tonemap_exposure = float(cfg3.get("exposure", 1.0))
-	_env.glow_enabled = true
-	_env.glow_intensity = 0.35
-	_env.glow_bloom = 0.05
-	_env.glow_hdr_threshold = 1.0
+	# 번지는 빛은 화면 효과(psych_screen의 soft)가 맡는다. 여기서 켜면 흰 벽이 화면 전체로 번진다
+	_env.glow_enabled = false
 	_env.fog_enabled = true
 	_env.fog_mode = Environment.FOG_MODE_DEPTH
 	_env.fog_light_color = Color(cfg3["sky"]["day"])
@@ -496,9 +497,9 @@ func _light(s, dt: float, dist: float, focus: Variant) -> void:
 	var tint := Color(time_tint.r, time_tint.g, time_tint.b)
 	var amb := Color("#fff6e6").lerp(Color("#9fb0e8"), night * 0.7).lerp(tint, clampf(tint_k, 0.0, 0.6))
 	_env.ambient_light_color = amb
-	_env.ambient_light_energy = 0.95 * (1.0 - nd)
+	_env.ambient_light_energy = AMBIENT * (1.0 - nd)
 	_sun.light_color = Color("#ffe7cc").lerp(tint, clampf(tint_k, 0.0, 0.6))
-	_sun.light_energy = 1.25 * maxf(0.0, 1.0 - nd * 1.3)
+	_sun.light_energy = SUN * maxf(0.0, 1.0 - nd * 1.3)
 	_glow.light_energy = float(cfg3["night"]["playerLight"]) * night * (0.3 if indoor else 1.0) * 1.5
 	if focus != null:
 		_glow.position = Vector3(focus.x, 1.3, focus.y)

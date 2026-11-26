@@ -184,6 +184,8 @@ var _mandatory_retry: Variant = null
 var _dinner_seat_timer := -1.0
 var _last_tier := ""
 var _tracked_cache: Variant = null
+## 독백 조건 중 '보이는' 사람을 보는 것의 가장 먼 거리 (그보다 먼 사람은 시선 검사를 하지 않는다. 결과는 같다)
+var _mono_los_range := -1.0
 
 
 ## options: seed(int, 없으면 -1)·practiced·vacation·difficulty. save: save_state()의 Dictionary (빈 값 = 새 게임)
@@ -208,6 +210,10 @@ func _init(config: Dictionary, save: Dictionary = {}, options: Dictionary = {}) 
 	sim = Simulation.new(DataLoader.sim_config_of(cfg), cfg["stimuli"])
 	phone = Phone.new({"ringSec": 12.0, "replyWaitSec": 25.0, "maxVisible": 4})
 	monologue = MonologueDirector.new(cfg["monologueTriggers"], cfg["monologue"], rng)
+	for tr in cfg["monologueTriggers"]:
+		var w: Dictionary = tr["when"]
+		if w.get("visible", false) and not w.has("event") and not w.has("area") and (w.has("npcProfile") or w.has("npcType")):
+			_mono_los_range = maxf(_mono_los_range, float(w.get("distMax", INF)))
 	crowd = Crowd.new(cfg["world"]["crowdLanes"], rng)
 	if cfg["world"].get("bus") != null:
 		bus_route = BusRoute.new(cfg["world"]["bus"], cfg["balance"]["bus"])
@@ -780,7 +786,13 @@ func npc_active(npc: Npc) -> bool:
 
 
 func active_npcs() -> Array:
-	return npcs.filter(func(n): return npc_active(n))
+	var out := []
+	var m := clock.minutes
+	for n in npcs:
+		var w: Variant = _npc_hours.get(n.id)
+		if w != null and m >= w[0] and (m < w[1] or n.state == "dialogue"):
+			out.append(n)
+	return out
 
 
 # ───────────────────────── 메인 스텝 ─────────────────────────
@@ -955,7 +967,7 @@ func _move_player(dt: float, c: Dictionary) -> void:
 	if length > 1:
 		mx /= length
 		my /= length
-	var can_move := p.frozen <= 0 and not phone_open and p.locked_safe == null and mode["kind"] == "free"
+	var can_move: bool = p.frozen <= 0 and not phone_open and p.locked_safe == null and mode["kind"] == "free"
 	p.moving = can_move and length > 0.01
 	p.running = p.moving and c["sprint"] and p.winded <= 0 and not p.phone_pretend and not p.biking
 	var pc: Dictionary = cfg["player"]
@@ -2316,7 +2328,7 @@ func _update_phone(dt: float, c: Dictionary) -> void:
 
 	# 전화 받기/거절 — 볼 감싸는 중이면 손을 쓸 수 없다
 	var call: Variant = phone.call
-	var can_use := not player.cover and mode["kind"] != "speech"
+	var can_use: bool = not player.cover and mode["kind"] != "speech"
 	if call != null and can_use:
 		var mandatory := _is_mandatory_call(call["contactId"])
 		var slipped: bool = (c["decline"] or c["textInstead"]) and sim.somatic.slips(rng())
@@ -2509,7 +2521,7 @@ func _update_world(dt: float) -> void:
 			game_event("exit:%s" % prev_area["id"])
 		if area["kind"] == "home" and _pending_escalations.size() > 0:
 			_escalate(_pending_escalations.pop_front())
-	var now_home := area != null and area["kind"] == "home"
+	var now_home: bool = area != null and area["kind"] == "home"
 	var was_home: bool = prev_area != null and prev_area["kind"] == "home"
 	if not now_home and home_locked and was_home:
 		home_locked = false
@@ -2534,7 +2546,7 @@ func _update_world(dt: float) -> void:
 	var percept := player_percept()
 	# 버스를 기다리거나 지하철 역을 고르는 중엔 붙잡힐 수 있다 (말을 걸면 기다림을 그만둔다)
 	var interruptible: bool = (mode["kind"] == "bus" and mode["phase"] == "waiting") or mode["kind"] == "metroMenu"
-	var talk_blocked := is_modal() and mode["kind"] != "seated" and not interruptible
+	var talk_blocked: bool = is_modal() and mode["kind"] != "seated" and not interruptible
 	var seated_focus: bool = mode["kind"] == "seated"
 	var far := float(cfg["balance"]["npcUpdateRange"])
 	var area_id: Variant = area["id"] if area != null else null
@@ -2643,7 +2655,7 @@ func _warm_nod(npc: Npc) -> bool:
 func _update_desk_away(dt: float, minutes_per_sec: float) -> void:
 	var d: Dictionary = cfg["balance"]["deskAway"]
 	var working := day.get("work") != null and not on_leave and objectives.is_done("commute") and not objectives.resolved("work")
-	var away := working and mode["kind"] == "free" and (player.locked_safe != null or not (d["areas"] as Array).has(area["id"] if area != null else ""))
+	var away: bool = working and mode["kind"] == "free" and (player.locked_safe != null or not (d["areas"] as Array).has(area["id"] if area != null else ""))
 	if not away:
 		_desk_away_min = 0.0
 		return
@@ -2720,7 +2732,7 @@ func _update_sim(dt: float) -> void:
 	crowd_level = 0.0 if p.locked_safe != null else crowd_d
 	# 비: 우산 없이 바깥에 있으면 축축하고 불편하다
 	# 자전거를 타면 우산을 쓸 수 없다
-	var soaked := raining() and area != null and area["kind"] == "outdoor" and (not (p.inventory["gear"] as Array).has("umbrella") or p.biking)
+	var soaked: bool = raining() and area != null and area["kind"] == "outdoor" and (not (p.inventory["gear"] as Array).has("umbrella") or p.biking)
 	bus.set_continuous("weather", "rainSoaked", 1.0 if soaked else 0.0)
 	if soaked and not _soaked_today:
 		_soaked_today = true
@@ -2834,11 +2846,13 @@ func _update_monologue(dt: float) -> void:
 	var map := world.map
 	var pp := player.pos
 	for n in active_npcs():
+		var dist: float = n.percept["dist"]
+		# 성능: '보이는' 조건은 distMax 안에서만 쓰이니, 그보다 먼 사람의 시선 검사는 건너뛴다 (결과는 같다)
 		list.append({
 			"profileId": n.profile_id,
 			"type": n.npc_type,
-			"dist": n.percept["dist"],
-			"visible": n.percept["inView"] or map.line_of_sight(pp, n.pos),
+			"dist": dist,
+			"visible": n.percept["inView"] or (dist <= _mono_los_range and map.line_of_sight(pp, n.pos)),
 			"noticed": n.notice > 0.4,
 		})
 	monologue.update(dt, {"areaId": area["id"] if area != null else null, "returning": returning(), "npcs": list})

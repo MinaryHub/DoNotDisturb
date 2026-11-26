@@ -132,7 +132,8 @@ func stream(t: Vector2) -> bool:
 				missing.append([d, cx, cy])
 	# 처음에는 보이는 곳을 한꺼번에, 이후에는 프레임마다 조금씩 (가까운 것부터)
 	missing.sort_custom(func(a, b): return a[0] < b[0])
-	var first := _chunks.is_empty()
+	# 순간 이동(지하철·"모두 사라져 버려~")으로 카메라 밑 청크가 없으면 처음처럼 한꺼번에
+	var first := _chunks.is_empty() or not _chunks.has("%d,%d" % [floori(t.x / S), floori(t.y / S)])
 	var budget := int(_cfg3["buildPerFrame"])
 	var built := false
 	for m in missing:

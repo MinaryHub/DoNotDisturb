@@ -115,7 +115,7 @@ func _frames(n: int, move: bool = false) -> void:
 		s.crowd.update(dt, s.player.pos, 0.3)
 		var t0 := Time.get_ticks_usec()
 		view.update_view(s, ps, st, dt)
-		if i == n - 1:
+		if i == n - 1 or i < 2:
 			print("  update_view us ", Time.get_ticks_usec() - t0, "  ", view.stats())
 		await process_frame
 
@@ -134,7 +134,7 @@ func _scene(tag: String, pos: Vector2, minutes: float, facing: float = PI / 2.0)
 	s.player.pos = pos
 	s.player.facing = facing
 	s.clock.minutes = minutes
-	await _frames(40, s.player.moving)
+	await _frames(30, s.player.moving)
 	await _shot(tag)
 
 
@@ -146,7 +146,7 @@ func _run() -> void:
 	await _scene("home", world.spawns["player"], 472.0)
 	print("home total ms ", Time.get_ticks_msec() - t0)
 	# 2. 출근길 대로 (러시아워): 전단지·행인·버스
-	var flyer := _npc("flyer", "flyer", Vector2(140, 68.5), PI / 2.0)
+	var flyer := _npc("flyer", "flyer", Vector2(141, 70.6), PI * 0.75)
 	flyer.notice = 0.6
 	flyer.state = "notice"
 	flyer.percept = {"dist": 3.0, "inView": true, "heard": false, "eyeContact": true}
@@ -157,6 +157,7 @@ func _run() -> void:
 	s.player.moving = true
 	ps.stress = 0.3
 	await _scene("street", Vector2(138, 72.5), 516.0, -PI / 2.0)
+	print("  flyer at ", view.project(flyer.pos), "  player at ", view.project(s.player.pos))
 	s.player.moving = false
 	# 3. 공원 (노을)
 	var friend := _npc("friend", "friend", Vector2(73.5, 29.4), PI / 2.0)

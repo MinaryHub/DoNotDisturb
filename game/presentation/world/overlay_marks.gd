@@ -101,15 +101,16 @@ func _dashed_poly(pts: PackedVector2Array, col: Color, width: float, dash: float
 		if seg < 0.0001:
 			continue
 		var dir := (b - a) / seg
+		# 점선 칸 경계마다 끊는다 (부동소수 오차로 제자리걸음하지 않게 최소 걸음을 둔다)
 		var d := 0.0
 		while d < seg:
 			var phase := fposmod(t + d, period)
-			if phase < dash:
-				var len := minf(dash - phase, seg - d)
-				draw_line(a + dir * d, a + dir * (d + len), col, width, true)
-				d += len
+			if phase < dash - 0.001:
+				var run := minf(dash - phase, seg - d)
+				draw_line(a + dir * d, a + dir * (d + run), col, width, true)
+				d += maxf(run, 0.001)
 			else:
-				d += period - phase
+				d += maxf(period - phase, 0.001)
 		t += seg
 
 
