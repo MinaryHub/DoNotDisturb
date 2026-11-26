@@ -35,6 +35,7 @@ uniform float soft_lift = 0.05;
 uniform vec3 soft_lift_color : source_color = vec3(1.0, 0.914, 0.839);
 uniform float soft_saturate = 0.92;
 uniform float soft_contrast = 0.94;
+uniform float soft_glow = 0.26;
 
 uniform float stress_vignette = 0.75;
 uniform vec3 red_tint : source_color = vec3(0.588, 0.078, 0.118);
@@ -117,6 +118,9 @@ void fragment() {
 	col = sepia(col, sanctuary * home_amber);
 	col *= 1.0 + migraine * 0.15 * distortion - critical * 0.12 + sanctuary * 0.03;
 	if (soft) {
+		// 부드러운 빛: 흐린 그림을 screen으로 얹어 밝은 곳이 은은하게 번진다
+		vec3 bloom = textureLod(screen_tex, uv, 3.5).rgb;
+		col = 1.0 - (1.0 - col) * (1.0 - bloom * bloom * soft_glow);
 		col = sat(col, soft_saturate);
 		col = (col - 0.5) * soft_contrast + 0.5;
 		col = 1.0 - (1.0 - col) * (1.0 - soft_lift_color * soft_lift);
